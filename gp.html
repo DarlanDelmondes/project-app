@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Gerenciador de Projetos – Gantt, Modo Dia/Noite e Evolução de Pessoas</title>
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <style>
+    /* Modo Claro */
+    body.light-mode {
+      background-color: #fff;
+      color: #212529;
+    }
+    /* Modo Escuro */
+    body.dark-mode {
+      background-color: #212529;
+      color: #f8f9fa;
+    }
+    body.dark-mode a { color: #66b0ff; }
+    body.dark-mode .card,
+    body.dark-mode .card-body {
+      background-color: #343a40;
+      color: #f8f9fa;
+    }
+    body.dark-mode .list-group-item {
+      background-color: #495057;
+      color: #f8f9fa;
+      border-color: #6c757d;
+    }
+    body.dark-mode .form-control {
+      background-color: #6c757d;
+      color: #f8f9fa;
+      border-color: #adb5bd;
+    }
+    body.dark-mode .input-group-text {
+      background-color: #6c757d;
+      color: #f8f9fa;
+      border-color: #adb5bd;
+    }
+    body.dark-mode .btn-outline-secondary {
+      color: #f8f9fa;
+      border-color: #adb5bd;
+    }
+    /* Estilos Gerais */
+    .project-item { cursor: pointer; }
+    .project-details { display: none; }
+    .responsavel-img {
+      width: 40px;
+      height: 40px;
+      object-fit: cover;
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+    /* Botão de Modo */
+    #modo-toggle {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+    }
+    /* Badge de Atraso */
+    .badge-warning { font-size: 0.8rem; }
+    /* Blocos Colapsáveis com cabeçalhos cinza */
+    .collapsible-header {
+      cursor: pointer;
+      background-color: #6c757d;
+      color: #fff;
+      padding: 10px;
+      margin-bottom: 0;
+      font-weight: bold;
+    }
+    /* Área de projetos por responsável: cada projeto em uma linha */
+    .resp-projects > div { margin-bottom: 5px; }
+    /* Linha vertical para marcar o dia de hoje no Gantt */
+    #today-line {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: red;
+      z-index: 10;
+      pointer-events: none;
+    }
+    /* Container do gráfico Gantt */
+    #chart_div { position: relative; }
+  </style>
+  <!-- Google Charts Loader -->
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+</head>
+<body class="light-mode">
+  
+<div class="container my-4">
+  <!-- Botão para alternar Modo Dia/Noite -->
+  <button id="modo-toggle" class="btn btn-secondary">Modo Noite</button>
+  
+  <h1 class="text-center mb-4">Gerenciador de Projetos</h1>
+  
+  <!-- Bloco Colapsável: Gerenciar Responsáveis -->
+  <div class="mb-4">
+    <div class="collapsible-header" data-target="#resp-form-block">Gerenciar Responsáveis</div>
+    <div id="resp-form-block" class="collapse show">
+      <div class="card">
+        <div class="card-body">
+          <form id="responsavel-form" class="mb-3">
+            <input type="hidden" id="responsavel-index" value="">
+            <div class="form-group">
+              <label for="responsavel-name">Nome do Responsável</label>
+              <input type="text" id="responsavel-name" class="form-control" placeholder="Digite o nome" required>
+            </div>
+            <div class="form-group">
+              <label for="responsavel-foto">Link da Foto</label>
+              <input type="url" id="responsavel-foto" class="form-control" placeholder="https://example.com/foto.jpg" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Salvar Responsável</button>
+            <button type="button" id="responsavel-cancel" class="btn btn-secondary" style="display:none;">Cancelar</button>
+          </form>
+          <ul id="responsavel-list" class="list-group">
+            <!-- Lista de Responsáveis será renderizada aqui -->
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Bloco Colapsável: Adicionar Projeto -->
+  <div class="mb-4">
+    <div class="collapsible-header" data-target="#proj-form-block">Adicionar Projeto</div>
+    <div id="proj-form-block" class="collapse show">
+      <div class="card">
+        <div class="card-body">
+          <form id="project-form">
+            <input type="hidden" id="project-index" value="">
+            <div class="form-group">
+              <label for="project-title">Título do Projeto</label>
+              <input type="text" id="project-title" class="form-control" placeholder="Título do Projeto" required>
+            </div>
+            <div class="form-group">
+              <label for="project-details">Detalhes do Projeto</label>
+              <textarea id="project-details" class="form-control" rows="3" placeholder="Detalhes do Projeto" required></textarea>
+            </div>
+            <div class="form-group">
+              <label for="project-link">Link Confluence</label>
+              <input type="url" id="project-link" class="form-control" placeholder="https://...">
+            </div>
+            <!-- Novos Atributos -->
+            <div class="form-group">
+              <label for="project-phase">Fase do Projeto</label>
+              <select id="project-phase" class="form-control" required>
+                <option value="">Selecione</option>
+                <option value="consultoria">Consultoria</option>
+                <option value="desenho iniciado">Desenho Iniciado</option>
+                <option value="enviado para masa">Enviado para MASA</option>
+                <option value="journey pendente">Journey Pendente</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="project-responsavel">Responsável</label>
+              <select id="project-responsavel" class="form-control">
+                <option value="">Selecione</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="project-knowledge">Percentual de Conhecimento (%)</label>
+              <input type="number" id="project-knowledge" class="form-control" placeholder="Ex: 80" required>
+            </div>
+            <div class="form-group">
+              <label for="project-pdtec">Quantidade de Pessoas Necessárias na PDTec</label>
+              <input type="number" id="project-pdtec" class="form-control" placeholder="Ex: 3" required>
+            </div>
+            <div class="form-group">
+              <label for="project-dentro">Quantidade de Pessoas Necessárias Dentro do Empreendimento</label>
+              <input type="number" id="project-dentro" class="form-control" placeholder="Ex: 5" required>
+            </div>
+            <div class="form-group">
+              <label for="project-fora">Quantidade de Pessoas Necessárias Fora do Empreendimento</label>
+              <input type="number" id="project-fora" class="form-control" placeholder="Ex: 2" required>
+            </div>
+            <!-- Área para exibir o resultado do cálculo -->
+            <div id="calculo-resultado" class="mb-3"></div>
+            <button type="submit" class="btn btn-primary">Salvar Projeto</button>
+            <button type="button" id="cancel-edit" class="btn btn-secondary" style="display: none;">Cancelar</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Lista de Projetos -->
+  <ul id="project-list" class="list-group mb-4">
+    <!-- Os projetos serão renderizados aqui -->
+  </ul>
+  
+  <!-- Filtros para o Gráfico Gantt -->
+  <div class="row mb-3">
+    <div class="col-md-6">
+      <label for="project-filter">Filtrar por Projeto:</label>
+      <select id="project-filter" class="form-control">
+        <option value="all">Todos</option>
+      </select>
+    </div>
+    <div class="col-md-6">
+      <label for="responsavel-gantt-filter">Filtrar por Responsável:</label>
+      <select id="responsavel-gantt-filter" class="form-control">
+        <option value="all">Todos</option>
+      </select>
+    </div>
+  </div>
+  
+  <!-- Gráfico Gantt -->
+  <div id="chart_div" class="my-4"></div>
+  
+  <!-- Gráfico de Linha: Evolução dos Projetos – Pessoas Envolvidas Hoje por Responsável (últimos 7 dias) -->
+  <div id="line_chart_div" class="my-4"></div>
+  
+</div>
+
+<!-- jQuery e Bootstrap JS -->
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+$(document).ready(function() {
+  
+  // Ativa os blocos colapsáveis usando os cabeçalhos
+  $('.collapsible-header').on('click', function() {
+    var target = $(this).data('target');
+    $(target).slideToggle();
+  });
+  
+  // Variável para manter o índice do projeto aberto
+  var openProjectIndex = null;
+  
+  // Funções para datas
+  function formatForDisplay(dateStr) {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    const year = parts[0].substr(2, 2);
+    return parts[2] + '/' + parts[1] + '/' + year;
+  }
+  
+  function formatDate(d) {
+    let month = '' + (d.getMonth() + 1);
+    let day = '' + d.getDate();
+    let year = d.getFullYear();
+    if (month.length < 2) month = '0' + month;
+    if (day.length < 2) day = '0' + day;
+    return [year, month, day].join('-');
+  }
+  
+  // Função para calcular dias úteis entre duas datas (inclusivo)
+  function getBusinessDays(startDate, endDate) {
+    let count = 0;
+    let curDate = new Date(startDate);
+    while(curDate <= endDate) {
+      let dayOfWeek = curDate.getDay();
+      if(dayOfWeek !== 0 && dayOfWeek !== 6) count++;
+      curDate.setDate(curDate.getDate() + 1);
+    }
+    return count;
+  }
+  
+  // Recupera dados do localStorage ou inicializa arrays vazios
+  let projects = JSON.parse(localStorage.getItem('projects')) || [];
+  let responsaveis = JSON.parse(localStorage.getItem('responsaveis')) || [];
+  
+  // Elementos do CRUD de Responsáveis
+  const responsavelForm = $('#responsavel-form');
+  const responsavelName = $('#responsavel-name');
+  const responsavelFoto = $('#responsavel-foto');
+  const responsavelIndex = $('#responsavel-index');
+  const responsavelCancel = $('#responsavel-cancel');
+  const responsavelList = $('#responsavel-list');
+  const projectResponsavel = $('#project-responsavel');
+  
+  // Elementos do CRUD de Projetos
+  const projectForm = $('#project-form');
+  const projectList = $('#project-list');
+  const projectTitle = $('#project-title');
+  const projectDetails = $('#project-details');
+  const projectLink = $('#project-link');
+  const projectPhase = $('#project-phase');
+  const projectKnowledge = $('#project-knowledge');
+  const projectPdtec = $('#project-pdtec');
+  const projectDentro = $('#project-dentro');
+  const projectFora = $('#project-fora');
+  const projectIndex = $('#project-index');
+  const formTitle = $('#form-title');
+  const cancelEdit = $('#cancel-edit');
+  const projectFilter = $('#project-filter');
+  const responsavelGanttFilter = $('#responsavel-gantt-filter');
+  const calculoResultado = $('#calculo-resultado');
+  
+  function saveProjects() {
+    localStorage.setItem('projects', JSON.stringify(projects));
+  }
+  
+  function saveResponsaveis() {
+    localStorage.setItem('responsaveis', JSON.stringify(responsaveis));
+  }
+  
+  // Atualiza o dropdown de responsáveis no formulário de projeto
+  function updateResponsavelOptions() {
+    projectResponsavel.empty().append('<option value="">Selecione</option>');
+    responsaveis.forEach((r, index) => {
+      projectResponsavel.append(`<option value="${index}">${r.name}</option>`);
+    });
+  }
+  
+  // Atualiza os filtros
+  function updateFilterOptions() {
+    projectFilter.empty().append('<option value="all">Todos</option>');
+    projects.forEach((project, index) => {
+      projectFilter.append(`<option value="${index}">${project.title}</option>`);
+    });
+    responsavelGanttFilter.empty().append('<option value="all">Todos</option>');
+    responsaveis.forEach((r, index) => {
+      responsavelGanttFilter.append(`<option value="${index}">${r.name}</option>`);
+    });
+  }
+  
+  // Renderiza a lista de Responsáveis – ao clicar no cabeçalho, expande os projetos do responsável (um por linha)
+  function renderResponsaveis() {
+    responsavelList.empty();
+    const now = new Date();
+    const next7 = new Date();
+    next7.setDate(now.getDate() + 7);
+    
+    responsaveis.forEach((r, index) => {
+      let countProjs = 0;
+      let hasOverdue = false;
+      projects.forEach(project => {
+        if(project.responsavel == index) {
+          const isActive = project.activities && project.activities.some(act => {
+            if(act.start) {
+              let actStart = new Date(act.start);
+              return actStart >= now && actStart <= next7;
+            }
+            return false;
+          });
+          if(isActive) countProjs++;
+          const overdue = project.activities && project.activities.some(act => {
+            if(act.end) {
+              let actEnd = new Date(act.end);
+              return actEnd < now;
+            }
+            return false;
+          });
+          if(overdue) hasOverdue = true;
+        }
+      });
+      
+      const li = $(`
+        <li class="list-group-item">
+          <div class="d-flex justify-content-between align-items-center responsavel-header" style="cursor:pointer;">
+            <div class="d-flex align-items-center">
+              <img src="${r.foto}" alt="Foto" class="responsavel-img">
+              <span>${r.name}</span>
+              <span class="ml-2 badge badge-info">${countProjs} projeto(s)</span>
+              ${hasOverdue ? '<span class="badge badge-warning ml-2">Atraso</span>' : ''}
+            </div>
+            <div>
+              <button class="btn btn-success btn-sm mr-1 edit-resp">Editar</button>
+              <button class="btn btn-danger btn-sm delete-resp">Excluir</button>
+            </div>
+          </div>
+          <div class="resp-projects" style="display:none; margin-top:10px;"></div>
+        </li>
+      `);
+      
+      li.find('.edit-resp').on('click', function(e) {
+        e.stopPropagation();
+        responsavelIndex.val(index);
+        responsavelName.val(r.name);
+        responsavelFoto.val(r.foto);
+        responsavelCancel.show();
+      });
+      
+      li.find('.delete-resp').on('click', function(e) {
+        e.stopPropagation();
+        if(confirm('Deseja excluir este responsável?')) {
+          responsaveis.splice(index, 1);
+          saveResponsaveis();
+          renderResponsaveis();
+          updateResponsavelOptions();
+          updateFilterOptions();
+        }
+      });
+      
+      // Ao clicar no cabeçalho, exibe os projetos daquele responsável (cada projeto em nova linha)
+      li.find('.responsavel-header').on('click', function() {
+        var projDiv = li.find('.resp-projects');
+        if(projDiv.is(':visible')) {
+          projDiv.slideUp();
+        } else {
+          projDiv.empty();
+          projects.forEach(project => {
+            if(project.responsavel == index) {
+              let badgeClass = "badge-secondary";
+              if(project.fase) {
+                switch(project.fase.toLowerCase()){
+                  case "consultoria": badgeClass = "badge-primary"; break;
+                  case "desenho iniciado": badgeClass = "badge-info"; break;
+                  case "enviado para masa": badgeClass = "badge-success"; break;
+                  case "journey pendente": badgeClass = "badge-warning"; break;
+                }
+              }
+              let overdueBadge = "";
+              if(project.activities && project.activities.some(act => {
+                if(act.end) {
+                  let actEnd = new Date(act.end);
+                  return actEnd < now;
+                }
+                return false;
+              })) {
+                overdueBadge = '<span class="badge badge-warning">Atraso</span>';
+              }
+              const projItem = $(`<div class="resp-project-item">${project.title} <span class="badge ${badgeClass}">${project.fase || ""}</span> ${overdueBadge}</div>`);
+              projDiv.append(projItem);
+            }
+          });
+          projDiv.slideDown();
+        }
+      });
+      
+      responsavelList.append(li);
+    });
+  }
+  
+  responsavelForm.on('submit', function(e) {
+    e.preventDefault();
+    let nameVal = responsavelName.val().trim();
+    let fotoVal = responsavelFoto.val().trim();
+    if(!nameVal || !fotoVal) {
+      alert("Preencha todos os campos do responsável.");
+      return;
+    }
+    let idx = responsavelIndex.val();
+    if(idx === "") {
+      responsaveis.push({ name: nameVal, foto: fotoVal });
+    } else {
+      responsaveis[idx] = { name: nameVal, foto: fotoVal };
+    }
+    saveResponsaveis();
+    renderResponsaveis();
+    updateResponsavelOptions();
+    updateFilterOptions();
+    this.reset();
+    responsavelIndex.val("");
+    responsavelCancel.hide();
+  });
+  
+  // Renderiza os projetos
+  function renderProjects() {
+    projectList.empty();
+    projects.forEach((project, pIndex) => {
+      const li = $('<li class="list-group-item"></li>');
+      li.attr('data-project-index', pIndex);
+      
+      // Cabeçalho do projeto
+      const headerDiv = $('<div class="d-flex justify-content-between align-items-center"></div>');
+      headerDiv.append(`<span><strong>${project.title}</strong></span>`);
+      const btnDiv = $('<div></div>');
+      const editBtn = $('<button class="btn btn-success btn-sm mr-1">Editar</button>');
+      editBtn.on('click', function(e) {
+        e.stopPropagation();
+        loadProject(pIndex);
+      });
+      const deleteBtn = $('<button class="btn btn-danger btn-sm">Excluir</button>');
+      deleteBtn.on('click', function(e) {
+        e.stopPropagation();
+        if(confirm('Tem certeza que deseja excluir este projeto?')) {
+          projects.splice(pIndex, 1);
+          saveProjects();
+          renderProjects();
+          updateFilterOptions();
+        }
+      });
+      btnDiv.append(editBtn).append(deleteBtn);
+      headerDiv.append(btnDiv);
+      li.append(headerDiv);
+      
+      // Área de detalhes do projeto
+      const detailsDiv = $(`
+        <div class="mt-2 project-details">
+          <p>${project.details}</p>
+          <p><strong>Link Confluence:</strong> <a href="${project.link}" target="_blank">${project.link}</a></p>
+          <p><strong>Fase do Projeto:</strong> ${project.fase ? project.fase : "Não definida"}</p>
+        </div>
+      `);
+      let respHtml = "Nenhum";
+      if(project.responsavel !== "" && responsaveis[project.responsavel]) {
+        let resp = responsaveis[project.responsavel];
+        respHtml = `<img src="${resp.foto}" alt="Foto" class="responsavel-img" style="width:30px;height:30px;"> <span>${resp.name}</span>`;
+      }
+      detailsDiv.append(`<p><strong>Responsável:</strong> ${respHtml}</p>`);
+      
+      // Se a fase for "desenho iniciado", efetua o cálculo (usando a atividade "desenho" se existente)
+      if(project.fase && project.fase.toLowerCase() === "desenho iniciado") {
+        let desenhoAct = project.activities && project.activities.find(act => act.title.toLowerCase() === "desenho");
+        if(desenhoAct && desenhoAct.start && desenhoAct.end) {
+          let startDate = new Date(desenhoAct.start);
+          let endDate = new Date(desenhoAct.end);
+          let businessDays = getBusinessDays(startDate, endDate);
+          let totalPessoas = (parseFloat(project.pdtec) || 0) + (parseFloat(project.dentro) || 0) + (parseFloat(project.fora) || 0);
+          let conhecimento = parseFloat(project.knowledge) || 0;
+          let pessoasPorDia = businessDays > 0 ? ((totalPessoas * (conhecimento / 100)) / businessDays).toFixed(2) : "0";
+          detailsDiv.append(`<p><strong>Pessoas Necessárias por Dia em Desenho:</strong> ${pessoasPorDia} (baseado em ${businessDays} dia(s) úteis)</p>`);
+        }
+      }
+      
+      // Container de atividades
+      const actContainer = $('<div class="mt-3"></div>');
+      actContainer.append('<h5>Atividades</h5>');
+      const actList = $('<ul class="list-group"></ul>');
+      project.activities = project.activities || [];
+      project.activities.forEach((act, aIndex) => {
+        const actLi = $(`
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <strong>${act.title}</strong> (Início: ${formatForDisplay(act.start)}, Fim: ${formatForDisplay(act.end)})
+            </div>
+          </li>
+        `);
+        const actBtnDiv = $('<div></div>');
+        const editActBtn = $('<button class="btn btn-success btn-sm mr-1">Editar</button>');
+        editActBtn.on('click', function(e) {
+          e.stopPropagation();
+          actForm.find('.activity-index').val(aIndex);
+          actForm.find('.activity-title').val(act.title);
+          actForm.find('.activity-start').val(act.start);
+          actForm.find('.activity-end').val(act.end);
+          actForm.find('.activity-cancel').show();
+        });
+        const deleteActBtn = $('<button class="btn btn-danger btn-sm">Excluir</button>');
+        deleteActBtn.on('click', function(e) {
+          e.stopPropagation();
+          if(confirm('Deseja excluir esta atividade?')) {
+            project.activities.splice(aIndex, 1);
+            saveProjects();
+            openProjectIndex = pIndex;
+            renderProjects();
+          }
+        });
+        actBtnDiv.append(editActBtn).append(deleteActBtn);
+        actLi.append(actBtnDiv);
+        actList.append(actLi);
+      });
+      actContainer.append(actList);
+      
+      // Formulário de atividades
+      const actForm = $(`
+        <form class="mt-3">
+          <input type="hidden" class="activity-index" value="">
+          <div class="form-group">
+            <label>Título da Atividade</label>
+            <input type="text" class="form-control activity-title" placeholder="Título da Atividade" required>
+          </div>
+          <div class="form-group">
+            <label>Data de Início</label>
+            <div class="input-group">
+              <input type="date" class="form-control activity-start" required>
+              <div class="input-group-append">
+                <button type="button" class="btn btn-outline-secondary quick-add" data-days="3">+3 dias</button>
+                <button type="button" class="btn btn-outline-secondary quick-add" data-days="7">+7 dias</button>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Data de Fim</label>
+            <div class="input-group">
+              <input type="date" class="form-control activity-end" required>
+              <div class="input-group-append">
+                <button type="button" class="btn btn-outline-secondary quick-add" data-days="3">+3 dias</button>
+                <button type="button" class="btn btn-outline-secondary quick-add" data-days="7">+7 dias</button>
+              </div>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary">Salvar Atividade</button>
+          <button type="button" class="btn btn-secondary activity-cancel" style="display:none;">Cancelar</button>
+        </form>
+      `);
+      
+      function attachQuickAdd(formElem) {
+        formElem.find('.quick-add').on('click', function(e) {
+          e.stopPropagation();
+          let days = parseInt($(this).data('days'));
+          let input = $(this).closest('.input-group').find('input[type="date"]');
+          let baseDate = input.val() ? new Date(input.val()) : new Date();
+          baseDate.setDate(baseDate.getDate() + days);
+          input.val(formatDate(baseDate));
+        });
+      }
+      attachQuickAdd(actForm);
+      
+      actForm.on('submit', function(e) {
+        e.preventDefault();
+        let actTitleVal = $(this).find('.activity-title').val().trim();
+        let actStartVal = $(this).find('.activity-start').val();
+        let actEndVal = $(this).find('.activity-end').val();
+        if (!actTitleVal || !actStartVal || !actEndVal) {
+          alert('Preencha todos os campos da atividade.');
+          return;
+        }
+        let indexVal = $(this).find('.activity-index').val();
+        if(indexVal === "") {
+          project.activities.push({ title: actTitleVal, start: actStartVal, end: actEndVal });
+        } else {
+          project.activities[indexVal] = { title: actTitleVal, start: actStartVal, end: actEndVal };
+        }
+        saveProjects();
+        openProjectIndex = pIndex;
+        renderProjects();
+      });
+      
+      actForm.find('.activity-cancel').on('click', function(e) {
+        e.stopPropagation();
+        $(this).closest('form')[0].reset();
+        $(this).closest('form').find('.activity-index').val("");
+        $(this).hide();
+        attachQuickAdd($(this).closest('form'));
+      });
+      
+      detailsDiv.append(actContainer).append(actForm);
+      li.append(detailsDiv);
+      
+      li.on('click', function(e) {
+        if(['INPUT','BUTTON','LABEL'].includes(e.target.tagName)) return;
+        $('.project-details').not($(this).find('.project-details')).slideUp();
+        $(this).find('.project-details').slideDown();
+      });
+      
+      projectList.append(li);
+    });
+    if(openProjectIndex !== null) {
+      projectList.find(`li[data-project-index="${openProjectIndex}"] .project-details`).show();
+    }
+    updateFilterOptions();
+    drawGanttChart();
+    drawLineChartEvolution();
+  }
+  
+  function loadProject(index) {
+    let project = projects[index];
+    projectTitle.val(project.title);
+    projectDetails.val(project.details);
+    projectLink.val(project.link);
+    projectPhase.val(project.fase || "");
+    projectIndex.val(index);
+    formTitle.text("Editar Projeto");
+    cancelEdit.show();
+    projectResponsavel.val(project.responsavel);
+    $("#project-knowledge").val(project.knowledge || "");
+    $("#project-pdtec").val(project.pdtec || "");
+    $("#project-dentro").val(project.dentro || "");
+    $("#project-fora").val(project.fora || "");
+  }
+  
+  function clearProjectForm() {
+    projectTitle.val('');
+    projectDetails.val('');
+    projectLink.val('');
+    projectPhase.val('');
+    projectIndex.val('');
+    formTitle.text("Adicionar Projeto");
+    cancelEdit.hide();
+    projectResponsavel.val('');
+    $("#project-knowledge").val('');
+    $("#project-pdtec").val('');
+    $("#project-dentro").val('');
+    $("#project-fora").val('');
+    $("#calculo-resultado").empty();
+  }
+  
+  projectForm.on('submit', function(e) {
+    e.preventDefault();
+    let titleVal = projectTitle.val().trim();
+    let detailsVal = projectDetails.val().trim();
+    let linkVal = projectLink.val().trim();
+    let faseVal = projectPhase.val();
+    let responsavelVal = projectResponsavel.val();
+    let knowledgeVal = parseFloat($("#project-knowledge").val()) || 0;
+    let pdtecVal = parseFloat($("#project-pdtec").val()) || 0;
+    let dentroVal = parseFloat($("#project-dentro").val()) || 0;
+    let foraVal = parseFloat($("#project-fora").val()) || 0;
+    if(!titleVal || !detailsVal) {
+      alert('Preencha os campos obrigatórios do projeto.');
+      return;
+    }
+    let idx = projectIndex.val();
+    if(idx === "") {
+      let today = new Date();
+      projects.push({
+        title: titleVal,
+        details: detailsVal,
+        link: linkVal,
+        fase: faseVal,
+        responsavel: responsavelVal,
+        knowledge: knowledgeVal,
+        pdtec: pdtecVal,
+        dentro: dentroVal,
+        fora: foraVal,
+        activities: [
+          { title: "kickoff", start: formatDate(today), end: formatDate(today) },
+          { title: "desenho", start: formatDate(new Date(today.getTime() + 3 * 86400000)), end: formatDate(new Date(today.getTime() + 3 * 86400000)) },
+          { title: "sprint", start: formatDate(new Date(today.getTime() + 7 * 86400000)), end: formatDate(new Date(today.getTime() + 7 * 86400000)) }
+        ]
+      });
+    } else {
+      projects[idx].title = titleVal;
+      projects[idx].details = detailsVal;
+      projects[idx].link = linkVal;
+      projects[idx].fase = faseVal;
+      projects[idx].responsavel = responsavelVal;
+      projects[idx].knowledge = knowledgeVal;
+      projects[idx].pdtec = pdtecVal;
+      projects[idx].dentro = dentroVal;
+      projects[idx].fora = foraVal;
+    }
+    saveProjects();
+    if(faseVal.toLowerCase() === "desenho iniciado") {
+      let desenhoAct = null;
+      let projObj = (projectIndex.val() !== "") ? projects[projectIndex.val()] : projects[projects.length - 1];
+      if(projObj && projObj.activities) {
+        desenhoAct = projObj.activities.find(act => act.title.toLowerCase() === "desenho");
+      }
+      if(desenhoAct && desenhoAct.start && desenhoAct.end) {
+        let startDate = new Date(desenhoAct.start);
+        let endDate = new Date(desenhoAct.end);
+        let businessDays = getBusinessDays(startDate, endDate);
+        let totalPessoas = pdtecVal + dentroVal + foraVal;
+        let pessoasPorDia = businessDays > 0 ? ((totalPessoas * (knowledgeVal / 100)) / businessDays).toFixed(2) : "0";
+        $("#calculo-resultado").html(`<strong>Pessoas Necessárias por Dia em Desenho:</strong> ${pessoasPorDia} (baseado em ${businessDays} dia(s) úteis)`);
+      } else {
+        $("#calculo-resultado").html(`<strong>Aviso:</strong> Verifique as datas da atividade "desenho".`);
+      }
+    } else {
+      $("#calculo-resultado").empty();
+    }
+    renderProjects();
+    clearProjectForm();
+  });
+  
+  cancelEdit.on('click', function() {
+    clearProjectForm();
+  });
+  
+  // Função para desenhar o Gráfico Gantt (somente atividades)
+  function drawGanttChart() {
+    google.charts.load('current', {'packages':['gantt']});
+    google.charts.setOnLoadCallback(function() {
+      var data = new google.visualization.DataTable();
+      data.addColumn('string', 'Task ID');
+      data.addColumn('string', 'Task Name');
+      data.addColumn('string', 'Resource');
+      data.addColumn('date', 'Start Date');
+      data.addColumn('date', 'End Date');
+      data.addColumn('number', 'Duration');
+      data.addColumn('number', 'Percent Complete');
+      data.addColumn('string', 'Dependencies');
+      
+      var rows = [];
+      var projFilter = projectFilter.val();
+      var respFilter = responsavelGanttFilter.val();
+      let globalMin = null, globalMax = null;
+      
+      projects.forEach((project, pIndex) => {
+        if(projFilter !== 'all' && projFilter != pIndex) return;
+        if(respFilter !== 'all' && project.responsavel != respFilter) return;
+        project.activities.forEach(act => {
+          let sd = act.start ? new Date(act.start) : null;
+          let ed = act.end ? new Date(act.end) : null;
+          if(sd) { globalMin = globalMin ? (sd < globalMin ? sd : globalMin) : sd; }
+          if(ed) { globalMax = globalMax ? (ed > globalMax ? ed : globalMax) : ed; }
+          if(sd && ed) {
+            rows.push([
+              pIndex + '-' + Math.random().toString(36).substr(2,5),
+              project.title + ": " + act.title,
+              project.title,
+              sd,
+              ed,
+              null,
+              0,
+              null
+            ]);
+          }
+        });
+      });
+      
+      data.addRows(rows);
+      
+      var options = { height: 400, gantt: { trackHeight: 30 } };
+      var chart = new google.visualization.Gantt(document.getElementById('chart_div'));
+      chart.draw(data, options);
+      
+      // Adiciona linha vertical para marcar o dia de hoje
+      if(globalMin && globalMax) {
+        const container = document.getElementById('chart_div');
+        const width = container.offsetWidth;
+        const today = new Date();
+        const frac = (today - globalMin) / (globalMax - globalMin);
+        const leftPos = frac * width;
+        let marker = document.getElementById('today-line');
+        if(!marker) {
+          marker = document.createElement('div');
+          marker.id = 'today-line';
+          container.appendChild(marker);
+        }
+        marker.style.left = leftPos + 'px';
+      }
+    });
+  }
+  
+  // Função para desenhar o Gráfico de Linha: Evolução dos Projetos – Pessoas Envolvidas nos Últimos 7 Dias por Responsável
+  function drawLineChartEvolution() {
+    google.charts.load('current', {packages: ['corechart']});
+    google.charts.setOnLoadCallback(function() {
+      // Define os últimos 7 dias (como strings)
+      let days = [];
+      let today = new Date();
+      for(let i = 6; i >= 0; i--) {
+        let d = new Date(today);
+        d.setDate(d.getDate() - i);
+        days.push(formatDate(d));
+      }
+      
+      // Prepara a DataTable com a primeira coluna sendo os dias e uma coluna para cada responsável
+      let dataTable = new google.visualization.DataTable();
+      dataTable.addColumn('string', 'Dia');
+      responsaveis.forEach((r, idx) => {
+        dataTable.addColumn('number', r.name);
+      });
+      
+      // Inicializa uma matriz para os dados: para cada dia, para cada responsável, valor 0
+      let rows = days.map(d => {
+        let row = [d];
+        responsaveis.forEach(() => row.push(0));
+        return row;
+      });
+      
+      // Para cada projeto com fase "desenho iniciado" e atividade "desenho", se o dia estiver no intervalo, adiciona valor
+      projects.forEach(project => {
+        if(project.fase && project.fase.toLowerCase() === "desenho iniciado" && project.activities) {
+          // Procura atividade "desenho" (título em minúsculo)
+          let desenhoAct = project.activities.find(act => act.title.toLowerCase() === "desenho");
+          if(desenhoAct && desenhoAct.start && desenhoAct.end) {
+            let startDate = new Date(desenhoAct.start);
+            let endDate = new Date(desenhoAct.end);
+            let businessDays = getBusinessDays(startDate, endDate);
+            let totalPessoas = (parseFloat(project.pdtec) || 0) + (parseFloat(project.dentro) || 0) + (parseFloat(project.fora) || 0);
+            let conhecimento = parseFloat(project.knowledge) || 0;
+            let pessoasDiarias = businessDays > 0 ? ((totalPessoas * (conhecimento / 100)) / businessDays) : 0;
+            // Para cada dia dos últimos 7, se estiver dentro do intervalo da atividade, soma o valor para o responsável do projeto
+            let responsavelIdx = project.responsavel;
+            if(responsavelIdx !== "" && responsaveis[responsavelIdx]) {
+              // Percorre os 7 dias
+              days.forEach((d, i) => {
+                let currentDay = new Date(d);
+                // Se o dia atual (currentDay) estiver entre a data de início e término da atividade
+                if(currentDay >= startDate && currentDay <= endDate) {
+                  rows[i][parseInt(responsavelIdx) + 1] += pessoasDiarias;
+                }
+              });
+            }
+          }
+        }
+      });
+      
+      dataTable.addRows(rows);
+      
+      var options = {
+        title: "Evolução dos Projetos – Pessoas Envolvidas (Últimos 7 dias)",
+        hAxis: { title: "Dia",  gridlines: { count: 7 } },
+        vAxis: { title: "Pessoas Envolvidas" },
+        legend: { position: 'bottom' },
+        pointSize: 5
+      };
+      
+      var chart = new google.visualization.LineChart(document.getElementById('line_chart_div'));
+      chart.draw(dataTable, options);
+    });
+  }
+  
+  projectFilter.on('change', function() { drawGanttChart(); });
+  responsavelGanttFilter.on('change', function() { drawGanttChart(); });
+  
+  $('#modo-toggle').on('click', function() {
+    if ($('body').hasClass('light-mode')) {
+      $('body').removeClass('light-mode').addClass('dark-mode');
+      $(this).text('Modo Dia');
+    } else {
+      $('body').removeClass('dark-mode').addClass('light-mode');
+      $(this).text('Modo Noite');
+    }
+  });
+  
+  // Inicializa as renderizações
+  renderResponsaveis();
+  updateResponsavelOptions();
+  renderProjects();
+  updateFilterOptions();
+  drawLineChartEvolution();
+});
+</script>
+  
+</body>
+</html>
