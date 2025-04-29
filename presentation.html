@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=1024" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>Slides Dinâmicos com Impress.js – Texto e Imagens</title>
+
+  <link href="//fonts.googleapis.com/css?family=Open+Sans:regular,semibold,italic,italicsemibold|PT+Sans:400,700,400italic,700italic|PT+Serif:400,700,400italic,700italic" rel="stylesheet"/>
+  <link href="https://impress.js.org/css/impress-demo.css" rel="stylesheet"/>
+  <link href="https://impress.js.org/css/impress-common.css" rel="stylesheet"/>
+
+  <style>
+    html, body,
+    .impress-supported,
+    .impress-not-supported { background-color: #000 !important; }
+    #impress { background: transparent !important; }
+    #input-screen { text-align: center; margin-top: 5%; }
+    #input-text {
+      width: 80%; height: 120px; background:#333; color:#fff;
+      border:1px solid #555; font-size:14px; padding:10px; resize:vertical;
+    }
+    #controls { margin:10px; }
+    #generate-btn, #play-toggle {
+      padding:8px 16px; margin:0 5px;
+      font-size:14px; cursor:pointer;
+      background:#222; color:#fff; border:1px solid #444;
+    }
+    .step { position: relative; }
+    .step p {
+      background:#fff; color:#000;
+      padding:20px; border-radius:4px;
+      max-width:600px; margin:20px auto;
+      white-space: pre-wrap; border: none;
+    }
+  </style>
+</head>
+<body class="impress-not-supported">
+
+  <div id="input-screen">
+    <h1>Gerador de Slides</h1>
+    <div id="controls">
+      <button id="play-toggle">Play: Off</button>
+      <button id="generate-btn">Gerar Slides</button>
+    </div>
+    <textarea id="input-text" placeholder="Cole seu conteúdo (texto e <img src=...>) aqui..."></textarea>
+  </div>
+
+  <div id="impress" style="display:none;"
+       data-transition-duration="1000"
+       data-width="1024" data-height="768"
+       data-max-scale="3" data-min-scale="0"
+       data-perspective="1000"></div>
+  <div id="impress-toolbar" style="display:none;"></div>
+  <div class="hint" style="display:none;"><p>Use espaço ou setas para navegar. ‘P’ abre o console do apresentador.</p></div>
+
+  <script src="https://impress.js.org/js/impress.js"></script>
+  <script>
+    let autoPlayEnabled = false, slideTimer = null;
+    document.getElementById('play-toggle').addEventListener('click', ()=>{
+      autoPlayEnabled = !autoPlayEnabled;
+      document.getElementById('play-toggle').textContent = 'Play: ' + (autoPlayEnabled? 'On':'Off');
+      if(!autoPlayEnabled && slideTimer) clearTimeout(slideTimer);
+    });
+    function getRandomInt(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
+    function calcSlideDelay(text){
+      const base = text.split(/\s+/).length * 100;
+      const commaCount = (text.match(/[,?!()]/g)||[]).length;
+      return base + commaCount*200;
+    }
+    function typeText(el,text,cb){
+      let i=0;
+      const puncts=[...text.matchAll(/[,?!()]/g)].map(m=>m.index).filter(i=>i!=null);
+      const win=5, minP=30, maxP=150, range=maxP-minP;
+      el.textContent='';
+      function next(){
+        if(i<text.length){
+          const ch=text.charAt(i);
+          el.textContent+=ch;
+          let pause;
+          if(/[,?!()]/.test(ch)) pause=maxP;
+          else{
+            const nextIdx=puncts.find(idx=>idx>i);
+            if(nextIdx!=null&&nextIdx-i<=win) pause=minP+((win-(nextIdx-i)+1)*(range/win));
+            else pause=minP;
+          }
+          i++; setTimeout(next,pause);
+        } else if(cb) cb();
+      }
+      next();
+    }
+    function onStepEnter(ev,api){
+      if(slideTimer) clearTimeout(slideTimer);
+      const p=ev.target.querySelector('p');
+      if(p&&p.dataset.text){
+        typeText(p,p.dataset.text,()=>{
+          p.style.border='5px solid #222';
+          if(autoPlayEnabled) slideTimer=setTimeout(()=>api.next(),calcSlideDelay(p.dataset.text));
+        });
+      } else if(ev.target.classList.contains('respire-step')&&autoPlayEnabled){
+        slideTimer=setTimeout(()=>api.next(),3000);
+      }
+    }
+    document.getElementById('generate-btn').addEventListener('click',()=>{
+      const txt=document.getElementById('input-text').value;
+      if(!txt.trim())return alert('Insira conteúdo.');
+      const parts=txt.split(/(<img\s+[^>]*src=["'][^"']+["'][^>]*>)/ig);
+      const c=document.getElementById('impress'); c.innerHTML='';
+      parts.forEach(pr=>{
+        if(typeof pr!=='string') return;
+        const part=pr.trim(); if(!part) return;
+        if(/^<img\s+/i.test(part)){
+          const src=(part.match(/src=["']([^"']+)["']/i)||[])[1];
+          if(src){
+            const sl=document.createElement('div'); sl.className='step';
+            sl.setAttribute('data-x',getRandomInt(-20000,20000)); sl.setAttribute('data-y',getRandomInt(-20000,20000));
+            sl.setAttribute('data-z',getRandomInt(-12000,12000)); sl.setAttribute('data-rotate-x',getRandomInt(-180,180));
+            sl.setAttribute('data-rotate-y',getRandomInt(-180,180)); sl.setAttribute('data-scale',getRandomInt(1,15));
+            sl.style.backgroundImage=`url('${src}')`; sl.style.backgroundSize='contain';
+            sl.style.backgroundRepeat='no-repeat'; sl.style.backgroundPosition='center';
+            const img=new Image(); img.src=src; img.onload=()=>{
+              sl.style.height=(img.naturalHeight*0.7)+'px'; sl.style.borderRadius='20px'; sl.style.overflow='hidden';
+            };
+            c.appendChild(sl);
+          }
+        } else {
+          const segments=part.split(/⸻/g);
+          segments.forEach((seg,idxSeg)=>{
+            if(typeof seg!=='string') return;
+            const segTrim=seg.trim(); if(!segTrim) return;
+            const frags=segTrim.split(/(?:[\r\n]|(?<!\d)\.(?!("|”)))/);
+            frags.forEach(fragRaw=>{
+              if(typeof fragRaw!=='string') return;
+              let frag=fragRaw.trim(); if(!frag)return;
+              const words=frag.split(/\s+/);
+              const chunks=words.length>25?words.reduce((a,w,i)=>{const idx=Math.floor(i/25);a[idx]=a[idx]||[];a[idx].push(w);return a;},[]):[words];
+              chunks.forEach((chunk,i)=>{
+                let text=chunk.join(' ');
+                if(chunks.length>1&&i<chunks.length-1) text+='...';
+                const sl=document.createElement('div'); sl.className='step';
+                sl.setAttribute('data-x',getRandomInt(-20000,20000)); sl.setAttribute('data-y',getRandomInt(-20000,20000));
+                sl.setAttribute('data-z',getRandomInt(-12000,12000)); sl.setAttribute('data-rotate-x',getRandomInt(-180,180));
+                sl.setAttribute('data-rotate-y',getRandomInt(-180,180)); sl.setAttribute('data-scale',getRandomInt(1,15));
+                const p=document.createElement('p'); p.dataset.text=text; p.textContent=''; sl.appendChild(p);
+                c.appendChild(sl);
+              });
+            });
+            if(idxSeg<segments.length-1){
+              const r=document.createElement('div'); r.className='step respire-step';
+              r.setAttribute('data-x',getRandomInt(-20000,20000)); r.setAttribute('data-y',getRandomInt(-20000,20000));
+              r.setAttribute('data-z',getRandomInt(-12000,12000)); r.setAttribute('data-rotate-x',getRandomInt(-180,180));
+              r.setAttribute('data-rotate-y',getRandomInt(-180,180)); r.setAttribute('data-scale',getRandomInt(1,15));
+              const rp=document.createElement('p'); rp.dataset.text='Respire'; rp.textContent=''; r.appendChild(rp);
+              c.appendChild(r);
+            }
+          });
+        }
+      });
+      const api=impress(); api.init(); api.goto(0);
+      document.addEventListener('impress:stepenter',ev=>onStepEnter(ev,api));
+      document.getElementById('input-screen').style.display='none'; c.style.display='block';
+      document.getElementById('impress-toolbar').style.display='block'; document.querySelector('.hint').style.display='block';
+    });
+  </script>
+</body>
+</html>
