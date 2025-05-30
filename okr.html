@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OKR Cards Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body.light-mode { background-color: #f8f9fa; color: #212529; }
+    body.dark-mode { background-color: #212529; color: #f8f9fa; }
+    body.light-mode .card { background-color: #fff; color: #212529; }
+    body.dark-mode .card { background-color: #343a40; color: #f8f9fa; }
+    body.dark-mode .modal-content { background-color: #495057; color: #f8f9fa; }
+  </style>
+</head>
+<body>
+  <div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1>OKRs Dashboard</h1>
+      <div>
+        <button id="modeToggle" class="btn btn-outline-secondary me-2">🌙</button>
+        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#okrModal">+ Novo OKR</button>
+      </div>
+    </div>
+    <div id="cardsContainer" class="row g-4"></div>
+  </div>
+
+  <!-- Modal OKR -->
+  <div class="modal fade" id="okrModal" tabindex="-1">
+    <div class="modal-dialog">
+      <form id="okrForm" class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">OKR</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="okrIndex">
+          <div class="mb-3">
+            <label class="form-label">Objective</label>
+            <input id="okrTitle" class="form-control" placeholder="Digite a Objective">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal KR -->
+  <div class="modal fade" id="krModal" tabindex="-1">
+    <div class="modal-dialog">
+      <form id="krForm" class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Key Result</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="krOkrIndex">
+          <input type="hidden" id="krIndex">
+          <div class="mb-3">
+            <label class="form-label">Descrição</label>
+            <input id="krDesc" class="form-control" placeholder="Digite o KR">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Hits Esperados</label>
+            <input id="krExpected" type="number" min="0" class="form-control" placeholder="Quantidade esperada">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Hits Realizados</label>
+            <input id="krActual" type="number" min="0" class="form-control" placeholder="Quantidade realizada">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.2.1/dist/chart.umd.min.js"></script>
+  <script>
+    const STORAGE_KEY = 'okrs';
+    const MODE_KEY = 'mode';
+    let okrs = [];
+    let charts = [];
+    let mode = 'light';
+
+    function loadOKRs() { okrs = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+    function saveOKRs() { localStorage.setItem(STORAGE_KEY, JSON.stringify(okrs)); }
+
+    function loadMode() {
+      mode = localStorage.getItem(MODE_KEY) || 'light';
+      document.body.classList.add(mode + '-mode');
+      updateModeToggle();
+    }
+    function saveMode() { localStorage.setItem(MODE_KEY, mode); }
+    function toggleMode() {
+      document.body.classList.remove(mode + '-mode');
+      mode = mode === 'light' ? 'dark' : 'light';
+      document.body.classList.add(mode + '-mode');
+      saveMode(); updateModeToggle(); renderCards();
+    }
+    function updateModeToggle() {
+      document.getElementById('modeToggle').textContent = mode === 'light' ? '🌙' : '☀️';
+    }
+
+    function renderCards() {
+      const container = document.getElementById('cardsContainer');
+      container.innerHTML = '';
+      charts.forEach(c => c.destroy()); charts = [];
+
+      okrs.forEach((o, idx) => {
+        const pctList = o.krs.map(kr => kr.expected > 0 ? (kr.actual / kr.expected) * 100 : 0);
+        const avgPct = pctList.length ? pctList.reduce((sum,p) => sum + p, 0) / pctList.length : 0;
+        const resto = Math.max(0, 100 - avgPct);
+        const completedColor = '#0d6efd';
+        const restanteColor = mode === 'light' ? '#ffffff' : '#000000';
+
+        const card = document.createElement('div');
+        card.className = 'col-md-4';
+        card.innerHTML = `
+          <div class="card h-100">
+            <div class="card-header d-flex justify-content-between">
+              <strong>${o.title}</strong>
+              <div>
+                <button class="btn btn-sm btn-outline-primary me-1" onclick="openOkRModal(${idx})">✎</button>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteOKR(${idx})">🗑</button>
+              </div>
+            </div>
+            <div class="card-body text-center">
+              <canvas id="chart_${idx}" width="200" height="200"></canvas>
+              <div class="mt-2">${avgPct.toFixed(1)}% Concluído</div>
+            </div>
+            <div class="card-footer text-end">
+              <button class="btn btn-sm btn-link" data-bs-toggle="collapse" data-bs-target="#krList_${idx}">Mostrar KRs</button>
+              <button class="btn btn-sm btn-success" onclick="openKRModal(${idx})">+ KR</button>
+              <div class="collapse mt-2" id="krList_${idx}">
+                <ul class="list-group">
+                  ${o.krs.map((kr, kIdx) => `
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                      ${kr.desc} <span>${kr.actual}/${kr.expected}</span>
+                      <span>
+                        <button class="btn btn-sm btn-outline-success me-1" onclick="incrementKR(${idx}, ${kIdx})">+1</button>
+                        <button class="btn btn-sm btn-outline-primary me-1" onclick="openKRModal(${idx},${kIdx})">✎</button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteKR(${idx}, ${kIdx})">🗑</button>
+                      </span>
+                    </li>`).join('')}
+                </ul>
+              </div>
+            </div>
+          </div>`;
+        container.appendChild(card);
+
+        const ctx = document.getElementById(`chart_${idx}`).getContext('2d');
+        charts[idx] = new Chart(ctx, {
+          type: 'pie',
+          data: {
+            labels: ['Concluído', 'Restante'],
+            datasets: [{
+              data: [avgPct, resto],
+              backgroundColor: [completedColor, restanteColor],
+              borderColor: ['#dee2e6', '#dee2e6'],
+              borderWidth: 1
+            }]
+          },
+          options: { responsive: false, animation: false }
+        });
+      });
+    }
+
+    function incrementKR(okrIdx, krIdx) {
+      okrs[okrIdx].krs[krIdx].actual++;
+      saveOKRs(); renderCards();
+    }
+
+    function openOkRModal(idx) {
+      document.getElementById('okrIndex').value = idx ?? '';
+      document.getElementById('okrTitle').value = idx !== '' ? okrs[idx].title : '';
+      new bootstrap.Modal(document.getElementById('okrModal')).show();
+    }
+    function deleteOKR(idx) {
+      okrs.splice(idx, 1);
+      saveOKRs(); renderCards();
+    }
+    document.getElementById('okrForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const idx = document.getElementById('okrIndex').value;
+      const title = document.getElementById('okrTitle').value.trim();
+      if (!title) return;
+      if (idx === '') okrs.push({ title, krs: [] });
+      else okrs[idx].title = title;
+      saveOKRs(); renderCards();
+      bootstrap.Modal.getInstance(document.getElementById('okrModal')).hide();
+    });
+
+    function openKRModal(okrIdx, krIdx) {
+      document.getElementById('krOkrIndex').value = okrIdx;
+      document.getElementById('krIndex').value = krIdx ?? '';
+      if (krIdx !== '') {
+        const kr = okrs[okrIdx].krs[krIdx];
+        document.getElementById('krDesc').value = kr.desc;
+        document.getElementById('krExpected').value = kr.expected;
+        document.getElementById('krActual').value = kr.actual;
+      } else {
+        document.getElementById('krDesc').value = '';
+        document.getElementById('krExpected').value = '';
+        document.getElementById('krActual').value = '';
+      }
+      new bootstrap.Modal(document.getElementById('krModal')).show();
+    }
+    function deleteKR(okrIdx, krIdx) {
+      okrs[okrIdx].krs.splice(krIdx, 1);
+      saveOKRs(); renderCards();
+    }
+    document.getElementById('krForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const okrIdx = +document.getElementById('krOkrIndex').value;
+      const krIdx = document.getElementById('krIndex').value;
+      const desc = document.getElementById('krDesc').value.trim();
+      const expected = parseInt(document.getElementById('krExpected').value, 10);
+      const actual = parseInt(document.getElementById('krActual').value, 10);
+      if (!desc || isNaN(expected) || isNaN(actual)) return;
+      if (krIdx === '') okrs[okrIdx].krs.push({ desc, expected, actual });
+      else okrs[okrIdx].krs[krIdx] = { desc, expected, actual };
+      saveOKRs(); renderCards();
+      bootstrap.Modal.getInstance(document.getElementById('krModal')).hide();
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadMode(); loadOKRs(); renderCards();
+      document.getElementById('modeToggle').addEventListener('click', toggleMode);
+    });
+  </script>
+</body>
+</html>
