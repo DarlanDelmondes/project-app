@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+  <title>WebApp Relógio e Plano de Ação</title>
+  <style>
+    /* Variáveis de cor para modos dia/noite */
+    :root {
+      --bg-color: #f0f0f0;
+      --container-bg: #ffffff;
+      --text-color: #333333;
+      --subtext-color: #666666;
+      --item-bg: #fafafa;
+      --item-border: #cccccc;
+      --progress-bg: #dddddd;
+      --progress-fill: #333333;
+      --button-bg: #ffffff;
+      --button-text: #333333;
+    }
+    body.night {
+      --bg-color: #1a1a1a;
+      --container-bg: #333333;
+      --text-color: #f0f0f0;
+      --subtext-color: #cccccc;
+      --item-bg: #444444;
+      --item-border: #555555;
+      --progress-bg: #555555;
+      --progress-fill: #f0f0f0;
+      --button-bg: #444444;
+      --button-text: #f0f0f0;
+    }
+    /* Reset e estilo base */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html {
+      min-height: 100%;
+      background-color: var(--bg-color);
+    }
+    body {
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: manipulation;
+    }
+    /* Botão de modo Dia/Noite */
+    #themeToggle {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      background-color: var(--button-bg);
+      color: var(--button-text);
+      border: 1px solid var(--item-border);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 100;
+      font-size: 20px;
+      line-height: 1;
+    }
+    /* Contêiner principal */
+    #mainSetup {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      padding: 20px;
+    }
+    #setupContainer, #crudContainer {
+      background: var(--container-bg);
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    /* Setup Container */
+    #setupContainer {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+    }
+    #setupContainer input, #setupContainer button {
+      margin: 8px 0;
+      padding: 10px;
+      font-size: 16px;
+      width: 100%;
+      background-color: var(--button-bg);
+      color: var(--button-text);
+      border: 1px solid var(--item-border);
+      border-radius: 4px;
+    }
+    #timeInputs {
+      display: flex;
+      gap: 5px;
+    }
+    #timeInputs input {
+      flex: 1;
+      padding: 10px;
+      font-size: 16px;
+      background-color: var(--button-bg);
+      color: var(--button-text);
+      border: 1px solid var(--item-border);
+      border-radius: 4px;
+      text-align: center;
+    }
+    #currentTimeSetup {
+      margin-top: 10px;
+      font-size: 18px;
+      color: var(--text-color);
+      text-align: center;
+    }
+    /* CRUD Container, form acima lista */
+    #crudContainer {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+    }
+    #crudContainer h2 {
+      margin-bottom: 10px;
+      font-size: 20px;
+      text-align: center;
+      color: var(--text-color);
+    }
+    #crudInput {
+      display: flex;
+      gap: 5px;
+      margin-bottom: 10px;
+    }
+    #crudInput input {
+      flex: 1;
+      padding: 8px;
+      font-size: 16px;
+      background-color: var(--button-bg);
+      color: var(--button-text);
+      border: 1px solid var(--item-border);
+      border-radius: 4px;
+    }
+    #crudInput button {
+      padding: 8px 12px;
+      font-size: 16px;
+      background-color: var(--button-bg);
+      color: var(--button-text);
+      border: 1px solid var(--item-border);
+      border-radius: 4px;
+    }
+    #planList {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      max-height: 400px;
+      overflow-y: auto;
+      border: 1px solid var(--item-border);
+      border-radius: 4px;
+    }
+    .planItem {
+      background: var(--item-bg);
+      margin: 5px;
+      padding: 10px;
+      border: 1px solid var(--item-border);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--text-color);
+    }
+    .planItem .title {
+      flex: 1;
+      margin-right: 10px;
+      word-break: break-word;
+      cursor: pointer;
+    }
+    .planItem .moveButtons {
+      display: flex;
+      gap: 5px;
+      margin-right: 10px;
+    }
+    .planItem .moveButtons button {
+      background: none;
+      border: none;
+      color: var(--text-color);
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .planItem button.deleteBtn {
+      background: none;
+      border: none;
+      color: var(--text-color);
+      cursor: pointer;
+      font-size: 16px;
+    }
+    /* Seção do Relógio (inicialmente oculta) */
+    #clockContainer {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    #clock {
+      font-size: 80px;
+      font-weight: bold;
+      color: var(--text-color);
+      opacity: 0.1;
+      transition: transform 0.3s ease-in-out;
+      text-align: center;
+    }
+    #targetTime, #activityDisplay {
+      font-size: 20px;
+      color: var(--subtext-color);
+      margin-top: 10px;
+      text-align: center;
+    }
+    #progressContainer {
+      width: 80%;
+      height: 6px;
+      background-color: var(--progress-bg);
+      border-radius: 3px;
+      margin-top: 10px;
+      overflow: hidden;
+    }
+    #progressBar {
+      width: 0%;
+      height: 100%;
+      background-color: var(--progress-fill);
+    }
+    .pulse {
+      animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+    #messages {
+      position: relative;
+      width: 100%;
+      max-width: 500px;
+      height: 200px;
+      overflow: hidden;
+      margin-top: 20px;
+    }
+    .message {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      text-align: center;
+      font-size: 24px;
+      color: var(--text-color);
+      opacity: 0;
+      animation: floatUp 5s ease-in forwards;
+    }
+    @keyframes floatUp {
+      0% { opacity: 0; transform: translateY(0); }
+      50% { opacity: 1; transform: translateY(-50px); }
+      100% { opacity: 0; transform: translateY(-150px); }
+    }
+    #confettiCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    /* Responsividade para dispositivos móveis (<768px) */
+    @media (max-width: 768px) {
+      #clock { font-size: 60px; }
+      #targetTime, #activityDisplay { font-size: 18px; }
+      #messages { height: 150px; }
+      .message { font-size: 20px; }
+      #timeInputs input { font-size: 16px; }
+      #crudInput input, #crudInput button, #setupContainer input, #setupContainer button { font-size: 14px; padding: 8px; }
+    }
+    /* Ajustes específicos para iPhone 15 Pro (~390px largura) */
+    @media (max-width: 400px) {
+      #clock { font-size: 48px; }
+      #targetTime, #activityDisplay { font-size: 16px; }
+      #currentTimeSetup { font-size: 16px; }
+      #messages { height: 120px; }
+      .message { font-size: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Botão modo Dia/Noite com ícones monocromáticos -->
+  <button id="themeToggle">☀</button>
+  <!-- Contêiner principal exibindo setup e CRUD -->
+  <div id="mainSetup">
+    <div id="setupContainer">
+      <h2>O que você pretende fazer?</h2>
+      <input type="text" id="activityInput" placeholder="Descreva sua atividade" />
+      <h2>Agende o horário</h2>
+      <div id="timeInputs">
+        <input type="number" id="hourInput" placeholder="HH" min="0" max="23" />
+        <input type="number" id="minuteInput" placeholder="MM" min="0" max="59" />
+        <input type="number" id="secondInput" placeholder="SS" min="0" max="59" />
+      </div>
+      <button id="startButton">Começar</button>
+      <div id="currentTimeSetup">Horário atual: 00:00:00</div>
+    </div>
+    <div id="crudContainer">
+      <h2>Plano de Ação</h2>
+      <div id="crudInput">
+        <input type="text" id="itemTitleInput" placeholder="Título do item" />
+        <button id="addItemButton">Adicionar</button>
+      </div>
+      <ul id="planList"></ul>
+    </div>
+  </div>
+  <!-- Seção do relógio -->
+  <div id="clockContainer">
+    <div id="clock">00:00</div>
+    <div id="targetTime"></div>
+    <div id="activityDisplay"></div>
+    <div id="progressContainer"><div id="progressBar"></div></div>
+    <canvas id="confettiCanvas"></canvas>
+    <div id="messages"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+  <script>
+    // Persistência de tema
+    let isNight = localStorage.getItem('isNight') === 'true';
+    const themeToggle = document.getElementById('themeToggle');
+    if (isNight) document.body.classList.add('night');
+    themeToggle.textContent = isNight ? '🌙' : '☀';
+    themeToggle.addEventListener('click', () => {
+      isNight = !isNight;
+      document.body.classList.toggle('night', isNight);
+      themeToggle.textContent = isNight ? '🌙' : '☀';
+      localStorage.setItem('isNight', isNight);
+    });
+
+    // Elementos Setup
+    const mainSetup = document.getElementById('mainSetup');
+    const activityInput = document.getElementById('activityInput');
+    const hourInput = document.getElementById('hourInput');
+    const minuteInput = document.getElementById('minuteInput');
+    const secondInput = document.getElementById('secondInput');
+    const startButton = document.getElementById('startButton');
+    const currentTimeSetupEl = document.getElementById('currentTimeSetup');
+
+    // Elementos CRUD
+    const itemTitleInput = document.getElementById('itemTitleInput');
+    const addItemButton = document.getElementById('addItemButton');
+    const planList = document.getElementById('planList');
+    let planItems = [];
+
+    // Elementos Relógio
+    const clockContainer = document.getElementById('clockContainer');
+    const clockEl = document.getElementById('clock');
+    const targetEl = document.getElementById('targetTime');
+    const activityDisplayEl = document.getElementById('activityDisplay');
+    const progressBar = document.getElementById('progressBar');
+    const messagesContainer = document.getElementById('messages');
+    const confettiCanvas = document.getElementById('confettiCanvas');
+    let targetTime = null;
+    let startTime = null;
+    let messageInterval;
+    const messagesList = [
+      'Se prepare você começará uma atividade importante',
+      'Pense onde você está nesse momento',
+      'Pense nos lugares e pessoas que você precisa acessar'
+    ];
+
+    // ===== Funções CRUD =====
+    function savePlanItems() {
+      localStorage.setItem('planItems', JSON.stringify(planItems));
+    }
+    function loadPlanItems() {
+      const data = localStorage.getItem('planItems');
+      planItems = data ? JSON.parse(data) : [];
+    }
+    function createPlanItemElement(item, index) {
+      const li = document.createElement('li');
+      li.classList.add('planItem');
+      const titleDiv = document.createElement('div');
+      titleDiv.classList.add('title');
+      titleDiv.textContent = item;
+      titleDiv.addEventListener('dblclick', () => {
+        activityInput.value = item;
+        activityInput.focus();
+      });
+      li.appendChild(titleDiv);
+
+      // Botões mover cima/baixo
+      const moveBtns = document.createElement('div');
+      moveBtns.classList.add('moveButtons');
+      const upBtn = document.createElement('button');
+      upBtn.textContent = '↑';
+      upBtn.title = 'Mover para cima';
+      upBtn.addEventListener('click', () => {
+        if (index > 0) {
+          const temp = planItems[index-1];
+          planItems[index-1] = planItems[index];
+          planItems[index] = temp;
+          savePlanItems();
+          renderPlanList();
+        }
+      });
+      const downBtn = document.createElement('button');
+      downBtn.textContent = '↓';
+      downBtn.title = 'Mover para baixo';
+      downBtn.addEventListener('click', () => {
+        if (index < planItems.length - 1) {
+          const temp = planItems[index+1];
+          planItems[index+1] = planItems[index];
+          planItems[index] = temp;
+          savePlanItems();
+          renderPlanList();
+        }
+      });
+      moveBtns.appendChild(upBtn);
+      moveBtns.appendChild(downBtn);
+      li.appendChild(moveBtns);
+
+      // Botão excluir com confirmação
+      const deleteBtn = document.createElement('button');
+      deleteBtn.textContent = '✖';
+      deleteBtn.title = 'Excluir';
+      deleteBtn.classList.add('deleteBtn');
+      deleteBtn.addEventListener('click', () => {
+        if (confirm('Tem certeza que deseja excluir este item?')) {
+          planItems.splice(index, 1);
+          savePlanItems();
+          renderPlanList();
+        }
+      });
+      li.appendChild(deleteBtn);
+
+      return li;
+    }
+    function renderPlanList() {
+      planList.innerHTML = '';
+      planItems.forEach((item, idx) => {
+        const li = createPlanItemElement(item, idx);
+        planList.appendChild(li);
+      });
+    }
+    addItemButton.addEventListener('click', () => {
+      const title = itemTitleInput.value.trim();
+      if (!title) return;
+      planItems.push(title);
+      itemTitleInput.value = '';
+      savePlanItems();
+      renderPlanList();
+    });
+    loadPlanItems();
+    renderPlanList();
+
+    // ===== Funções Relógio =====
+    function updateCurrentTimeSetup() {
+      const now = new Date();
+      const h = String(now.getHours()).padStart(2, '0');
+      const m = String(now.getMinutes()).padStart(2, '0');
+      const s = String(now.getSeconds()).padStart(2, '0');
+      currentTimeSetupEl.textContent = `Horário atual: ${h}:${m}:${s}`;
+    }
+    setInterval(updateCurrentTimeSetup, 1000);
+    updateCurrentTimeSetup();
+
+    startButton.addEventListener('click', () => {
+      const hh = parseInt(hourInput.value, 10);
+      const mm = parseInt(minuteInput.value, 10);
+      const ss = parseInt(secondInput.value, 10);
+      const activityValue = activityInput.value.trim();
+      if (isNaN(hh) || isNaN(mm) || isNaN(ss) || !activityValue) {
+        alert('Por favor, preencha a atividade e o horário completo (HH, MM, SS).');
+        return;
+      }
+      startTime = new Date();
+      targetTime = new Date(startTime.getFullYear(), startTime.getMonth(), startTime.getDate(), hh, mm, ss);
+      if (targetTime <= startTime) targetTime.setDate(targetTime.getDate() + 1);
+      targetEl.textContent = `Horário agendado: ${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
+      activityDisplayEl.textContent = `Atividade cadastrada: ${activityValue}`;
+      document.getElementById('mainSetup').style.display = 'none';
+      clockContainer.style.display = 'flex';
+      startClock();
+      startMessages();
+    });
+
+    function startClock() {
+      const totalDuration = targetTime - startTime;
+      const update = () => {
+        const now = new Date();
+        const h = String(now.getHours()).padStart(2, '0');
+        const m = String(now.getMinutes()).padStart(2, '0');
+        const s = String(now.getSeconds()).padStart(2, '0');
+        clockEl.textContent = (s === '00') ? `${h}:${m}` : `${h}:${m}:${s}`;
+        let elapsed = now - startTime;
+        if (elapsed < 0) elapsed = 0;
+        let fraction = elapsed / totalDuration;
+        if (fraction > 1) fraction = 1;
+        progressBar.style.width = `${fraction * 100}%`;
+        clockEl.style.opacity = (0.1 + 0.9 * fraction);
+        const diff = (targetTime - now) / 1000;
+        if (diff <= 30 && diff > 0) clockEl.classList.add('pulse'); else clockEl.classList.remove('pulse');
+        if (now >= targetTime) { clearInterval(clockInterval); clearInterval(messageInterval); launchConfetti(); }
+      };
+      update();
+      const clockInterval = setInterval(update, 1000);
+    }
+    function startMessages() {
+      let index = 0;
+      messageInterval = setInterval(() => {
+        const now = new Date();
+        if (now >= targetTime) { clearInterval(messageInterval); return; }
+        showMessage(messagesList[index]);
+        index = (index + 1) % messagesList.length;
+      }, 5000);
+    }
+    function showMessage(text) {
+      const msgEl = document.createElement('div');
+      msgEl.classList.add('message');
+      msgEl.textContent = text;
+      messagesContainer.appendChild(msgEl);
+      setTimeout(() => { messagesContainer.removeChild(msgEl); }, 5000);
+    }
+    function launchConfetti() {
+      const myConfetti = confetti.create(confettiCanvas, { resize: true });
+      const duration = 5 * 1000;
+      const end = Date.now() + duration;
+      (function frame() {
+        myConfetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 } });
+        myConfetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 } });
+        if (Date.now() < end) requestAnimationFrame(frame);
+      }());
+    }
+  </script>
+</body>
+</html>
