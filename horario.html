@@ -39,10 +39,14 @@
 </head>
 <body>
 <div class="container py-4">
-  <!-- Gráfico de Aderência (no topo) -->
+  <!-- Gráficos de Aderência -->
   <div class="mb-4">
     <h3>Aderência Journey</h3>
     <canvas id="adherenceChart" height="60"></canvas>
+  </div>
+  <div class="mb-4">
+    <h3>Aderência SAP</h3>
+    <canvas id="sapChart" height="60"></canvas>
   </div>
 
   <!-- Seção Favoritos -->
@@ -101,250 +105,119 @@
 <!-- Bootstrap JS e dependências -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-// Helpers de LocalStorage
-function saveData(key,data){ localStorage.setItem(key,JSON.stringify(data)); }
-function loadData(key){ return JSON.parse(localStorage.getItem(key)||'{}'); }
+// LocalStorage Helpers
+function saveData(key, data) { localStorage.setItem(key, JSON.stringify(data)); }
+function loadData(key) { return JSON.parse(localStorage.getItem(key) || '{}'); }
 
 // FAVORITOS
-let favorites=[];
-const favForm=document.getElementById('favorite-form');
-const favList=document.getElementById('favorites-list');
-function renderFavorites(){
-  favList.innerHTML='';
-  favorites.forEach(f=>{
-    const col=document.createElement('div'); col.className='col';
-    const card=document.createElement('div'); card.className='card h-100';
-    const body=document.createElement('div'); body.className='card-body d-flex justify-content-between align-items-center';
-    const link=document.createElement('a'); link.href=f.url; link.textContent=f.name; link.target='_blank';
-    const grp=document.createElement('div');
-    const btnE=document.createElement('button'); btnE.className='btn btn-sm btn-warning me-1'; btnE.textContent='Editar'; btnE.onclick=()=>editFavorite(f.id);
-    const btnD=document.createElement('button'); btnD.className='btn btn-sm btn-danger'; btnD.textContent='Excluir'; btnD.onclick=()=>deleteFavorite(f.id);
-    grp.append(btnE,btnD);
-    body.append(link,grp);
-    card.append(body);
-    col.append(card);
-    favList.append(col);
+let favorites = [];
+const favForm = document.getElementById('favorite-form');
+const favList = document.getElementById('favorites-list');
+function renderFavorites() {
+  favList.innerHTML = '';
+  favorites.forEach(f => {
+    const col = document.createElement('div'); col.className = 'col';
+    const card = document.createElement('div'); card.className = 'card h-100';
+    const body = document.createElement('div'); body.className = 'card-body d-flex justify-content-between align-items-center';
+    const link = document.createElement('a'); link.href = f.url; link.textContent = f.name; link.target = '_blank';
+    const grp = document.createElement('div');
+    const btnE = document.createElement('button'); btnE.className = 'btn btn-sm btn-warning me-1'; btnE.textContent = 'Editar'; btnE.onclick = () => editFavorite(f.id);
+    const btnD = document.createElement('button'); btnD.className = 'btn btn-sm btn-danger'; btnD.textContent = 'Excluir'; btnD.onclick = () => deleteFavorite(f.id);
+    grp.append(btnE, btnD); body.append(link, grp); card.append(body); col.append(card); favList.append(col);
   });
 }
-function addFavorite(name,url){ const id=Date.now(); favorites.push({id,name,url}); saveData('favorites',favorites); renderFavorites(); }
-function editFavorite(id){ const f=favorites.find(x=>x.id===id); const nn=prompt('Novo nome:',f.name); const nu=prompt('Nova URL:',f.url); if(nn&&nu){ f.name=nn; f.url=nu; saveData('favorites',favorites); renderFavorites(); } }
-function deleteFavorite(id){ favorites=favorites.filter(x=>x.id!==id); saveData('favorites',favorites); renderFavorites(); }
-favForm.addEventListener('submit',e=>{ e.preventDefault(); addFavorite(document.getElementById('fav-name').value, document.getElementById('fav-url').value); favForm.reset(); });
+function addFavorite(name, url) { const id = Date.now(); favorites.push({ id, name, url }); saveData('favorites', favorites); renderFavorites(); }
+function editFavorite(id) { const f = favorites.find(x => x.id === id); const nn = prompt('Novo nome:', f.name); const nu = prompt('Nova URL:', f.url); if (nn && nu) { f.name = nn; f.url = nu; saveData('favorites', favorites); renderFavorites(); } }
+function deleteFavorite(id) { favorites = favorites.filter(x => x.id !== id); saveData('favorites', favorites); renderFavorites(); }
+favForm.addEventListener('submit', e => { e.preventDefault(); addFavorite(document.getElementById('fav-name').value, document.getElementById('fav-url').value); favForm.reset(); });
 
-// MESES, HORÁRIOS E GRÁFICO
-let months=[]; let times={};
-const monthForm=document.getElementById('month-form');
-const monthsAcc=document.getElementById('months-accordion');
-let adherenceChart=null;
-const today=new Date();
-const monthNames=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+// MESES & HORÁRIOS & GRÁFICOS
+let months = [];
+let times = {};
+const monthForm = document.getElementById('month-form');
+const monthsAcc = document.getElementById('months-accordion');
+let adherenceChart = null, sapChart = null;
+const today = new Date();
+const monthNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
-function renderMonths(){
-  monthsAcc.innerHTML='';
-  months.forEach((m,i)=>{
-    const id=`month-${m.year}-${m.month}`;
-    const cur=m.isCurrent;
-    const lbl=`${m.month.toString().padStart(2,'0')} - ${monthNames[m.month-1]} ${m.year}`;
-    const hdr=`<h2 class="accordion-header" id="h-${i}"><button class="accordion-button ${cur?'':'collapsed'}" data-bs-toggle="collapse" data-bs-target="#${id}" aria-expanded="${cur}">${lbl}</button></h2>`;
-    const body=document.createElement('div');
-    body.id=id;
-    body.className=`accordion-collapse collapse ${cur?'show':''}`;
-    body.setAttribute('aria-labelledby',`h-${i}`);
-    const bc=document.createElement('div'); bc.className='accordion-body';
-    const days=new Date(m.year,m.month,0).getDate();
-    for(let d=1; d<=days; d++){
-      const wd=new Date(m.year,m.month-1,d).getDay();
-      const row=document.createElement('div');
-      row.className='row align-items-center mb-2';
-      if(wd===0||wd===6) row.classList.add('weekend-row','p-2');
-      if(cur&&d===today.getDate()&&today.getMonth()+1===m.month&&today.getFullYear()===m.year) row.classList.add('bg-warning');
-
-      // Dia  
-      const cd=document.createElement('div');
-      cd.className='col-auto';
-      cd.innerHTML=`<strong>${d}</strong>`;
-      row.append(cd);
-
-      // Horários
+function renderMonths() {
+  monthsAcc.innerHTML = '';
+  months.forEach((m, i) => {
+    const id = `month-${m.year}-${m.month}`;
+    const cur = m.isCurrent;
+    const lbl = `${m.month.toString().padStart(2,'0')} - ${monthNames[m.month-1]} ${m.year}`;
+    const hdr = `<h2 class="accordion-header" id="h-${i}">
+      <button class="accordion-button ${cur?'':'collapsed'}" data-bs-toggle="collapse" data-bs-target="#${id}" aria-expanded="${cur}">
+        ${lbl}
+      </button>
+    </h2>`;
+    const body = document.createElement('div'); body.id = id; body.className = `accordion-collapse collapse ${cur?'show':''}`; body.setAttribute('aria-labelledby',`h-${i}`);
+    const bc = document.createElement('div'); bc.className='accordion-body';
+    const max = new Date(m.year, m.month, 0).getDate();
+    for (let d=1; d<=max; d++) {
+      const wd = new Date(m.year, m.month-1, d).getDay();
+      const row = document.createElement('div'); row.className='row align-items-center mb-2';
+      if (wd===0||wd===6) row.classList.add('weekend-row','p-2');
+      if (cur && d===today.getDate() && today.getMonth()+1===m.month && today.getFullYear()===m.year) row.classList.add('bg-warning');
+      // dia
+      const cd = document.createElement('div'); cd.className='col-auto'; cd.innerHTML=`<strong>${d}</strong>`; row.append(cd);
+      // horários
       ['start','lunchStart','lunchEnd','end'].forEach(k=>{
         const co=document.createElement('div'); co.className='col';
-        const ip=document.createElement('input');
-        ip.type='time';
-        ip.className='form-control time-input';
+        const ip=document.createElement('input'); ip.type='time'; ip.className='form-control time-input';
         ip.dataset.day=d; ip.dataset.monthIdx=i; ip.dataset.field=k;
         const df={start:'08:00',lunchStart:'12:00',lunchEnd:'13:00',end:'17:00'};
         ip.value=(times[i]&&times[i][d]&&times[i][d][k])||df[k];
-        ip.addEventListener('change',()=>{ calculateAll(); updateChart(); });
-        co.append(ip);
-        row.append(co);
+        ip.addEventListener('change',()=>{ calculateAll(); updateCharts(); });
+        co.append(ip); row.append(co);
       });
-
-      // Calculado
+      // calculado h:mm
       const cc=document.createElement('div'); cc.className='col';
-      const ci=document.createElement('input');
-      ci.type='text'; ci.className='form-control'; ci.readOnly=true;
+      const ci=document.createElement('input'); ci.type='text'; ci.className='form-control'; ci.readOnly=true;
       ci.dataset.day=d; ci.dataset.monthIdx=i;
       ci.value=(times[i]&&times[i][d]&&times[i][d].calc)||'';
-      cc.append(ci);
-      row.append(cc);
-
-      // Checkboxes
+      cc.append(ci); row.append(cc);
+      // calculado decimal
+      const dc=document.createElement('div'); dc.className='col';
+      const di=document.createElement('input'); di.type='text'; di.className='form-control decimal-input'; di.readOnly=true;
+      di.dataset.day=d; di.dataset.monthIdx=i;
+      di.value=(times[i]&&times[i][d]&&times[i][d].dec)||'';
+      dc.append(di); row.append(dc);
+      // checkboxes
       ['journey','SAP'].forEach(fld=>{
         const co=document.createElement('div'); co.className='col-auto form-check';
-        const ip=document.createElement('input');
-        ip.type='checkbox'; ip.className='form-check-input';
+        const ip=document.createElement('input'); ip.type='checkbox'; ip.className='form-check-input';
         ip.dataset.day=d; ip.dataset.monthIdx=i; ip.dataset.field=fld;
-        ip.checked = times[i]&&times[i][d]&&times[i][d][fld];
-        ip.addEventListener('change',()=>{ saveTimes(); updateChart(); });
-        const lb=document.createElement('label');
-        lb.textContent=fld; lb.className='form-check-label';
-        co.append(ip,lb);
-        row.append(co);
+        ip.checked=(times[i]&&times[i][d]&&times[i][d][fld])||wd===0||wd===6;
+        ip.addEventListener('change',()=>{ saveTimes(); updateCharts(); });
+        const lb=document.createElement('label'); lb.textContent=fld; lb.className='form-check-label';
+        lb.addEventListener('dblclick',()=>{ ip.checked=true; saveTimes(); updateCharts(); });
+        co.append(ip,lb); row.append(co);
       });
-
       bc.append(row);
     }
-
     body.append(bc);
-    const itm=document.createElement('div');
-    itm.className='accordion-item';
-    itm.innerHTML=hdr;
-    itm.append(body);
-    monthsAcc.append(itm);
+    const itm=document.createElement('div'); itm.className='accordion-item'; itm.innerHTML=hdr; itm.append(body); monthsAcc.append(itm);
   });
   calculateAll();
 }
-
-function addMonth(mo,yr,isCur){
-  if(isCur) months.forEach(x=>x.isCurrent=false);
-  months.push({month:mo,year:yr,isCurrent:isCur});
-  saveData('months',months);
-  renderMonths();
-  updateChart();
-}
-
-function calculateAll(){
-  months.forEach((mo,i)=>{
-    const dmax=new Date(mo.year,mo.month,0).getDate();
-    for(let d=1; d<=dmax; d++){
-      const sel=`.time-input[data-month-idx='${i}'][data-day='${d}']`;
-      const v={
-        start: document.querySelector(`${sel}[data-field='start']`)?.value,
-        ls:    document.querySelector(`${sel}[data-field='lunchStart']`)?.value,
-        le:    document.querySelector(`${sel}[data-field='lunchEnd']`)?.value,
-        end:   document.querySelector(`${sel}[data-field='end']`)?.value
-      };
-      const cali=document.querySelector(`input[data-month-idx='${i}'][data-day='${d}']:not(.time-input)`);
-      if(v.start&&v.ls&&v.le&&v.end){
-        const toM=t=>{const [h,m]=t.split(':');return parseInt(h)*60+parseInt(m);};
-        const diff=(toM(v.ls)-toM(v.start))+(toM(v.end)-toM(v.le));
-        const H=Math.floor(diff/60), M=diff%60;
-        cali.value=`${H.toString().padStart(2,'0')}:${M.toString().padStart(2,'0')}`;
-      }
-      if(!times[i]) times[i]={};
-      if(!times[i][d]) times[i][d]={};
-      times[i][d].calc = cali.value;
-    }
-  });
-  saveTimes();
-}
-
-function saveTimes(){
-  months.forEach((mo,i)=>{
-    const dmax=new Date(mo.year,mo.month,0).getDate();
-    if(!times[i]) times[i]={};
-    for(let d=1; d<=dmax; d++){
-      if(!times[i][d]) times[i][d]={};
-      ['start','lunchStart','lunchEnd','end'].forEach(k=>{
-        times[i][d][k] = document.querySelector(`.time-input[data-month-idx='${i}'][data-day='${d}'][data-field='${k}']`).value;
-      });
-      ['journey','SAP'].forEach(fld=>{
-        times[i][d][fld] = document.querySelector(`input[data-month-idx='${i}'][data-day='${d}'][data-field='${fld}']`).checked;
-      });
-      const ci=document.querySelector(`input[data-month-idx='${i}'][data-day='${d}']:not(.time-input)`);
-      times[i][d].calc = ci.value;
-    }
-  });
-  saveData('times',times);
-}
-
-function updateChart(){
-  const ctx=document.getElementById('adherenceChart').getContext('2d');
-  const idx=months.findIndex(x=>x.isCurrent);
-  if(idx<0) return;
-  const mo=months[idx];
-  const days=new Date(mo.year,mo.month,0).getDate();
-  let done=0;
-  for(let d=1; d<=days; d++){
-    if(times[idx]&&times[idx][d]&&times[idx][d].journey) done++;
-  }
-  const pct=Math.round((done/days)*100), rest=100-pct;
-  const lbl=`${mo.month.toString().padStart(2,'0')} - ${monthNames[mo.month-1]} ${mo.year}`;
-
-  if(!adherenceChart){
-    adherenceChart=new Chart(ctx,{
-      type:'bar',
-      data:{
-        labels:[lbl],
-        datasets:[
-          {label:'Concluído',data:[pct]},
-          {label:'Restante',data:[rest]}
-        ]
-      },
-      options:{
-        indexAxis:'y',
-        scales:{ x:{stacked:true,max:100}, y:{stacked:true} },
-        plugins:{ tooltip:{mode:'index',axis:'x'}, legend:{position:'bottom'} }
-      }
-    });
-  } else {
-    adherenceChart.data.labels=[lbl];
-    adherenceChart.data.datasets[0].data=[pct];
-    adherenceChart.data.datasets[1].data=[rest];
-    adherenceChart.update();
-  }
-}
+function addMonth(mo,yr,isCur){ if(isCur) months.forEach(x=>x.isCurrent=false); months.push({month:mo,year:yr,isCurrent:isCur}); saveData('months',months); renderMonths(); updateCharts(); }
+function calculateAll(){ months.forEach((m,i)=>{ const max=new Date(m.year,m.month,0).getDate(); for(let d=1;d<=max;d++){ const sel=`.time-input[data-month-idx='${i}'][data-day='${d}']`; const v={ start:document.querySelector(`${sel}[data-field='start']`)?.value, ls:document.querySelector(`${sel}[data-field='lunchStart']`)?.value, le:document.querySelector(`${sel}[data-field='lunchEnd']`)?.value, end:document.querySelector(`${sel}[data-field='end']`)?.value }; const calIn=document.querySelector(`input[data-month-idx='${i}'][data-day='${d}']:not(.time-input)`); if(v.start&&v.ls&&v.le&&v.end){ const toM=t=>{const [h,m]=t.split(':');return parseInt(h)*60+parseInt(m)}; const diff=(toM(v.ls)-toM(v.start))+(toM(v.end)-toM(v.le)); const H=Math.floor(diff/60),M=diff%60; calIn.value=`${H.toString().padStart(2,'0')}:${M.toString().padStart(2,'0')}`; const dec=(diff/60).toFixed(2).replace('.',','); document.querySelector(`.decimal-input[data-month-idx='${i}'][data-day='${d}']`).value=dec; } if(!times[i]) times[i]={}; if(!times[i][d]) times[i][d]={}; times[i][d].calc=calIn.value; times[i][d].dec=document.querySelector(`.decimal-input[data-month-idx='${i}'][data-day='${d}']`).value; } }); saveTimes(); }
+function saveTimes(){ months.forEach((m,i)=>{ const max=new Date(m.year,m.month,0).getDate(); if(!times[i]) times[i]={}; for(let d=1;d<=max;d++){ if(!times[i][d]) times[i][d]={}; ['start','lunchStart','lunchEnd','end'].forEach(k=>{ times[i][d][k]=document.querySelector(`.time-input[data-month-idx='${i}'][data-day='${d}'][data-field='${k}']`).value; }); ['journey','SAP'].forEach(fld=>{ times[i][d][fld]=document.querySelector(`input[data-month-idx='${i}'][data-day='${d}'][data-field='${fld}']`).checked; }); const ci=document.querySelector(`input[data-month-idx='${i}'][data-day='${d}']:not(.time-input)`); times[i][d].calc=ci.value; times[i][d].dec=document.querySelector(`.decimal-input[data-month-idx='${i}'][data-day='${d}']`).value; } }); saveData('times',times); }
+function updateCharts(){ updateChart(); updateSAPChart(); }
+function updateChart(){ const ctx=document.getElementById('adherenceChart').getContext('2d'); const idx=months.findIndex(x=>x.isCurrent); if(idx<0) return; const m=months[idx]; const todayDay=(today.getMonth()+1===m.month&&today.getFullYear()===m.year)?today.getDate():new Date(m.year,m.month,0).getDate(); let done=0; for(let d=1;d<=todayDay;d++) if(times[idx]&&times[idx][d]&&times[idx][d].journey) done++; const pct=Math.round((done/todayDay)*100),rest=100-pct; const lbl=`${m.month.toString().padStart(2,'0')} - ${monthNames[m.month-1]} ${m.year}`; if(!adherenceChart){ adherenceChart=new Chart(ctx,{ type:'bar', data:{ labels:[lbl], datasets:[ {label:'Concluído',data:[pct]}, {label:'Restante',data:[rest]} ] }, options:{ indexAxis:'y', scales:{ x:{stacked:true,max:100}, y:{stacked:true} }, plugins:{ tooltip:{mode:'index',axis:'x'}, legend:{position:'bottom'} } } }); } else { adherenceChart.data.labels=[lbl]; adherenceChart.data.datasets[0].data=[pct]; adherenceChart.data.datasets[1].data=[rest]; adherenceChart.update(); } }
+function updateSAPChart(){ const ctx=document.getElementById('sapChart').getContext('2d'); const idx=months.findIndex(x=>x.isCurrent); if(idx<0) return; const m=months[idx]; const todayDay=(today.getMonth()+1===m.month&&today.getFullYear()===m.year)?today.getDate():new Date(m.year,m.month,0).getDate(); let done=0; for(let d=1;d<=todayDay;d++) if(times[idx]&&times[idx][d]&&times[idx][d].SAP) done++; const pct=Math.round((done/todayDay)*100),rest=100-pct; const lbl=`${m.month.toString().padStart(2,'0')} - ${monthNames[m.month-1]} ${m.year}`; if(!sapChart){ sapChart=new Chart(ctx,{ type:'bar', data:{ labels:[lbl], datasets:[ {label:'Concluído',data:[pct]}, {label:'Restante',data:[rest]} ] }, options:{ indexAxis:'y', scales:{ x:{stacked:true,max:100}, y:{stacked:true} }, plugins:{ tooltip:{mode:'index',axis:'x'}, legend:{position:'bottom'} } } }); } else { sapChart.data.labels=[lbl]; sapChart.data.datasets[0].data=[pct]; sapChart.data.datasets[1].data=[rest]; sapChart.update(); } }
 
 // Calculadora
-const calcBtn=document.getElementById('calc-btn');
-const calcPanel=document.getElementById('calc-panel');
-const calcTime=document.getElementById('calc-time');
-const calcDecimal=document.getElementById('calc-decimal');
-calcBtn.addEventListener('click',()=>{ calcPanel.classList.toggle('open'); });
-
-function updateDecimal(){
-  const [h,m]=calcTime.value.split(':').map(Number);
-  const dec=h + (m/60);
-  calcDecimal.value = dec.toFixed(2).replace('.',',');
-}
+const calcBtn=document.getElementById('calc-btn'), calcPanel=document.getElementById('calc-panel');
+const calcTime=document.getElementById('calc-time'), calcDecimal=document.getElementById('calc-decimal');
+calcBtn.addEventListener('click',()=>calcPanel.classList.toggle('open'));
+function updateDecimal(){ const [h,m]=calcTime.value.split(':').map(Number); const dec=h+(m/60); calcDecimal.value=dec.toFixed(2).replace('.',','); }
 calcTime.addEventListener('change',updateDecimal);
 
-// Inicialização
-document.addEventListener('DOMContentLoaded',()=>{
-  favorites = JSON.parse(localStorage.getItem('favorites')||'[]');
-  renderFavorites();
-  months    = JSON.parse(localStorage.getItem('months')||'[]');
-  times     = loadData('times');
-  renderMonths();
-  updateChart();
-  updateDecimal();
-});
-
-// Formulários
-monthForm.addEventListener('submit',e=>{
-  e.preventDefault();
-  addMonth(
-    +document.getElementById('month-month').value,
-    +document.getElementById('month-year').value,
-    document.getElementById('month-current').checked
-  );
-  monthForm.reset();
-});
-
-document.getElementById('save-btn').addEventListener('click',()=>{
-  saveTimes();
-  new bootstrap.Toast(document.getElementById('saveToast')).show();
-});
+document.addEventListener('DOMContentLoaded',()=>{ favorites=JSON.parse(localStorage.getItem('favorites')||'[]'); renderFavorites(); months=JSON.parse(localStorage.getItem('months')||'[]'); times=loadData('times'); renderMonths(); updateCharts(); updateDecimal(); });
+monthForm.addEventListener('submit',e=>{ e.preventDefault(); addMonth(+document.getElementById('month-month').value,+document.getElementById('month-year').value,document.getElementById('month-current').checked); monthForm.reset(); });
+document.getElementById('save-btn').addEventListener('click',()=>{ saveTimes(); new bootstrap.Toast(document.getElementById('saveToast')).show(); });
 </script>
 </body>
 </html>
