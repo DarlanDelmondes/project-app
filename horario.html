@@ -10,6 +10,31 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     .weekend-row { background-color: #f0f0f0; }
+    #calc-panel {
+      position: fixed;
+      bottom: 0;
+      right: 10%;
+      background: white;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+      transform-origin: bottom right;
+      transform: scale(0);
+      transition: transform 0.3s ease-in-out;
+      z-index: 2000;
+      max-width: 50%;
+      max-height: 50%;
+      min-width: 25%;
+      min-height: 25%;
+      overflow: auto;
+      padding: 1rem;
+      border-radius: 0.5rem;
+    }
+    #calc-panel.open { transform: scale(1); }
+    #calc-btn {
+      position: fixed;
+      bottom: 4rem;
+      right: 1rem;
+      z-index: 2001;
+    }
   </style>
 </head>
 <body>
@@ -49,8 +74,20 @@
   </section>
 </div>
 
-<!-- Botão Salvar e Toast -->
+<!-- Botões Fixos -->
 <button id="save-btn" class="btn btn-success position-fixed bottom-0 end-0 m-3">Salvar</button>
+<button id="calc-btn" class="btn btn-secondary" title="Abrir Calculadora">Calculadora</button>
+
+<!-- Painel Calculadora -->
+<div id="calc-panel" aria-hidden="true">
+  <h5>Calculadora de Horário</h5>
+  <label for="calc-time" class="form-label">Horário:</label>
+  <input type="time" id="calc-time" class="form-control mb-2" value="08:00">
+  <label class="form-label">Decimal:</label>
+  <input type="text" id="calc-decimal" class="form-control" readonly>
+</div>
+
+<!-- Toast Salvar -->
 <div class="position-fixed bottom-0 end-0 p-3" style="z-index:11">
   <div id="saveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
     <div class="toast-header">
@@ -65,198 +102,144 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 // Helpers de LocalStorage
-function saveData(key, data){ localStorage.setItem(key, JSON.stringify(data)); }
-function loadData(key){ return JSON.parse(localStorage.getItem(key) || '{}'); }
+function saveData(key,data){ localStorage.setItem(key,JSON.stringify(data)); }
+function loadData(key){ return JSON.parse(localStorage.getItem(key)||'{}'); }
 
 // FAVORITOS
-let favorites = [];
-const favForm = document.getElementById('favorite-form');
-const favList = document.getElementById('favorites-list');
-
+let favorites=[];
+const favForm=document.getElementById('favorite-form');
+const favList=document.getElementById('favorites-list');
 function renderFavorites(){
-  favList.innerHTML = '';
-  favorites.forEach(f => {
-    const col = document.createElement('div'); col.className = 'col';
-    const card = document.createElement('div'); card.className = 'card h-100';
-    const body = document.createElement('div'); body.className = 'card-body d-flex justify-content-between align-items-center';
-    const link = document.createElement('a'); link.href = f.url; link.textContent = f.name; link.target = '_blank';
-    const grp = document.createElement('div');
-    const btnE = document.createElement('button'); btnE.className = 'btn btn-sm btn-warning me-1'; btnE.textContent = 'Editar';
-    btnE.onclick = () => editFavorite(f.id);
-    const btnD = document.createElement('button'); btnD.className = 'btn btn-sm btn-danger'; btnD.textContent = 'Excluir';
-    btnD.onclick = () => deleteFavorite(f.id);
-    grp.append(btnE, btnD);
-    body.append(link, grp);
+  favList.innerHTML='';
+  favorites.forEach(f=>{
+    const col=document.createElement('div'); col.className='col';
+    const card=document.createElement('div'); card.className='card h-100';
+    const body=document.createElement('div'); body.className='card-body d-flex justify-content-between align-items-center';
+    const link=document.createElement('a'); link.href=f.url; link.textContent=f.name; link.target='_blank';
+    const grp=document.createElement('div');
+    const btnE=document.createElement('button'); btnE.className='btn btn-sm btn-warning me-1'; btnE.textContent='Editar'; btnE.onclick=()=>editFavorite(f.id);
+    const btnD=document.createElement('button'); btnD.className='btn btn-sm btn-danger'; btnD.textContent='Excluir'; btnD.onclick=()=>deleteFavorite(f.id);
+    grp.append(btnE,btnD);
+    body.append(link,grp);
     card.append(body);
     col.append(card);
     favList.append(col);
   });
 }
-
-function addFavorite(name, url){
-  const id = Date.now();
-  favorites.push({ id, name, url });
-  saveData('favorites', favorites);
-  renderFavorites();
-}
-
-function editFavorite(id){
-  const f = favorites.find(x => x.id === id);
-  const nn = prompt('Novo nome:', f.name);
-  const nu = prompt('Nova URL:', f.url);
-  if(nn && nu){
-    f.name = nn;
-    f.url = nu;
-    saveData('favorites', favorites);
-    renderFavorites();
-  }
-}
-
-function deleteFavorite(id){
-  favorites = favorites.filter(x => x.id !== id);
-  saveData('favorites', favorites);
-  renderFavorites();
-}
-
-favForm.addEventListener('submit', e => {
-  e.preventDefault();
-  addFavorite(document.getElementById('fav-name').value,
-              document.getElementById('fav-url').value);
-  favForm.reset();
-});
+function addFavorite(name,url){ const id=Date.now(); favorites.push({id,name,url}); saveData('favorites',favorites); renderFavorites(); }
+function editFavorite(id){ const f=favorites.find(x=>x.id===id); const nn=prompt('Novo nome:',f.name); const nu=prompt('Nova URL:',f.url); if(nn&&nu){ f.name=nn; f.url=nu; saveData('favorites',favorites); renderFavorites(); } }
+function deleteFavorite(id){ favorites=favorites.filter(x=>x.id!==id); saveData('favorites',favorites); renderFavorites(); }
+favForm.addEventListener('submit',e=>{ e.preventDefault(); addFavorite(document.getElementById('fav-name').value, document.getElementById('fav-url').value); favForm.reset(); });
 
 // MESES, HORÁRIOS E GRÁFICO
-let months = [];
-let times = {};
-const monthForm = document.getElementById('month-form');
-const monthsAcc = document.getElementById('months-accordion');
-let adherenceChart = null;
-const today = new Date();
-const monthNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+let months=[]; let times={};
+const monthForm=document.getElementById('month-form');
+const monthsAcc=document.getElementById('months-accordion');
+let adherenceChart=null;
+const today=new Date();
+const monthNames=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
 function renderMonths(){
-  monthsAcc.innerHTML = '';
-  months.forEach((m, i) => {
-    const id = `month-${m.year}-${m.month}`;
-    const cur = m.isCurrent;
-    const lbl = `${m.month.toString().padStart(2,'0')} - ${monthNames[m.month-1]} ${m.year}`;
-    const hdr = `
-      <h2 class="accordion-header" id="h-${i}">
-        <button class="accordion-button ${cur?'':'collapsed'}"
-                data-bs-toggle="collapse" data-bs-target="#${id}"
-                aria-expanded="${cur}">
-          ${lbl}
-        </button>
-      </h2>`;
-    const body = document.createElement('div');
-    body.id = id;
-    body.className = `accordion-collapse collapse ${cur?'show':''}`;
-    body.setAttribute('aria-labelledby', `h-${i}`);
-    const bc = document.createElement('div');
-    bc.className = 'accordion-body';
-    const days = new Date(m.year, m.month, 0).getDate();
-
+  monthsAcc.innerHTML='';
+  months.forEach((m,i)=>{
+    const id=`month-${m.year}-${m.month}`;
+    const cur=m.isCurrent;
+    const lbl=`${m.month.toString().padStart(2,'0')} - ${monthNames[m.month-1]} ${m.year}`;
+    const hdr=`<h2 class="accordion-header" id="h-${i}"><button class="accordion-button ${cur?'':'collapsed'}" data-bs-toggle="collapse" data-bs-target="#${id}" aria-expanded="${cur}">${lbl}</button></h2>`;
+    const body=document.createElement('div');
+    body.id=id;
+    body.className=`accordion-collapse collapse ${cur?'show':''}`;
+    body.setAttribute('aria-labelledby',`h-${i}`);
+    const bc=document.createElement('div'); bc.className='accordion-body';
+    const days=new Date(m.year,m.month,0).getDate();
     for(let d=1; d<=days; d++){
-      const wd = new Date(m.year, m.month-1, d).getDay();
-      const row = document.createElement('div');
-      row.className = 'row align-items-center mb-2';
+      const wd=new Date(m.year,m.month-1,d).getDay();
+      const row=document.createElement('div');
+      row.className='row align-items-center mb-2';
       if(wd===0||wd===6) row.classList.add('weekend-row','p-2');
-      if(cur && d===today.getDate() &&
-         today.getMonth()+1===m.month &&
-         today.getFullYear()===m.year) row.classList.add('bg-warning');
+      if(cur&&d===today.getDate()&&today.getMonth()+1===m.month&&today.getFullYear()===m.year) row.classList.add('bg-warning');
 
-      // Dia
-      const colDay = document.createElement('div');
-      colDay.className = 'col-auto';
-      colDay.innerHTML = `<strong>${d}</strong>`;
-      row.append(colDay);
+      // Dia  
+      const cd=document.createElement('div');
+      cd.className='col-auto';
+      cd.innerHTML=`<strong>${d}</strong>`;
+      row.append(cd);
 
       // Horários
       ['start','lunchStart','lunchEnd','end'].forEach(k=>{
-        const co = document.createElement('div');
-        co.className = 'col';
-        const ip = document.createElement('input');
-        ip.type = 'time';
-        ip.className = 'form-control time-input';
-        ip.dataset.day = d;
-        ip.dataset.monthIdx = i;
-        ip.dataset.field = k;
-        const df = { start:'08:00', lunchStart:'12:00', lunchEnd:'13:00', end:'17:00' };
-        ip.value = (times[i]&&times[i][d]&&times[i][d][k])||df[k];
-        ip.addEventListener('change', ()=>{ calculateAll(); updateChart(); });
+        const co=document.createElement('div'); co.className='col';
+        const ip=document.createElement('input');
+        ip.type='time';
+        ip.className='form-control time-input';
+        ip.dataset.day=d; ip.dataset.monthIdx=i; ip.dataset.field=k;
+        const df={start:'08:00',lunchStart:'12:00',lunchEnd:'13:00',end:'17:00'};
+        ip.value=(times[i]&&times[i][d]&&times[i][d][k])||df[k];
+        ip.addEventListener('change',()=>{ calculateAll(); updateChart(); });
         co.append(ip);
         row.append(co);
       });
 
       // Calculado
-      const cc = document.createElement('div');
-      cc.className = 'col';
-      const ci = document.createElement('input');
-      ci.type = 'text';
-      ci.className = 'form-control';
-      ci.readOnly = true;
-      ci.dataset.day = d;
-      ci.dataset.monthIdx = i;
-      ci.value = (times[i]&&times[i][d]&&times[i][d].calc)||'';
+      const cc=document.createElement('div'); cc.className='col';
+      const ci=document.createElement('input');
+      ci.type='text'; ci.className='form-control'; ci.readOnly=true;
+      ci.dataset.day=d; ci.dataset.monthIdx=i;
+      ci.value=(times[i]&&times[i][d]&&times[i][d].calc)||'';
       cc.append(ci);
       row.append(cc);
 
       // Checkboxes
-      ['journey','SAP'].forEach(f=>{
-        const co = document.createElement('div');
-        co.className = 'col-auto form-check';
-        const ip = document.createElement('input');
-        ip.type = 'checkbox';
-        ip.className = 'form-check-input';
-        ip.dataset.day = d;
-        ip.dataset.monthIdx = i;
-        ip.dataset.field = f;
-        ip.checked = times[i]&&times[i][d]&&times[i][d][f];
-        ip.addEventListener('change', ()=>{ saveTimes(); updateChart(); });
-        const lb = document.createElement('label');
-        lb.textContent = f;
-        lb.className = 'form-check-label';
-        co.append(ip, lb);
+      ['journey','SAP'].forEach(fld=>{
+        const co=document.createElement('div'); co.className='col-auto form-check';
+        const ip=document.createElement('input');
+        ip.type='checkbox'; ip.className='form-check-input';
+        ip.dataset.day=d; ip.dataset.monthIdx=i; ip.dataset.field=fld;
+        ip.checked = times[i]&&times[i][d]&&times[i][d][fld];
+        ip.addEventListener('change',()=>{ saveTimes(); updateChart(); });
+        const lb=document.createElement('label');
+        lb.textContent=fld; lb.className='form-check-label';
+        co.append(ip,lb);
         row.append(co);
       });
 
       bc.append(row);
     }
+
     body.append(bc);
-    const itm = document.createElement('div');
-    itm.className = 'accordion-item';
-    itm.innerHTML = hdr;
+    const itm=document.createElement('div');
+    itm.className='accordion-item';
+    itm.innerHTML=hdr;
     itm.append(body);
     monthsAcc.append(itm);
   });
   calculateAll();
 }
 
-function addMonth(mo, yr, isCur){
+function addMonth(mo,yr,isCur){
   if(isCur) months.forEach(x=>x.isCurrent=false);
-  months.push({ month:mo, year:yr, isCurrent:isCur });
-  saveData('months', months);
+  months.push({month:mo,year:yr,isCurrent:isCur});
+  saveData('months',months);
   renderMonths();
   updateChart();
 }
 
 function calculateAll(){
   months.forEach((mo,i)=>{
-    const dmax = new Date(mo.year, mo.month, 0).getDate();
+    const dmax=new Date(mo.year,mo.month,0).getDate();
     for(let d=1; d<=dmax; d++){
-      const sel = `.time-input[data-month-idx='${i}'][data-day='${d}']`;
-      const v = {
+      const sel=`.time-input[data-month-idx='${i}'][data-day='${d}']`;
+      const v={
         start: document.querySelector(`${sel}[data-field='start']`)?.value,
         ls:    document.querySelector(`${sel}[data-field='lunchStart']`)?.value,
         le:    document.querySelector(`${sel}[data-field='lunchEnd']`)?.value,
         end:   document.querySelector(`${sel}[data-field='end']`)?.value
       };
-      const cali = document.querySelector(`input[data-month-idx='${i}'][data-day='${d}']:not(.time-input)`);
+      const cali=document.querySelector(`input[data-month-idx='${i}'][data-day='${d}']:not(.time-input)`);
       if(v.start&&v.ls&&v.le&&v.end){
-        const toM = t=>{ const [h,m]=t.split(':'); return parseInt(h)*60+parseInt(m); };
-        const diff = (toM(v.ls)-toM(v.start)) + (toM(v.end)-toM(v.le));
-        const H = Math.floor(diff/60), M = diff%60;
-        cali.value = `${H.toString().padStart(2,'0')}:${M.toString().padStart(2,'0')}`;
+        const toM=t=>{const [h,m]=t.split(':');return parseInt(h)*60+parseInt(m);};
+        const diff=(toM(v.ls)-toM(v.start))+(toM(v.end)-toM(v.le));
+        const H=Math.floor(diff/60), M=diff%60;
+        cali.value=`${H.toString().padStart(2,'0')}:${M.toString().padStart(2,'0')}`;
       }
       if(!times[i]) times[i]={};
       if(!times[i][d]) times[i][d]={};
@@ -268,68 +251,87 @@ function calculateAll(){
 
 function saveTimes(){
   months.forEach((mo,i)=>{
-    const dmax = new Date(mo.year, mo.month, 0).getDate();
+    const dmax=new Date(mo.year,mo.month,0).getDate();
     if(!times[i]) times[i]={};
     for(let d=1; d<=dmax; d++){
       if(!times[i][d]) times[i][d]={};
       ['start','lunchStart','lunchEnd','end'].forEach(k=>{
         times[i][d][k] = document.querySelector(`.time-input[data-month-idx='${i}'][data-day='${d}'][data-field='${k}']`).value;
       });
-      ['journey','SAP'].forEach(f=>{
-        times[i][d][f] = document.querySelector(`input[data-month-idx='${i}'][data-day='${d}'][data-field='${f}']`).checked;
+      ['journey','SAP'].forEach(fld=>{
+        times[i][d][fld] = document.querySelector(`input[data-month-idx='${i}'][data-day='${d}'][data-field='${fld}']`).checked;
       });
-      const ci = document.querySelector(`input[data-month-idx='${i}'][data-day='${d}']:not(.time-input)`);
+      const ci=document.querySelector(`input[data-month-idx='${i}'][data-day='${d}']:not(.time-input)`);
       times[i][d].calc = ci.value;
     }
   });
-  saveData('times', times);
+  saveData('times',times);
 }
 
 function updateChart(){
-  const ctx = document.getElementById('adherenceChart').getContext('2d');
-  const idx = months.findIndex(x=>x.isCurrent);
+  const ctx=document.getElementById('adherenceChart').getContext('2d');
+  const idx=months.findIndex(x=>x.isCurrent);
   if(idx<0) return;
-  const mo = months[idx];
-  const days = new Date(mo.year, mo.month, 0).getDate();
-  let done = 0;
+  const mo=months[idx];
+  const days=new Date(mo.year,mo.month,0).getDate();
+  let done=0;
   for(let d=1; d<=days; d++){
     if(times[idx]&&times[idx][d]&&times[idx][d].journey) done++;
   }
-  const pct  = Math.round((done/days)*100);
-  const rest = 100-pct;
-  const lbl  = `${mo.month.toString().padStart(2,'0')} - ${monthNames[mo.month-1]} ${mo.year}`;
+  const pct=Math.round((done/days)*100), rest=100-pct;
+  const lbl=`${mo.month.toString().padStart(2,'0')} - ${monthNames[mo.month-1]} ${mo.year}`;
 
   if(!adherenceChart){
-    adherenceChart = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: [lbl],
-        datasets: [
-          { label: 'Concluído', data: [pct] },
-          { label: 'Restante', data: [rest] }
+    adherenceChart=new Chart(ctx,{
+      type:'bar',
+      data:{
+        labels:[lbl],
+        datasets:[
+          {label:'Concluído',data:[pct]},
+          {label:'Restante',data:[rest]}
         ]
       },
-      options: {
-        indexAxis: 'y',
-        scales: {
-          x: { stacked: true, max: 100 },
-          y: { stacked: true }
-        },
-        plugins: {
-          tooltip: { mode: 'index', axis: 'x' },
-          legend: { position: 'bottom' }
-        }
+      options:{
+        indexAxis:'y',
+        scales:{ x:{stacked:true,max:100}, y:{stacked:true} },
+        plugins:{ tooltip:{mode:'index',axis:'x'}, legend:{position:'bottom'} }
       }
     });
   } else {
-    adherenceChart.data.labels = [lbl];
-    adherenceChart.data.datasets[0].data = [pct];
-    adherenceChart.data.datasets[1].data = [rest];
+    adherenceChart.data.labels=[lbl];
+    adherenceChart.data.datasets[0].data=[pct];
+    adherenceChart.data.datasets[1].data=[rest];
     adherenceChart.update();
   }
 }
 
-monthForm.addEventListener('submit', e=>{
+// Calculadora
+const calcBtn=document.getElementById('calc-btn');
+const calcPanel=document.getElementById('calc-panel');
+const calcTime=document.getElementById('calc-time');
+const calcDecimal=document.getElementById('calc-decimal');
+calcBtn.addEventListener('click',()=>{ calcPanel.classList.toggle('open'); });
+
+function updateDecimal(){
+  const [h,m]=calcTime.value.split(':').map(Number);
+  const dec=h + (m/60);
+  calcDecimal.value = dec.toFixed(2).replace('.',',');
+}
+calcTime.addEventListener('change',updateDecimal);
+
+// Inicialização
+document.addEventListener('DOMContentLoaded',()=>{
+  favorites = JSON.parse(localStorage.getItem('favorites')||'[]');
+  renderFavorites();
+  months    = JSON.parse(localStorage.getItem('months')||'[]');
+  times     = loadData('times');
+  renderMonths();
+  updateChart();
+  updateDecimal();
+});
+
+// Formulários
+monthForm.addEventListener('submit',e=>{
   e.preventDefault();
   addMonth(
     +document.getElementById('month-month').value,
@@ -339,18 +341,9 @@ monthForm.addEventListener('submit', e=>{
   monthForm.reset();
 });
 
-document.getElementById('save-btn').addEventListener('click', ()=>{
+document.getElementById('save-btn').addEventListener('click',()=>{
   saveTimes();
   new bootstrap.Toast(document.getElementById('saveToast')).show();
-});
-
-document.addEventListener('DOMContentLoaded', ()=>{
-  favorites = JSON.parse(localStorage.getItem('favorites')||'[]');
-  renderFavorites();
-  months    = JSON.parse(localStorage.getItem('months')   ||'[]');
-  times     = loadData('times');
-  renderMonths();
-  updateChart();
 });
 </script>
 </body>
