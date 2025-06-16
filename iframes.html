@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Webapp CRUD de Iframes</title>
+  <style>
+    body { margin: 0; font-family: Arial, sans-serif; background: #f4f4f4; overflow: hidden; }
+    header { height: 50px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; background: #2c3e50; color: #ecf0f1; }
+    header button { margin-left: 10px; padding: 8px 12px; border: none; background: #3498db; color: #fff; cursor: pointer; border-radius: 4px; font-size: 14px; }
+    header button:hover { background: #2980b9; }
+    #workspace { position: absolute; top: 50px; left: 0; right: 0; bottom: 50px; background: #eaeaea; overflow: hidden; }
+    .iframe-window { position: absolute; background: #fff; border: 1px solid #ccc; box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; flex-direction: column; resize: both; overflow: hidden; }
+    .title-bar { cursor: move; background: #34495e; color: #ecf0f1; padding: 4px 8px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; flex-shrink: 0; }
+    .title-bar .controls { display: flex; gap: 4px; }
+    .title-bar button { background: transparent; border: none; color: #ecf0f1; cursor: pointer; font-size: 14px; padding: 2px 6px; }
+    .title-bar button:hover { background: rgba(255,255,255,0.2); border-radius: 3px; }
+    .iframe-window iframe { flex: 1; border: 0; }
+    #tray { position: absolute; bottom: 0; left: 0; right: 0; height: 50px; background: #2c3e50; display: flex; align-items: center; padding: 0 10px; overflow-x: auto; }
+    #tray button { margin-right: 8px; background: #34495e; border: none; color: #ecf0f1; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-size: 13px; }
+    #tray button:hover { background: #3d5a73; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1 style="margin:0; font-size:18px;">Gerenciador de Iframes</h1>
+    <div>
+      <button id="addBtn">Adicionar Iframe</button>
+      <button id="expandAllBtn">Maximizar Todos</button>
+      <button id="collapseAllBtn">Restaurar Todos</button>
+    </div>
+  </header>
+
+  <div id="workspace"></div>
+  <div id="tray"></div>
+
+  <script>
+    const STORAGE_KEY = 'iframeConfigs';
+    let iframes = [];
+    const ws = document.getElementById('workspace');
+    const tray = document.getElementById('tray');
+
+    function load() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) iframes = JSON.parse(saved);
+      else iframes = [];
+      render();
+    }
+    function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(iframes)); }
+
+    function render() {
+      ws.innerHTML = '';
+      tray.innerHTML = '';
+
+      iframes.forEach((cfg, idx) => {
+        if (cfg.minimized) {
+          const btn = document.createElement('button');
+          btn.textContent = cfg.title;
+          btn.onclick = () => {
+            // restaurar posição e tamanho anteriores
+            cfg.minimized = false;
+            cfg.maximized = false;
+            cfg.x = cfg.prevX;
+            cfg.y = cfg.prevY;
+            cfg.width = cfg.prevWidth;
+            cfg.height = cfg.prevHeight;
+            save(); render();
+          };
+          tray.appendChild(btn);
+          return;
+        }
+
+        const win = document.createElement('div'); win.className = 'iframe-window';
+        win.style.width = cfg.width; win.style.height = cfg.height;
+        win.style.left = cfg.x; win.style.top = cfg.y;
+
+        const titleBar = document.createElement('div'); titleBar.className = 'title-bar';
+        titleBar.innerHTML = `<span>${cfg.title}</span>`;
+        const ctrls = document.createElement('div'); ctrls.className = 'controls';
+
+        const delBtn = document.createElement('button'); delBtn.textContent = '✕'; delBtn.title='Excluir';
+        delBtn.onclick = () => { iframes.splice(idx,1); save(); render(); };
+
+        const expandBtn = document.createElement('button');
+        expandBtn.textContent = cfg.maximized ? '⤡' : '⤢';
+        expandBtn.title = cfg.maximized ? 'Restaurar' : 'Maximizar';
+        expandBtn.onclick = () => {
+          // capturar estado atual antes de maximizar/restaurar
+          const currentStyle = win.style;
+          if (!cfg.maximized) {
+            cfg.prevX = currentStyle.left;
+            cfg.prevY = currentStyle.top;
+            cfg.prevWidth = currentStyle.width;
+            cfg.prevHeight = currentStyle.height;
+            cfg.x = '0px'; cfg.y = '0px';
+            cfg.width = ws.clientWidth + 'px'; cfg.height = ws.clientHeight + 'px';
+            cfg.maximized = true;
+          } else {
+            cfg.x = cfg.prevX;
+            cfg.y = cfg.prevY;
+            cfg.width = cfg.prevWidth;
+            cfg.height = cfg.prevHeight;
+            cfg.maximized = false;
+          }
+          save(); render();
+        };
+
+        const minBtn = document.createElement('button'); minBtn.textContent = '━'; minBtn.title='Minimizar';
+        minBtn.onclick = () => {
+          // capturar estado atual antes de minimizar
+          const cs = win.style;
+          cfg.prevX = cs.left;
+          cfg.prevY = cs.top;
+          cfg.prevWidth = cs.width;
+          cfg.prevHeight = cs.height;
+          cfg.minimized = true;
+          cfg.maximized = false;
+          save(); render();
+        };
+
+        ctrls.append(delBtn, expandBtn, minBtn);
+        titleBar.appendChild(ctrls); win.appendChild(titleBar);
+        const iframe = document.createElement('iframe'); iframe.src = cfg.url;
+        win.appendChild(iframe); ws.appendChild(win);
+
+        makeDraggable(win, titleBar, idx);
+        new ResizeObserver(() => updateSize(idx, win)).observe(win);
+      });
+    }
+
+    function updateSize(idx, win) {
+      const rect = win.getBoundingClientRect();
+      const pr = ws.getBoundingClientRect();
+      iframes[idx].width = win.style.width;
+      iframes[idx].height = win.style.height;
+      iframes[idx].x = (rect.left - pr.left) + 'px';
+      iframes[idx].y = (rect.top - pr.top) + 'px';
+    }
+
+    function makeDraggable(el, handle, idx) {
+      let offsetX, offsetY;
+      handle.addEventListener('mousedown', e => {
+        e.preventDefault();
+        const elRect = el.getBoundingClientRect();
+        offsetX = e.clientX - elRect.left;
+        offsetY = e.clientY - elRect.top;
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+      });
+      function onMouseMove(e) {
+        const par = ws.getBoundingClientRect();
+        let x = e.clientX - par.left - offsetX;
+        let y = e.clientY - par.top - offsetY;
+        x = Math.max(0, Math.min(x, ws.clientWidth - el.offsetWidth));
+        y = Math.max(0, Math.min(y, ws.clientHeight - el.offsetHeight));
+        el.style.left = x + 'px'; el.style.top = y + 'px';
+      }
+      function onMouseUp() {
+        updateSize(idx, el);
+        save();
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+      }
+    }
+
+    document.getElementById('addBtn').onclick = () => {
+      const url = prompt('URL do iframe:', 'https://'); if (!url) return;
+      const title = prompt('Título exibido:', new URL(url).hostname);
+      const width = '300px'; const height = '200px';
+      const x = '20px', y = '20px';
+      iframes.push({ url, title, width, height, x, y, minimized:false, maximized:false, prevX:x, prevY:y, prevWidth:width, prevHeight:height });
+      save(); render();
+    };
+
+    document.getElementById('expandAllBtn').onclick = () => {
+      iframes.forEach(cfg => {
+        cfg.prevX = cfg.x;
+        cfg.prevY = cfg.y;
+        cfg.prevWidth = cfg.width;
+        cfg.prevHeight = cfg.height;
+        cfg.x = '0px'; cfg.y = '0px';
+        cfg.width = ws.clientWidth + 'px'; cfg.height = ws.clientHeight + 'px';
+        cfg.maximized = true;
+      }); save(); render();
+    };
+    document.getElementById('collapseAllBtn').onclick = () => {
+      iframes.forEach(cfg => {
+        if (cfg.maximized) {
+          cfg.x = cfg.prevX;
+          cfg.y = cfg.prevY;
+          cfg.width = cfg.prevWidth;
+          cfg.height = cfg.prevHeight;
+          cfg.maximized = false;
+        }
+      }); save(); render();
+    };
+
+    load();
+  </script>
+</body>
+</html>
