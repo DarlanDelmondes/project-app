@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Background OKR da Primeira Atividade Pendente</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    html { font-size: 0.75rem; }
+    @media only screen and (-webkit-min-device-pixel-ratio: 2),
+           only screen and (min-resolution: 192dpi) {
+      html { font-size: 0.7rem; }
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      background-size: cover;
+      background-position: top center;
+      background-repeat: no-repeat;
+      transition: background-image 0.3s ease;
+      position: relative;
+      cursor: pointer;
+    }
+    #edit-bg-btn {
+      position: fixed;
+      bottom: 1rem;
+      right: 1rem;
+      background: rgba(255, 255, 255, 0.3);
+      backdrop-filter: blur(4px);
+      border-radius: 0.5rem;
+      padding: 0.5rem;
+      cursor: pointer;
+      opacity: 0.4;
+      transition: opacity 0.2s;
+    }
+    #edit-bg-btn:hover {
+      opacity: 1;
+    }
+    #tooltip {
+      position: absolute;
+      pointer-events: none;
+      background: rgba(0,0,0,0.75);
+      color: white;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      font-size: 0.75rem;
+      display: none;
+      white-space: nowrap;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+  <!-- Botão para editar manualmente -->
+  <button id="edit-bg-btn" aria-label="Editar background">
+    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-gray-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+    </svg>
+  </button>
+  <div id="tooltip"></div>
+
+  <script>
+    (function() {
+      const ACT_KEY = 'Atividades';
+      const DEF_KEY = 'OKR_DEFS';
+      const activities = JSON.parse(localStorage.getItem(ACT_KEY)) || [];
+
+      // Encontra a primeira atividade não concluída
+      const pending = activities.find(a => !a.done);
+      let bgUrl = null;
+      if (pending && pending.okr) {
+        const defs = JSON.parse(localStorage.getItem(DEF_KEY)) || [];
+        const def = defs.find(d => d.name === pending.okr);
+        if (def && def.image) {
+          bgUrl = def.image;
+          document.body.style.backgroundImage = `url('${bgUrl}')`;
+        }
+      }
+
+      // Tooltip para texto da atividade pendente
+      const tooltip = document.getElementById('tooltip');
+      if (pending && pending.text) {
+        document.body.addEventListener('mousemove', e => {
+          tooltip.style.left = e.pageX + 10 + 'px';
+          tooltip.style.top = e.pageY + 10 + 'px';
+        });
+        document.body.addEventListener('mouseenter', () => {
+          tooltip.textContent = pending.text;
+          tooltip.style.display = 'block';
+        });
+        document.body.addEventListener('mouseleave', () => {
+          tooltip.style.display = 'none';
+        });
+      }
+
+      // Duplo clique exibe atividade, OKR e URL
+      document.body.addEventListener('dblclick', () => {
+        let activityText = pending ? pending.text : null;
+        let okrName = pending ? pending.okr : null;
+        let url = null;
+        if (okrName) {
+          const defs = JSON.parse(localStorage.getItem(DEF_KEY)) || [];
+          const def = defs.find(d => d.name === okrName);
+          url = def ? def.image : null;
+        }
+        alert(
+          `Atividade: ${activityText || '—'}\n` +
+          `OKR: ${okrName || '—'}\n` +
+          `URL: ${url || '—'}`
+        );
+      });
+
+      // Botão de edição manual de background
+      document.getElementById('edit-bg-btn').addEventListener('click', e => {
+        e.stopPropagation();
+        const urlInput = prompt('Cole a URL da imagem de background:', bgUrl || '');
+        if (urlInput) {
+          bgUrl = urlInput;
+          document.body.style.backgroundImage = `url('${bgUrl}')`;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

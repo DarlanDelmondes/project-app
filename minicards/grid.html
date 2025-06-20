@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Grid Customizável com Iframes</title>
+  <!-- Google Fonts -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap"
+    rel="stylesheet"
+  />
+  <!-- Bootstrap CSS -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+  <style>
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      font-family: 'Poppins', sans-serif;
+      background: #f0f2f5;
+      overflow: hidden;
+    }
+    /* Ícone de toggle fixo */
+    #toggleBarIcon {
+      position: fixed;
+      left: 0.5rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: #007bff;
+      color: #fff;
+      padding: 0.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+      z-index: 9999;
+    }
+    /* Barra superior expansível */
+    #topBar {
+      position: relative;
+      width: 100%;
+      height: 0;
+      overflow: hidden;
+      background: #fff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      transition: height 0.3s ease, padding 0.3s ease;
+      z-index: 10000;
+    }
+    #topBar.expanded {
+      height: auto;
+      padding: 0.5rem 1rem;
+    }
+    #topBar .toolbar-content {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    #mainContent {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 0.5rem;
+    }
+    /* Container de linhas flexível */
+    #gridContainer {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      overflow: hidden;
+    }
+    .grid-row {
+      flex: 1;
+      display: flex;
+      gap: 0.5rem;
+      overflow: hidden;
+    }
+    .grid-cell {
+      position: relative;
+      flex: 1;
+      display: flex;
+      padding: 0;
+      border: 1px solid #dee2e6;
+      border-radius: 4px;
+      background: #fff;
+      overflow: hidden;
+    }
+    .grid-cell .btn-add {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 1.5rem;
+      width: 3rem;
+      height: 3rem;
+      border-radius: 50%;
+      z-index: 9998;
+    }
+    .grid-cell iframe {
+      flex: 1;
+      border: none;
+    }
+    .edit-actions {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      display: flex;
+      gap: 0.3rem;
+      z-index: 9998;
+    }
+  </style>
+</head>
+<body>
+  <!-- Ícone de toggle -->
+  <div id="toggleBarIcon">≡</div>
+  <!-- Barra superior expansível -->
+  <div id="topBar">
+    <div class="toolbar-content container-fluid px-2">
+      <h4 class="mb-0">Grid Customizável</h4>
+      <button id="btnAddRow" class="btn btn-success btn-sm">Adicionar Linha</button>
+      <button id="btnToggleEdit" class="btn btn-outline-secondary btn-sm">Editar</button>
+    </div>
+  </div>
+  <!-- Conteúdo principal flexível -->
+  <div id="mainContent">
+    <div id="gridContainer"></div>
+  </div>
+  <!-- Modal para inserir link -->
+  <div class="modal fade" id="linkModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Inserir URL</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <label for="linkInput" class="form-label">URL da página</label>
+          <input
+            type="url"
+            id="linkInput"
+            class="form-control"
+            placeholder="https://exemplo.com"
+          />
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="btnSaveLink" class="btn btn-primary">Salvar</button>
+          <button
+            type="button"
+            class="btn btn-secondary"
+            data-bs-dismiss="modal"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Bootstrap JS + Popper -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const LS_CONFIG_KEY = 'gridConfig';
+    const LS_LINKS_KEY = 'cellLinks';
+    let gridConfig = { rows: [] };
+    let cellLinks = {};
+    let currentCellId = null;
+    let editMode = false;
+    const linkModal = new bootstrap.Modal(
+      document.getElementById('linkModal')
+    );
+    // Toggle da barra superior
+    document
+      .getElementById('toggleBarIcon')
+      .addEventListener('click', () => {
+        document.getElementById('topBar').classList.toggle('expanded');
+      });
+    function loadStorage() {
+      const cfg = localStorage.getItem(LS_CONFIG_KEY);
+      gridConfig = cfg ? JSON.parse(cfg) : { rows: [1] };
+      const links = localStorage.getItem(LS_LINKS_KEY);
+      cellLinks = links ? JSON.parse(links) : {};
+    }
+    function saveStorage() {
+      localStorage.setItem(LS_CONFIG_KEY, JSON.stringify(gridConfig));
+      localStorage.setItem(LS_LINKS_KEY, JSON.stringify(cellLinks));
+    }
+    function removeColumn(r, c) {
+      let newLinks = {};
+      gridConfig.rows[r]--;
+      Object.keys(cellLinks).forEach((key) => {
+        let [rr, cc] = key.split('_').map(Number);
+        if (rr === r) {
+          if (cc === c) return;
+          cc = cc > c ? cc - 1 : cc;
+          newLinks[`${rr}_${cc}`] = cellLinks[key];
+        } else newLinks[key] = cellLinks[key];
+      });
+      cellLinks = newLinks;
+      saveStorage();
+      renderGrid();
+    }
+    function renderGrid() {
+      const container = document.getElementById('gridContainer');
+      container.innerHTML = '';
+      gridConfig.rows.forEach((colCount, r) => {
+        const rowDiv = document.createElement('div');
+        rowDiv.className = 'grid-row';
+        for (let c = 0; c < colCount; c++) {
+          const colDiv = document.createElement('div');
+          colDiv.className = 'grid-cell';
+          const cellId = `${r}_${c}`;
+          colDiv.dataset.cellId = cellId;
+          if (!editMode && cellLinks[cellId]) {
+            const iframe = document.createElement('iframe');
+            iframe.src = cellLinks[cellId];
+            colDiv.appendChild(iframe);
+          }
+          if (!editMode && !cellLinks[cellId]) {
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-outline-primary btn-add';
+            btn.innerHTML = '+';
+            btn.onclick = () => openLinkModal(cellId);
+            colDiv.appendChild(btn);
+          }
+          if (editMode) {
+            const actions = document.createElement('div');
+            actions.className = 'edit-actions';
+            const editBtn = document.createElement('button');
+            editBtn.className = 'btn btn-ниже-outline-primary';
+            editBtn.innerHTML = '✏️';
+            editBtn.onclick = () => openLinkModal(cellId);
+            const delBtn = document.createElement('button');
+            delBtn.className = 'btn btn-sm btn-outline-danger';
+            delBtn.innerHTML = '🗑️';
+            delBtn.onclick = () => {
+              delete cellLinks[cellId];
+              saveStorage();
+              renderGrid();
+            };
+            delBtn.ondblclick = () => removeColumn(r, c);
+            actions.append(editBtn, delBtn);
+            colDiv.appendChild(actions);
+            if (cellLinks[cellId]) {
+              const iframe = document.createElement('iframe');
+              iframe.src = cellLinks[cellId];
+              colDiv.appendChild(iframe);
+            }
+          }
+          rowDiv.appendChild(colDiv);
+        }
+        // botão adicionar coluna
+        const addColBtn = document.createElement('button');
+        addColBtn.className = 'btn btn-outline-success btn-sm';
+        addColBtn.innerHTML = '+';
+        addColBtn.onclick = () => {
+          gridConfig.rows[r]++;
+          saveStorage();
+          renderGrid();
+        };
+        rowDiv.appendChild(addColBtn);
+        // botão excluir linha
+        if (editMode) {
+          const delRowBtn = document.createElement('button');
+          delRowBtn.className = 'btn btn-outline-danger btn-sm ms-2';
+          delRowBtn.innerHTML = 'Excluir Linha';
+          delRowBtn.onclick = () => {
+            gridConfig.rows.splice(r, 1);
+            Object.keys(cellLinks).forEach((key) => {
+              const [rr] = key.split('_').map(Number);
+              if (rr === r) delete cellLinks[key];
+            });
+            let newLinks = {};
+            Object.keys(cellLinks).forEach((key) => {
+              let [rr, cc] = key.split('_').map(Number);
+              if (rr > r) rr--;
+              newLinks[`${rr}_${cc}`] = cellLinks[key];
+            });
+            cellLinks = newLinks;
+            if (!gridConfig.rows.length) gridConfig.rows = [1];
+            saveStorage();
+            renderGrid();
+          };
+          rowDiv.appendChild(delRowBtn);
+        }
+        container.appendChild(rowDiv);
+      });
+    }
+    function openLinkModal(cellId) {
+      currentCellId = cellId;
+      document.getElementById('linkInput').value = cellLinks[cellId] || '';
+      linkModal.show();
+    }
+    // eventos
+    document.getElementById('btnSaveLink').addEventListener('click', () => {
+      const url = document.getElementById('linkInput').value.trim();
+      if (url) cellLinks[currentCellId] = url;
+      else delete cellLinks[currentCellId];
+      saveStorage();
+      renderGrid();
+      linkModal.hide();
+    });
+    document.getElementById('btnAddRow').addEventListener('click', () => {
+      gridConfig.rows.push(1);
+      saveStorage();
+      renderGrid();
+    });
+    document
+      .getElementById('btnToggleEdit')
+      .addEventListener('click', () => {
+        editMode = !editMode;
+        const btn = document.getElementById('btnToggleEdit');
+        btn.textContent = editMode ? 'Cancelar Edição' : 'Editar';
+        btn.classList.toggle('btn-outline-secondary');
+        btn.classList.toggle('btn-secondary');
+        renderGrid();
+      });
+    window.addEventListener('DOMContentLoaded', () => {
+      loadStorage();
+      renderGrid();
+    });
+  </script>
+</body>
+</html>

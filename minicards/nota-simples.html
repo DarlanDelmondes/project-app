@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anotação por OKR</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    html { font-size: 0.75rem; }
+    @media only screen and (-webkit-min-device-pixel-ratio: 2),
+           only screen and (min-resolution: 192dpi) {
+      html { font-size: 0.7rem; }
+    }
+    body { margin: 0; padding: 0; background-color: #f9fafb; }
+    .toolbar button {
+      background: #fff;
+      border: 1px solid #d1d5db;
+      margin-right: 0.25rem;
+      padding: 0.25rem;
+      border-radius: 0.25rem;
+      cursor: pointer;
+    }
+    .toolbar button:hover {
+      background: #e5e7eb;
+    }
+    #quick-note {
+      background: white;
+      border: 1px solid #d1d5db;
+      border-radius: 0.5rem;
+      padding: 1rem;
+      outline: none;
+      flex: 1;
+      overflow: auto;
+    }
+  </style>
+</head>
+<body class="flex flex-col min-h-screen p-4">
+  <div class="w-full max-w-3xl mx-auto flex flex-col flex-1">
+    <!-- Labels de OKR -->
+    <div id="okr-labels" class="mb-4 flex flex-wrap gap-2"></div>
+    <!-- Toolbar WYSIWYG -->
+    <div class="toolbar mb-2">
+      <button data-cmd="bold"><b>B</b></button>
+      <button data-cmd="italic"><i>I</i></button>
+      <button data-cmd="underline"><u>U</u></button>
+      <button data-cmd="insertUnorderedList">• List</button>
+      <button data-cmd="insertOrderedList">1. List</button>
+      <button data-cmd="createLink">Link</button>
+    </div>
+    <!-- Área WYSIWYG -->
+    <div id="quick-note" contenteditable="true" placeholder="Digite aqui suas anotações..." class="resize-none"></div>
+    <!-- Feedback -->
+    <div id="save-feedback" class="fixed top-4 right-4 opacity-0 transition-opacity duration-300">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+      </svg>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      const ACT_KEY = 'Atividades';
+      const STORAGE_KEY = 'quickNotes';
+      const activities = JSON.parse(localStorage.getItem(ACT_KEY)) || [];
+      const pending = activities.find(a=> !a.done);
+      const defs = JSON.parse(localStorage.getItem('OKR_DEFS')) || [];
+      const okrs = ['_all', ...defs.map(d=>d.name)];
+      let selected = pending && pending.okr && okrs.includes(pending.okr) ? pending.okr : '_all';
+      let notes = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+
+      const labelsEl = document.getElementById('okr-labels');
+      const editor = document.getElementById('quick-note');
+      const feedback = document.getElementById('save-feedback');
+      const toolbar = document.querySelector('.toolbar');
+      let feedbackTimeout;
+
+      function renderLabels(){
+        labelsEl.innerHTML = '';
+        okrs.forEach(key=>{
+          const span = document.createElement('span');
+          span.textContent = key==='_all'? 'Todas': key;
+          span.className = `text-xs px-2 py-1 rounded-full cursor-pointer ${key===selected ? 'bg-indigo-500 text-white' : 'bg-gray-200 text-gray-700 opacity-50'}`;
+          span.onclick = ()=>{
+            selected = key;
+            loadNote();
+            renderLabels();
+          };
+          labelsEl.appendChild(span);
+        });
+      }
+
+      function loadNote(){
+        editor.innerHTML = notes[selected] || '';
+      }
+
+      function saveNote(){
+        notes[selected] = editor.innerHTML;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+      }
+
+      function showFeedback(){
+        clearTimeout(feedbackTimeout);
+        feedback.classList.remove('opacity-0');
+        feedback.classList.add('opacity-100');
+        feedbackTimeout = setTimeout(()=>{
+          feedback.classList.remove('opacity-100');
+          feedback.classList.add('opacity-0');
+        }, 800);
+      }
+
+      // Toolbar commands
+      toolbar.addEventListener('click', e => {
+        if (e.target.dataset.cmd) {
+          const cmd = e.target.dataset.cmd;
+          if (cmd === 'createLink') {
+            const url = prompt('URL para o link:');
+            if (url) document.execCommand(cmd, false, url);
+          } else {
+            document.execCommand(cmd, false, null);
+          }
+          editor.focus();
+        }
+      });
+
+      editor.addEventListener('input', ()=>{
+        saveNote();
+        showFeedback();
+      });
+
+      // Inicialização
+      renderLabels();
+      loadNote();
+    })();
+  </script>
+</body>
+</html>

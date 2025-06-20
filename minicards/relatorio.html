@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>Relatório de Atividades</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Retina */
+    @media only screen and (-webkit-min-device-pixel-ratio: 2),
+           only screen and (min-resolution: 192dpi) {
+      html { font-size: 0.85rem; }
+    }
+  </style>
+</head>
+<body class="bg-white flex flex-col items-stretch min-h-screen">
+  <h1 class="text-lg font-semibold text-center py-3">Relatório de Atividades</h1>
+  <div class="flex-1 grid grid-cols-2 gap-3 p-2">
+    <div class="p-2 bg-indigo-50 text-center rounded-xl">
+      <div class="text-xs text-gray-600 mb-1">Criadas na última semana</div>
+      <div id="created-week" class="text-2xl font-medium text-indigo-700">0</div>
+    </div>
+    <div class="p-2 bg-green-50 text-center rounded-xl">
+      <div class="text-xs text-gray-600 mb-1">Concluídas na última hora</div>
+      <div id="completed-hour" class="text-2xl font-medium text-green-700">0</div>
+    </div>
+    <div class="p-2 bg-green-100 text-center rounded-xl">
+      <div class="text-xs text-gray-600 mb-1">Concluídas no último dia</div>
+      <div id="completed-day" class="text-2xl font-medium text-green-800">0</div>
+    </div>
+    <div class="p-2 bg-green-200 text-center rounded-xl">
+      <div class="text-xs text-gray-600 mb-1">Concluídas na última semana</div>
+      <div id="completed-week" class="text-2xl font-medium text-green-900">0</div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'Atividades';
+    const activities = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    const now = new Date();
+    const oneHourAgo = new Date(now - 3600e3);
+    const oneDayAgo = new Date(now - 86400e3);
+    const oneWeekAgo = new Date(now - 7*86400e3);
+    const createdWeekCount = activities.filter(a => a.createdAt && new Date(a.createdAt) >= oneWeekAgo && new Date(a.createdAt) <= now).length;
+    const completedHourCount = activities.filter(a => a.completedAt && new Date(a.completedAt) >= oneHourAgo).length;
+    const completedDayCount = activities.filter(a => a.completedAt && new Date(a.completedAt) >= oneDayAgo).length;
+    const completedWeekCount = activities.filter(a => a.completedAt && new Date(a.completedAt) >= oneWeekAgo).length;
+    document.getElementById('created-week').textContent = createdWeekCount;
+    document.getElementById('completed-hour').textContent = completedHourCount;
+    document.getElementById('completed-day').textContent = completedDayCount;
+    document.getElementById('completed-week').textContent = completedWeekCount;
+  </script>
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>Timer de Atividade</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Ajuste para retina */
+    @media only screen and (-webkit-min-device-pixel-ratio: 2),
+           only screen and (min-resolution: 192dpi) {
+      html { font-size: 0.85rem; }
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center min-h-screen p-4">
+  <div id="timer-card" class="bg-white bg-opacity-90 backdrop-blur rounded-2xl p-8 text-center max-w-sm w-full">
+    <h1 id="activity-title" class="text-xl font-semibold text-gray-800 mb-6">Carregando...</h1>
+    <div id="controls" class="flex flex-col items-center space-y-4">
+      <button id="start-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-full flex items-center space-x-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-6.518-3.759A1 1 0 007 8.3v7.4a1 1 0 001.234.97l6.518-1.876a1 1 0 00.752-.97v-1.6a1 1 0 00-.752-.97z" />
+        </svg>
+        <span>Iniciar</span>
+      </button>
+      <button id="conclude-btn" class="hidden bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-full flex items-center space-x-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        <span>Concluir</span>
+      </button>
+      <div id="timer-display" class="hidden text-6xl font-mono text-gray-900">00:00</div>
+      <div id="end-time" class="hidden text-sm text-gray-700">Término previsto: --:--</div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const STORAGE_KEY = 'Atividades';
+      let activities = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+      // Índice da primeira atividade pendente (done === false)
+      let currentIndex = activities.findIndex(a => !a.done);
+      let first = currentIndex > -1 ? activities[currentIndex] : null;
+
+      const titleEl = document.getElementById('activity-title');
+      const startBtn = document.getElementById('start-btn');
+      const concludeBtn = document.getElementById('conclude-btn');
+      const timerEl = document.getElementById('timer-display');
+      const endEl = document.getElementById('end-time');
+      let interval;
+      let timeLeft;
+
+      function saveActivities() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(activities));
+      }
+
+      function init() {
+        if (!first) {
+          titleEl.textContent = 'Nenhuma atividade disponível';
+          startBtn.disabled = true;
+          startBtn.textContent = '—';
+        } else if (first.done) {
+          titleEl.textContent = `${first.text} (Concluída)`;
+          startBtn.disabled = true;
+          startBtn.textContent = '✔️';
+        } else {
+          titleEl.textContent = first.text;
+        }
+      }
+
+      function formatTime(sec) {
+        const m = String(Math.floor(sec / 60)).padStart(2, '0');
+        const s = String(sec % 60).padStart(2, '0');
+        return `${m}:${s}`;
+      }
+
+      function markCompleted() {
+        clearInterval(interval);
+        if (first) {
+          activities[currentIndex].done = true;
+          activities[currentIndex].completedAt = new Date().toISOString();
+          saveActivities();
+        }
+        titleEl.textContent = first ? `${first.text} (Concluída)` : 'Atividade concluída!';
+        timerEl.classList.add('hidden');
+        endEl.classList.add('hidden');
+        concludeBtn.classList.add('hidden');
+      }
+
+      startBtn.addEventListener('click', () => {
+        timeLeft = 20 * 60; // 20 minutos
+        const finish = new Date(Date.now() + timeLeft * 1000);
+        endEl.textContent = `Término previsto: ${finish.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
+        startBtn.classList.add('hidden');
+        concludeBtn.classList.remove('hidden');
+        timerEl.classList.remove('hidden');
+        endEl.classList.remove('hidden');
+        timerEl.textContent = formatTime(timeLeft);
+
+        interval = setInterval(() => {
+          timeLeft--;
+          if (timeLeft < 0) {
+            markCompleted();
+          } else {
+            timerEl.textContent = formatTime(timeLeft);
+          }
+        }, 1000);
+      });
+
+      concludeBtn.addEventListener('click', markCompleted);
+
+      init();
+    })();
+  </script>
+</body>
+</html>

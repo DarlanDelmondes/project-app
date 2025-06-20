@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>Proporção de Atividades por OKR Hoje</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Ajuste para retina */
+    @media only screen and (-webkit-min-device-pixel-ratio: 2),
+           only screen and (min-resolution: 192dpi) {
+      html { font-size: 0.85rem; }
+    }
+    .square { width: 12px; height: 12px; border-radius: 2px; margin: 1px; }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-4">
+  <h1 class="text-lg font-semibold mb-4">Atividades Concluídas por OKR (Hoje)</h1>
+  <div id="waffle" class="grid grid-cols-10 grid-rows-10 gap-1 mb-6"></div>
+  <div id="legend" class="w-full max-w-md"></div>
+
+  <script>
+    const STORAGE_KEY = 'Atividades';
+    const activities = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+
+    // Calcula apenas as concluídas HOJE (GMT-3 local)
+    const now = new Date();
+    const todayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const doneToday = activities.filter(a => a.done && a.completedAt).filter(a => {
+      const d = new Date(a.completedAt);
+      const dLocal = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      return dLocal.getTime() === todayLocal.getTime();
+    });
+
+    const total = doneToday.length;
+
+    // Agrupa por OKR
+    const counts = {};
+    doneToday.forEach(a => {
+      const key = a.okr || 'Sem OKR';
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    const entries = Object.entries(counts);
+
+    // Paleta para até 10 grupos
+    const colors = ['bg-indigo-500','bg-green-500','bg-yellow-500','bg-red-500',
+                    'bg-purple-500','bg-pink-500','bg-blue-500','bg-teal-500',
+                    'bg-orange-500','bg-cyan-500'];
+
+    // Constrói os quadradinhos (100 no total)
+    const squares = [];
+    let sumPct = 0;
+    entries.forEach(([okr, cnt], i) => {
+      const pct = total ? cnt / total : 0;
+      const num = Math.round(pct * 100);
+      squares.push({ okr, num, color: colors[i % colors.length], cnt });
+      sumPct += num;
+    });
+    // Ajuste de soma para 100
+    const diff = 100 - sumPct;
+    if (diff !== 0 && squares.length) {
+      squares[squares.length - 1].num += diff;
+    }
+
+    // Render do waffle com tooltips
+    const waffle = document.getElementById('waffle');
+    squares.forEach(group => {
+      for (let i = 0; i < group.num; i++) {
+        const cell = document.createElement('div');
+        cell.className = `square ${group.color}`;
+        cell.title = `${group.okr}: ${group.cnt} (${((group.cnt/total)*100||0).toFixed(1)}%)`;
+        waffle.appendChild(cell);
+      }
+    });
+
+    // Legenda
+    const legend = document.getElementById('legend');
+    entries.forEach(([okr, cnt], i) => {
+      const group = squares[i];
+      const item = document.createElement('div');
+      item.className = 'flex items-center mb-2';
+      const dot = document.createElement('span');
+      dot.className = `inline-block w-3 h-3 ${group.color} mr-2 rounded-full`;
+      const label = document.createElement('span');
+      const pct = total ? ((group.cnt / total) * 100).toFixed(1) : '0.0';
+      label.textContent = `${okr}: ${group.cnt} (${pct}%)`;
+      label.className = 'text-sm text-gray-700';
+      item.appendChild(dot);
+      item.appendChild(label);
+      legend.appendChild(item);
+    });
+  </script>
+</body>
+</html>

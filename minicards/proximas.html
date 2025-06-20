@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>Próximas Atividades</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <style>
+    @media only screen and (-webkit-min-device-pixel-ratio: 2),
+           only screen and (min-resolution: 192dpi) {
+      html { font-size: 0.85rem; }
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-start justify-center p-4">
+  <h2 class="text-lg font-semibold mb-2">Próximas Atividades</h2>
+  <ul id="upcoming-list" class="w-full max-w-md space-y-2 mb-2"></ul>
+  <button id="see-more" class="px-4 py-2 bg-indigo-500 text-white rounded mb-6">Ver mais</button>
+
+  <h2 class="text-lg font-semibold mb-2">Atividades Recorrentes</h2>
+  <ul id="recurring-list" class="w-full max-w-md space-y-2"></ul>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const STORAGE_KEY = 'Atividades';
+      let all = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const todayKey = 'DailyEvents_' + today.toISOString().slice(0,10);
+      let renderedCount = 0;
+
+      const upcomingEl = document.getElementById('upcoming-list');
+      const seeMoreBtn = document.getElementById('see-more');
+      const recurEl    = document.getElementById('recurring-list');
+
+      // Carrega eventos pontuais e fixos para criar array de intervalos ocupados
+      const dailyEventsRaw = JSON.parse(localStorage.getItem(todayKey)) || [];
+      const fixedRaw       = JSON.parse(localStorage.getItem('FixedEvents')) || [];
+      const dailyEvents = dailyEventsRaw.map(e => ({ startMin: parseTime(e.start), endMin: parseTime(e.end) }));
+      const fixedEvents = fixedRaw.map(e => ({ startMin: parseTime(e.start), endMin: parseTime(e.end) }));
+      let busy = [...dailyEvents, ...fixedEvents].map(o => [o.startMin, o.endMin]).sort((a,b)=>a[0]-b[0]);
+
+      function parseTime(str) {
+        const [h,m] = str.split(':').map(Number);
+        return h*60 + m;
+      }
+
+      function isExpired(a) {
+        return a.date && (new Date(a.date+'T00:00:00') < today) && !a.done;
+      }
+
+      function getUpcomingItems() {
+        return all.map((a,idx)=>({a,idx}))
+          .filter(({a})=>!a.done);
+      }
+
+      function getRecurringItems() {
+        return all.map((a,idx)=>({a,idx})).filter(({a})=>a.type==='recurring');
+      }
+
+      function nextFree(tMin) {
+        let t = tMin;
+        for (const [bs, be] of busy) {
+          if (t + 20 <= bs) break;
+          if (t >= bs && t < be) t = be;
+        }
+        return t;
+      }
+
+      function appendNextBatch() {
+        const items = getUpcomingItems();
+        const batch = items.slice(renderedCount, renderedCount+5);
+        let baseMin = now.getHours()*60 + now.getMinutes() + renderedCount*20;
+
+        batch.forEach(({a,idx}) => {
+          const startMin = nextFree(baseMin);
+          const endMin   = startMin + 20;
+          baseMin = endMin;
+          busy.push([startMin,endMin]); busy.sort((x,y)=>x[0]-y[0]);
+
+          const s = new Date(today);
+          s.setHours(Math.floor(startMin/60), startMin%60);
+          const e = new Date(today);
+          e.setHours(Math.floor(endMin/60), endMin%60);
+
+          const li = document.createElement('li');
+          li.className = 'flex justify-between p-2 bg-white rounded';
+          li.dataset.index = idx;
+
+          let mark = '';
+          if (isExpired(a)) mark = '<span class="text-red-500 mr-2">⚠️</span>';
+
+          li.innerHTML = `
+            <div class="flex items-center">
+              ${mark}
+              <div class="flex flex-col">
+                <span>${a.text}</span>
+                <span class="text-xs text-gray-500">${a.date||''}</span>
+              </div>
+            </div>
+            <span class="text-sm text-indigo-600 font-medium">
+              ${s.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})} - ${e.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}
+            </span>
+          `;
+          upcomingEl.appendChild(li);
+        });
+
+        renderedCount += batch.length;
+        seeMoreBtn.disabled = renderedCount >= getUpcomingItems().length;
+      }
+
+      Sortable.create(upcomingEl, {
+        animation: 150,
+        onEnd: () => {
+          const newOrder = Array.from(upcomingEl.children).map(el => +el.dataset.index);
+          const items = getUpcomingItems();
+          // remove originais
+          items.map(x => x.idx).sort((a,b)=>b-a).forEach(i => all.splice(i,1));
+          // reinsere
+          let pos = newOrder.length ? Math.min(...newOrder) : 0;
+          newOrder.forEach(origIdx => {
+            const obj = items.find(x => x.idx === origIdx);
+            all.splice(pos++, 0, obj.a);
+          });
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+          // Reset render
+          renderedCount = 0;
+          upcomingEl.innerHTML = '';
+          busy = [...dailyEvents, ...fixedEvents].map(o => [o.startMin,o.endMin]).sort((a,b)=>a[0]-b[0]);
+          appendNextBatch();
+        }
+      });
+
+      function renderRecurring() {
+        const recs = getRecurringItems();
+        recurEl.innerHTML = '';
+        if (!recs.length) {
+          recurEl.innerHTML = '<li class="text-center text-gray-500">Nenhuma recorrente cadastrada.</li>';
+          return;
+        }
+        recs.forEach(({a,idx}) => {
+          const li = document.createElement('li');
+          li.className = 'flex justify-between p-2 bg-white rounded cursor-pointer';
+          let mark = '';
+          if (isExpired(a)) mark = '❌ ';
+          else if (!a.done) mark = '🔄 ';
+          li.innerHTML = `
+            <span>${mark}${a.text}</span>
+            <span class="text-xs text-gray-500">${a.recurrence}</span>
+          `;
+          // duplo clique: copiar como fixo com data de hoje
+          li.addEventListener('dblclick', () => {
+            const todayStr = today.toISOString().slice(0,10);
+            const newAct = {
+              text: a.text,
+              date: todayStr,
+              done: false,
+              type: 'fixed',
+              recurrence: null,
+              createdAt: new Date().toISOString(),
+              okr: a.okr || null
+            };
+            all.push(newAct);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+            renderedCount = 0;
+            upcomingEl.innerHTML = '';
+            busy = [...dailyEvents, ...fixedEvents].map(o=>[o.startMin,o.endMin]).sort((a,b)=>a[0]-b[0]);
+            appendNextBatch();
+          });
+          recurEl.appendChild(li);
+        });
+      }
+
+      appendNextBatch();
+      renderRecurring();
+      seeMoreBtn.addEventListener('click', appendNextBatch);
+    });
+  </script>
+</body>
+</html>

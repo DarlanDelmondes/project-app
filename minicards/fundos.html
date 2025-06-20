@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>Gerenciador de OKRs - Apenas Cards</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Retina */
+    @media only screen and (-webkit-min-device-pixel-ratio:2),
+           only screen and (min-resolution:192dpi) {
+      html { font-size:0.85rem; }
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+  <div class="w-full max-w-lg">
+    <!-- Grade de cards apenas -->
+    <div id="okr-list" class="grid grid-cols-2 gap-4"></div>
+  </div>
+
+  <!-- Modal de edição -->
+  <div id="edit-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center">
+    <div class="bg-white rounded-lg p-6 w-full max-w-md">
+      <h2 class="text-lg font-medium mb-4">Editar OKR</h2>
+      <form id="edit-form" class="flex flex-col space-y-2">
+        <input type="text" id="edit-name"
+               class="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" disabled />
+        <input type="url" id="edit-image"
+               class="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" required />
+        <div class="flex justify-end gap-2 mt-4">
+          <button type="button" id="btn-cancel" class="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300">Cancelar</button>
+          <button type="submit" class="px-4 py-2 rounded bg-green-500 text-white hover:bg-green-600">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const ACT_KEY = 'Atividades';
+      const DEF_KEY = 'OKR_DEFS';
+      const acts = JSON.parse(localStorage.getItem(ACT_KEY)) || [];
+      const names = Array.from(new Set(acts.map(a=>a.okr).filter(o=>o)));
+      let defs = JSON.parse(localStorage.getItem(DEF_KEY)) || [];
+      names.forEach(name => {
+        if (!defs.find(d=>d.name===name)) defs.push({name, image:''});
+      });
+      const listEl = document.getElementById('okr-list');
+      const modal = document.getElementById('edit-modal');
+      const editForm = document.getElementById('edit-form');
+      const editName = document.getElementById('edit-name');
+      const editImage = document.getElementById('edit-image');
+      const btnCancel = document.getElementById('btn-cancel');
+      let editIndex = null;
+
+      function saveDefs() {
+        localStorage.setItem(DEF_KEY, JSON.stringify(defs));
+        renderCards();
+      }
+
+      function renderCards() {
+        listEl.innerHTML = '';
+        defs.forEach((d, i) => {
+          const card = document.createElement('div');
+          card.className = 'relative h-32 rounded-lg overflow-hidden shadow';
+          card.style.backgroundImage = d.image ? `url('${d.image}')` : 'none';
+          card.style.backgroundSize = 'cover';
+          card.style.backgroundPosition = 'center';
+
+          const overlay = document.createElement('div');
+          overlay.className = 'absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-end p-2';
+          const title = document.createElement('span');
+          title.textContent = d.name;
+          title.className = 'text-white text-sm font-medium';
+          overlay.appendChild(title);
+
+          const btns = document.createElement('div');
+          btns.className = 'absolute top-2 right-2 flex gap-1';
+
+          const editBtn = document.createElement('button');
+          editBtn.innerHTML = '✎';
+          editBtn.className = 'text-white bg-black bg-opacity-50 rounded-full p-1 hover:bg-opacity-75';
+          editBtn.onclick = () => {
+            editIndex = i;
+            editName.value = d.name;
+            editImage.value = d.image;
+            modal.classList.remove('hidden');
+          };
+
+          const delBtn = document.createElement('button');
+          delBtn.innerHTML = '×';
+          delBtn.className = 'text-white bg-black bg-opacity-50 rounded-full p-1 hover:bg-opacity-75';
+          delBtn.onclick = () => {
+            if (confirm(`Excluir OKR "${d.name}"?`)) {
+              defs.splice(i, 1);
+              saveDefs();
+            }
+          };
+
+          btns.append(editBtn, delBtn);
+          card.append(overlay, btns);
+          listEl.appendChild(card);
+        });
+      }
+
+      editForm.onsubmit = e => {
+        e.preventDefault();
+        defs[editIndex].image = editImage.value.trim();
+        saveDefs();
+        modal.classList.add('hidden');
+      };
+
+      btnCancel.onclick = () => modal.classList.add('hidden');
+
+      renderCards();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>Atividades Concluídas</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Ajuste para retina */
+    @media only screen and (-webkit-min-device-pixel-ratio: 2),
+           only screen and (min-resolution: 192dpi) {
+      html { font-size: 0.85rem; }
+    }
+  </style>
+</head>
+<body class="bg-gray-100 flex flex-col items-center justify-start min-h-screen p-4">
+  <h1 class="text-2xl font-bold mb-6">Atividades Concluídas</h1>
+  <ul id="completed-list" class="w-full max-w-md space-y-2">
+    <!-- Concluídas serão renderadas aqui -->
+  </ul>
+
+  <script>
+    const STORAGE_KEY = 'Atividades';
+    const all = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    // Filtrar somente concluídas com timestamp
+    const completed = all
+      .filter(a => a.done && a.completedAt)
+      .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+
+    const ul = document.getElementById('completed-list');
+    if (completed.length === 0) {
+      const li = document.createElement('li');
+      li.textContent = 'Nenhuma atividade concluída.';
+      li.className = 'text-center text-gray-500';
+      ul.appendChild(li);
+    } else {
+      completed.forEach(a => {
+        const li = document.createElement('li');
+        li.className = 'flex justify-between p-2';
+
+        const desc = document.createElement('span');
+        desc.textContent = a.text;
+        desc.className = 'text-gray-900';
+
+        const time = new Date(a.completedAt);
+        const ts = time.toLocaleDateString() + ' ' + time.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        const timeSpan = document.createElement('span');
+        timeSpan.textContent = ts;
+        timeSpan.className = 'text-xs text-gray-500';
+
+        li.appendChild(desc);
+        li.appendChild(timeSpan);
+        ul.appendChild(li);
+      });
+    }
+  </script>
+</body>
+</html>

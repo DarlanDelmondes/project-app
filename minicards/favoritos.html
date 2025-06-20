@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Links Favoritos por OKR</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    html { font-size: 0.75rem; }
+    @media only screen and (-webkit-min-device-pixel-ratio: 2),
+           only screen and (min-resolution: 192dpi) {
+      html { font-size: 0.7rem; }
+    }
+    body { margin: 0; padding: 0; background-color: #f9fafb; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col p-4">
+  <div class="max-w-4xl w-full mx-auto">
+    <!-- Labels de OKR -->
+    <div id="okr-labels" class="mb-4 flex flex-wrap gap-2"></div>
+    <!-- Formulário de adição -->
+    <form id="link-form" class="flex space-x-2 mb-4 w-full">
+      <input id="title-input" type="text" placeholder="Título" required
+             class="flex-1 px-3 py-2 border-none focus:outline-none rounded-md shadow-inner"/>
+      <input id="url-input" type="url" placeholder="URL" required
+             class="flex-1 px-3 py-2 border-none focus:outline-none rounded-md shadow-inner"/>
+      <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-md transition">+</button>
+    </form>
+    <!-- Lista de links -->
+    <ul id="link-list" class="flex flex-wrap gap-3"></ul>
+  </div>
+
+  <script>
+    (function(){
+      const ACT_KEY = 'Atividades';
+      const STORAGE_KEY = 'favoriteLinks';
+      const activities = JSON.parse(localStorage.getItem(ACT_KEY)) || [];
+      const pending = activities.find(a=>!a.done);
+      const currentOKR = pending && pending.okr ? pending.okr : '_all';
+
+      // Carrega definições de OKR
+      const okrDefs = JSON.parse(localStorage.getItem('OKR_DEFS')) || [];
+      const okrs = ['_all', ...okrDefs.map(d=>d.name)];
+      let selectedOKR = currentOKR;
+
+      // Links salvo
+      let links = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+
+      const labelsEl = document.getElementById('okr-labels');
+      const form = document.getElementById('link-form');
+      const titleInput = document.getElementById('title-input');
+      const urlInput = document.getElementById('url-input');
+      const listEl = document.getElementById('link-list');
+
+      function saveLinks() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(links));
+      }
+
+      function renderLabels() {
+        labelsEl.innerHTML = '';
+        okrs.forEach(o => {
+          const span = document.createElement('span');
+          span.textContent = o === '_all' ? 'Todas' : o;
+          span.className = `text-xs px-2 py-1 rounded-full cursor-pointer ${o===selectedOKR ? 'bg-indigo-500 text-white' : 'bg-gray-200 text-gray-700 opacity-50'}`;
+          span.onclick = () => {
+            selectedOKR = o;
+            renderLabels();
+            renderLinks();
+          };
+          labelsEl.appendChild(span);
+        });
+      }
+
+      function randomPastel() {
+        const hue = Math.floor(Math.random() * 360);
+        return `hsl(${hue},70%,90%)`;
+      }
+
+      function renderLinks() {
+        listEl.innerHTML = '';
+        const filtered = links.filter(l => selectedOKR === '_all' || l.okr === selectedOKR);
+        if (filtered.length === 0) {
+          const msg = document.createElement('p');
+          msg.textContent = 'Nenhum link para este OKR.';
+          msg.className = 'text-gray-500';
+          listEl.appendChild(msg);
+          return;
+        }
+        filtered.forEach((link, idx) => {
+          const li = document.createElement('li');
+          li.className = 'group w-40 h-40 rounded-xl p-4 cursor-pointer flex flex-col justify-between';
+          li.style.backgroundColor = link.color;
+          li.addEventListener('dblclick', () => window.open(link.url, '_blank'));
+
+          const info = document.createElement('div');
+          info.innerHTML = `
+            <a href="${link.url}" target="_blank" class="block text-base font-semibold hover:underline text-indigo-700 truncate">
+              ${link.title}
+            </a>
+            <span class="block text-xs truncate text-gray-800">${link.url}</span>
+          `;
+
+          const actions = document.createElement('div');
+          actions.className = 'flex space-x-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity duration-150';
+
+          const editBtn = document.createElement('button');
+          editBtn.innerHTML = '✎';
+          editBtn.title = 'Editar';
+          editBtn.className = 'p-1 rounded-full hover:bg-yellow-200 transition';
+          editBtn.onclick = e => {
+            e.stopPropagation();
+            titleInput.value = link.title;
+            urlInput.value = link.url;
+            // remove para re-adicionar
+            links.splice(links.indexOf(link),1);
+            saveLinks();
+            renderLinks();
+          };
+
+          const deleteBtn = document.createElement('button');
+          deleteBtn.innerHTML = '×';
+          deleteBtn.title = 'Excluir';
+          deleteBtn.className = 'p-1 rounded-full hover:bg-red-200 transition';
+          deleteBtn.onclick = e => {
+            e.stopPropagation();
+            if (confirm('Excluir este link?')) {
+              links.splice(links.indexOf(link),1);
+              saveLinks();
+              renderLinks();
+            }
+          };
+
+          actions.append(editBtn, deleteBtn);
+          li.append(info, actions);
+          listEl.appendChild(li);
+        });
+      }
+
+      form.onsubmit = e => {
+        e.preventDefault();
+        const newLink = {
+          title: titleInput.value.trim(),
+          url: urlInput.value.trim(),
+          color: randomPastel(),
+          okr: selectedOKR
+        };
+        links.push(newLink);
+        saveLinks();
+        renderLinks();
+        form.reset();
+        titleInput.focus();
+      };
+
+      // Init
+      renderLabels();
+      renderLinks();
+    })();
+  </script>
+</body>
+</html>

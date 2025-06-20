@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>Lista de Atividades</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Ajuste para retina */
+    @media only screen and (-webkit-min-device-pixel-ratio: 2),
+           only screen and (min-resolution: 192dpi) {
+      html { font-size: 0.85rem; }
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+  <ul id="activity-list" class="flex flex-wrap gap-4 w-full max-w-xl"></ul>
+
+  <script>
+    const STORAGE_KEY = 'Atividades';
+    let activities = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    const listEl = document.getElementById('activity-list');
+
+    function save() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(activities));
+    }
+
+    function renderList() {
+      listEl.innerHTML = '';
+      if (activities.length === 0) {
+        const msg = document.createElement('p');
+        msg.textContent = 'Nenhuma atividade cadastrada.';
+        msg.className = 'text-center text-gray-500 w-full';
+        listEl.appendChild(msg);
+        return;
+      }
+
+      activities.forEach((act, idx) => {
+        const li = document.createElement('li');
+        // Estilo e cor conforme estado concluído
+        li.className = `flex flex-col p-4 flex-1 cursor-pointer ${act.done ? 'bg-green-100' : 'bg-gray-50'}`;
+        // Duplo clique apenas para concluir
+        li.addEventListener('dblclick', () => {
+          if (!activities[idx].done) {
+            activities[idx].done = true;
+            activities[idx].completedAt = new Date().toISOString();
+            save(); renderList();
+          }
+        });
+
+        const desc = document.createElement('span');
+        desc.textContent = act.text;
+        desc.className = act.done ? 'line-through text-green-800 mb-1' : 'text-gray-900 mb-1';
+
+        const dateSpan = document.createElement('span');
+        dateSpan.textContent = act.date ? new Date(act.date).toLocaleDateString() : '';
+        dateSpan.className = 'text-xs text-gray-500 mb-2';
+
+        // Botão excluir permanece com duplo clique
+        const del = document.createElement('button');
+        del.textContent = '✕';
+        del.title = 'Excluir atividade';
+        del.className = 'self-end text-red-500 hover:text-red-700';
+        del.addEventListener('dblclick', (e) => {
+          e.stopPropagation();
+          activities.splice(idx, 1);
+          save(); renderList();
+        });
+
+        li.appendChild(desc);
+        li.appendChild(dateSpan);
+        li.appendChild(del);
+        listEl.appendChild(li);
+      });
+    }
+
+    renderList();
+  </script>
+</body>
+</html>

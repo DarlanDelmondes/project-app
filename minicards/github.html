@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contribuições de Atividades</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    html { font-size: 0.75rem; }
+    .square { width:12px; height:12px; border-radius:2px; margin:1px; }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen p-4 flex flex-col items-start">
+  <div class="max-w-3xl w-full mx-auto">
+    <div id="okr-labels" class="mb-4 flex flex-wrap gap-2"></div>
+
+    <h2 class="text-sm font-semibold mb-2">Hoje (Hora a Hora)</h2>
+    <div id="graph-day" class="flex"></div>
+
+    <h2 class="text-sm font-semibold my-2">Semana Atual (Dia a Dia)</h2>
+    <div id="graph-week" class="flex"></div>
+
+    <h2 class="text-sm font-semibold my-2">Mês Atual (Dia a Dia)</h2>
+    <div id="graph-month" class="flex flex-wrap mb-4"></div>
+
+    <!-- Alertas de deadlines -->
+    <div id="deadline-alert-today" class="mt-4"></div>
+    <ul id="deadline-list-today" class="mt-2 list-disc list-inside text-sm text-yellow-700"></ul>
+
+    <div id="deadline-alert-overdue" class="mt-4"></div>
+    <ul id="deadline-list-overdue" class="mt-2 list-disc list-inside text-sm text-red-700"></ul>
+  </div>
+
+  <script>
+    (function(){
+      const ACT_KEY = 'Atividades';
+      const activities = JSON.parse(localStorage.getItem(ACT_KEY)) || [];
+      const okrDefs = JSON.parse(localStorage.getItem('OKR_DEFS')) || [];
+      const okrs = ['_all', ...okrDefs.map(d=>d.name)];
+      let selectedOKR = '_all';
+
+      const labelsEl = document.getElementById('okr-labels');
+      const daEl = document.getElementById('deadline-alert-today');
+      const dtEl = document.getElementById('deadline-list-today');
+      const oaEl = document.getElementById('deadline-alert-overdue');
+      const otEl = document.getElementById('deadline-list-overdue');
+
+      function renderLabels() {
+        labelsEl.innerHTML = '';
+        okrs.forEach(o => {
+          const span = document.createElement('span');
+          span.textContent = o === '_all' ? 'Todas' : o;
+          span.className = `text-xs px-2 py-1 rounded-full cursor-pointer ${o===selectedOKR?'bg-indigo-500 text-white':'bg-gray-200 text-gray-700 opacity-50'}`;
+          span.onclick = () => { selectedOKR = o; renderAll(); };
+          labelsEl.appendChild(span);
+        });
+      }
+
+      function filterOKR(a) { return selectedOKR === '_all' || a.okr === selectedOKR; }
+
+      function intensity(count) {
+        if (count===0) return '#ebedf0'; if (count<2) return '#9be9a8'; if (count<4) return '#40c463'; if (count<6) return '#30a14e'; return '#216e39';
+      }
+
+      function countByHour() {
+        const now=new Date(); const counts=Array(24).fill(0);
+        activities.forEach(a=>{ if(a.completedAt&&filterOKR(a)){ const d=new Date(a.completedAt); if(d.toDateString()===now.toDateString()) counts[d.getHours()]++; }});
+        return counts;
+      }
+      function countByWeekDay() {
+        const now=new Date(); const start=new Date(now); start.setDate(start.getDate()-start.getDay()); const counts=Array(7).fill(0);
+        activities.forEach(a=>{ if(a.completedAt&&filterOKR(a)){ const d=new Date(a.completedAt); if(d>=start&&d<new Date(start.getTime()+7*86400000)) counts[d.getDay()]++; }});
+        return counts;
+      }
+      function countByMonthDay() {
+        const now=new Date(); const days=new Date(now.getFullYear(),now.getMonth()+1,0).getDate(); const counts=Array(days).fill(0);
+        activities.forEach(a=>{ if(a.completedAt&&filterOKR(a)){ const d=new Date(a.completedAt); if(d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear()) counts[d.getDate()-1]++; }});
+        return counts;
+      }
+
+      function renderGraph(id,data){ document.getElementById(id).innerHTML=''; data.forEach(c=>{ const sq=document.createElement('div'); sq.className='square'; sq.style.backgroundColor=intensity(c); document.getElementById(id).appendChild(sq); }); }
+
+      function renderDeadlineAlerts(){
+        const todayStr = new Date().toISOString().slice(0,10);
+        const todayList = activities.filter(a=>a.type==='deadline'&&!a.done&&a.date===todayStr&&filterOKR(a));
+        const overdueList = activities.filter(a=>a.type==='deadline'&&!a.done&&a.date<todayStr&&filterOKR(a));
+
+        // Hoje
+        if(todayList.length){
+          daEl.innerHTML = `<div class="flex items-center gap-2 bg-yellow-200 text-yellow-800 px-3 py-2 rounded">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3" />
+            </svg>
+            <span>${todayList.length} deadline(s) para hoje</span>
+          </div>`;
+          dtEl.innerHTML='';
+          todayList.forEach(a=>{ const li=document.createElement('li'); li.textContent=`${a.text} (${a.okr||'—'})`; dtEl.appendChild(li); });
+        } else { daEl.innerHTML=''; dtEl.innerHTML=''; }
+
+        // Vencidos
+        if(overdueList.length){
+          oaEl.innerHTML = `<div class="flex items-center gap-2 bg-red-200 text-red-800 px-3 py-2 rounded">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2v6" />
+            </svg>
+            <span>${overdueList.length} deadline(s) vencida(s)</span>
+          </div>`;
+          otEl.innerHTML='';
+          overdueList.forEach(a=>{ const li=document.createElement('li'); li.textContent=`${a.text} (${a.okr||'—'})`; otEl.appendChild(li); });
+        } else { oaEl.innerHTML=''; otEl.innerHTML=''; }
+      }
+
+      function renderAll(){
+        renderLabels();
+        renderGraph('graph-day',countByHour());
+        renderGraph('graph-week',countByWeekDay());
+        renderGraph('graph-month',countByMonthDay());
+        renderDeadlineAlerts();
+      }
+
+      renderAll();
+    })();
+  </script>
+</body>
+</html>

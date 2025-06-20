@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>Gerenciador de Eventos</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @media only screen and (-webkit-min-device-pixel-ratio:2), only screen and (min-resolution:192dpi) {
+      html { font-size:0.85rem; }
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen p-4">
+  <div class="max-w-4xl mx-auto space-y-8">
+    <!-- Eventos do Dia primeiro -->
+    <section class="bg-white p-6 rounded-lg shadow">
+      <h2 class="text-lg font-semibold mb-4">Eventos de Hoje</h2>
+      <form id="daily-form" class="flex flex-wrap gap-2 mb-4">
+        <input type="text" id="daily-title" placeholder="Título"
+               class="flex-1 px-3 py-2 border rounded focus:outline-none" required />
+        <input type="time" id="daily-start"
+               class="w-24 px-2 py-2 border rounded focus:outline-none" required />
+        <input type="time" id="daily-end"
+               class="w-24 px-2 py-2 border rounded focus:outline-none" required />
+        <button type="submit"
+                class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Adicionar</button>
+      </form>
+      <ul id="daily-list" class="space-y-2 text-sm">
+        <!-- Eventos do dia serão renderizados aqui -->
+      </ul>
+    </section>
+
+    <!-- Eventos Fixos abaixo -->
+    <section class="bg-white p-6 rounded-lg shadow">
+      <h2 class="text-lg font-semibold mb-4">Eventos Fixos</h2>
+      <form id="fixed-form" class="flex flex-wrap gap-2 mb-4">
+        <input type="text" id="fixed-title" placeholder="Título"
+               class="flex-1 px-3 py-2 border rounded focus:outline-none" required />
+        <input type="time" id="fixed-start"
+               class="w-24 px-2 py-2 border rounded focus:outline-none" required />
+        <input type="time" id="fixed-end"
+               class="w-24 px-2 py-2 border rounded focus:outline-none" required />
+        <button type="submit"
+                class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Adicionar</button>
+      </form>
+      <ul id="fixed-list" class="space-y-2 text-sm">
+        <!-- Eventos fixos serão renderizados aqui -->
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const fixedForm = document.getElementById('fixed-form');
+      const fixedList = document.getElementById('fixed-list');
+      const dailyForm = document.getElementById('daily-form');
+      const dailyList = document.getElementById('daily-list');
+
+      const FIXED_KEY = 'FixedEvents';
+      const todayKey = () => 'DailyEvents_' + new Date().toISOString().slice(0,10);
+
+      let fixedEvents = JSON.parse(localStorage.getItem(FIXED_KEY)) || [];
+      let dailyEvents = JSON.parse(localStorage.getItem(todayKey())) || [];
+
+      function saveFixed() { localStorage.setItem(FIXED_KEY, JSON.stringify(fixedEvents)); }
+      function saveDaily(){ localStorage.setItem(todayKey(), JSON.stringify(dailyEvents)); }
+
+      function renderDaily() {
+        dailyList.innerHTML = '';
+        dailyEvents.forEach((e,i)=>{
+          const li=document.createElement('li');
+          li.className='flex justify-between items-center p-2 border rounded hover:bg-gray-50';
+          li.innerHTML = `
+            <div>
+              <span class="font-medium">${e.title}</span>
+              <span class="text-xs text-gray-600 ml-2">[${e.start} - ${e.end}]</span>
+            </div>
+            <button class="text-red-500 hover:text-red-700 text-sm">✕</button>
+          `;
+          li.querySelector('button').addEventListener('click',()=>{
+            dailyEvents.splice(i,1);
+            saveDaily(); renderDaily();
+          });
+          dailyList.appendChild(li);
+        });
+      }
+
+      function renderFixed() {
+        fixedList.innerHTML = '';
+        fixedEvents.forEach((e,i)=>{
+          const li=document.createElement('li');
+          li.className='flex justify-between items-center p-2 border rounded hover:bg-gray-50';
+          li.innerHTML = `
+            <div>
+              <span class="font-medium">${e.title}</span>
+              <span class="text-xs text-gray-600 ml-2">[${e.start} - ${e.end}]</span>
+            </div>
+            <button class="text-red-500 hover:text-red-700 text-sm">✕</button>
+          `;
+          // duplo clique copia
+          li.addEventListener('dblclick',()=>{
+            dailyEvents.push({...e}); saveDaily(); renderDaily();
+          });
+          // delete
+          li.querySelector('button').addEventListener('click',()=>{
+            fixedEvents.splice(i,1);
+            saveFixed(); renderFixed();
+          });
+          fixedList.appendChild(li);
+        });
+      }
+
+      fixedForm.addEventListener('submit',e=>{
+        e.preventDefault();
+        const title=document.getElementById('fixed-title').value.trim();
+        const start=document.getElementById('fixed-start').value;
+        const end=document.getElementById('fixed-end').value;
+        fixedEvents.push({title,start,end});
+        saveFixed(); renderFixed(); fixedForm.reset();
+      });
+
+      dailyForm.addEventListener('submit',e=>{
+        e.preventDefault();
+        const title=document.getElementById('daily-title').value.trim();
+        const start=document.getElementById('daily-start').value;
+        const end=document.getElementById('daily-end').value;
+        dailyEvents.push({title,start,end});
+        saveDaily(); renderDaily(); dailyForm.reset();
+      });
+
+      renderDaily();
+      renderFixed();
+    });
+  </script>
+</body>
+</html>

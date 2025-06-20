@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>Lista de Atividades</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Retina */
+    @media only screen and (-webkit-min-device-pixel-ratio: 2),
+           only screen and (min-resolution: 192dpi) {
+      html { font-size: 0.85rem; }
+    }
+    [data-open] {
+      transition: height 0.3s ease;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen p-4 flex justify-center">
+  <div class="w-full max-w-lg bg-white p-4 rounded-lg shadow-md">
+    <div class="flex gap-2 mb-4 text-xs">
+      <button id="filter-pending" class="px-2 py-1 bg-yellow-200 rounded">Pendentes</button>
+      <button id="filter-done" class="px-2 py-1 bg-green-200 rounded">Concluídas</button>
+      <button id="filter-all" class="px-2 py-1 bg-gray-200 rounded">Todas</button>
+    </div>
+    <ul id="activity-list" class="space-y-2"></ul>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const STORAGE_KEY = 'Atividades';
+      let activities = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+      activities.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      const listEl = document.getElementById('activity-list');
+      let filter = 'all';
+
+      function render() {
+        listEl.innerHTML = '';
+        activities.forEach((act, idx) => {
+          if (filter === 'pending' && act.done) return;
+          if (filter === 'done' && !act.done) return;
+
+          const li = document.createElement('li');
+          li.className = 'rounded-lg bg-gray-50';
+
+          const header = document.createElement('div');
+          header.className = 'p-2 cursor-pointer flex justify-between items-center';
+          header.innerHTML =
+            `<span class="${act.done?'line-through text-gray-400':'text-gray-900'}">${act.text}</span>` +
+            `<span class="text-xs text-gray-500">${new Date(act.createdAt).toLocaleString()}</span>`;
+
+          // Botão excluir
+          const delBtn = document.createElement('button');
+          delBtn.innerHTML = '✕';
+          delBtn.title = 'Excluir atividade';
+          delBtn.className = 'text-red-500 hover:text-red-700 ml-2';
+          delBtn.addEventListener('click', e => {
+            e.stopPropagation();
+            if (confirm(`Excluir atividade "${act.text}"?`)) {
+              activities.splice(idx, 1);
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(activities));
+              render();
+            }
+          });
+          header.appendChild(delBtn);
+
+          const details = document.createElement('div');
+          details.setAttribute('data-open','false');
+          details.style.height = '0px';
+          details.className = 'px-4';
+          details.innerHTML =
+            `<div class="py-1 text-xs text-gray-700">Data: ${act.date||'—'}</div>`+
+            `<div class="pb-1 text-xs text-gray-700">Tipo: ${act.type}</div>`+
+            `<div class="pb-1 text-xs text-gray-700">Recorrência: ${act.recurrence||'—'}</div>`+
+            `<div class="pb-1 text-xs text-gray-700">OKR: ${act.okr||'—'}</div>`;
+
+          header.addEventListener('click', () => {
+            const open = details.getAttribute('data-open') === 'true';
+            if (!open) {
+              details.style.height = details.scrollHeight + 'px';
+              details.setAttribute('data-open','true');
+            } else {
+              details.style.height = '0px';
+              details.setAttribute('data-open','false');
+            }
+          });
+
+          li.appendChild(header);
+          li.appendChild(details);
+          listEl.appendChild(li);
+        });
+      }
+
+      document.getElementById('filter-pending').onclick = () => { filter='pending'; render(); };
+      document.getElementById('filter-done').onclick    = () => { filter='done';    render(); };
+      document.getElementById('filter-all').onclick     = () => { filter='all';     render(); };
+
+      render();
+    });
+  </script>
+</body>
+</html>
