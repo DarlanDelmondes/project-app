@@ -11,6 +11,16 @@
            only screen and (min-resolution: 192dpi) {
       html { font-size: 0.85rem; }
     }
+    /* Modal */
+    #modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      display: none; align-items: center; justify-content: center;
+      z-index: 50;
+    }
+    #modal {
+      background: white; border-radius: 0.5rem; padding: 1rem;
+      max-width: 90%; width: 20rem;
+    }
   </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
@@ -24,6 +34,15 @@
       <div>Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
     </div>
     <div id="calendar" class="grid grid-cols-7 gap-1 mt-1"></div>
+  </div>
+
+  <!-- Modal -->
+  <div id="modal-overlay">
+    <div id="modal">
+      <h3 id="modal-title" class="text-lg font-semibold mb-2"></h3>
+      <ul id="modal-list" class="list-disc list-inside text-sm mb-4"></ul>
+      <button id="modal-close" class="mt-2 px-4 py-2 bg-indigo-500 text-white rounded">Fechar</button>
+    </div>
   </div>
 
   <script>
@@ -43,6 +62,11 @@
     const nextBtn = document.getElementById('next');
     let current = new Date();
 
+    const modalOverlay = document.getElementById('modal-overlay');
+    const modalTitle = document.getElementById('modal-title');
+    const modalList = document.getElementById('modal-list');
+    const modalClose = document.getElementById('modal-close');
+
     function renderCalendar() {
       calendarEl.innerHTML = '';
       const year = current.getFullYear();
@@ -57,44 +81,45 @@
       }
       for (let day = 1; day <= daysInMonth; day++) {
         const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-        const acts = activitiesByDate[dateStr];
+        const acts = activitiesByDate[dateStr] || [];
         const isToday = new Date().toDateString() === new Date(year, month, day).toDateString();
         const cell = document.createElement('div');
         cell.className = `relative py-2 ${isToday ? 'bg-indigo-100 rounded-full' : ''}`;
         cell.innerHTML = `<span class="block">${day}</span>`;
-        if (acts) {
+        if (acts.length) {
           const hasDeadline = acts.some(a => a.type === 'deadline');
           const dot = document.createElement('span');
           dot.className = `absolute bottom-1 left-1/2 transform -translate-x-1/2 h-2 w-2 rounded-full ${hasDeadline ? 'bg-green-500' : 'bg-indigo-500'} cursor-pointer`;
-          dot.addEventListener('mouseenter', e => {
-            const tooltip = document.createElement('div');
-            tooltip.className = 'absolute bg-gray-800 text-white text-xs rounded px-2 py-1 z-50';
-            tooltip.textContent = acts.map(a=>a.text).join(', ');
-            document.body.appendChild(tooltip);
-            const rect = e.target.getBoundingClientRect();
-            const top = rect.top - tooltip.offsetHeight - 4;
-            const left = rect.left + rect.width/2 - tooltip.offsetWidth/2;
-            tooltip.style.top = `${top}px`;
-            tooltip.style.left = `${left}px`;
-            dot._tooltip = tooltip;
-          });
-          dot.addEventListener('mouseleave', () => {
-            if (dot._tooltip) document.body.removeChild(dot._tooltip);
-          });
           cell.appendChild(dot);
         }
+        // Duplo clique para abrir modal
+        cell.addEventListener('dblclick', () => {
+          const list = activitiesByDate[dateStr] || [];
+          if (!list.length) return;
+          modalTitle.textContent = `Atividades em ${dateStr}`;
+          modalList.innerHTML = '';
+          list.forEach(a => {
+            const li = document.createElement('li');
+            li.textContent = `${a.text}`;
+            if (a.type === 'deadline') {
+              const star = document.createElement('span');
+              star.textContent = ' ★';
+              star.className = 'text-yellow-500';
+              li.appendChild(star);
+            }
+            modalList.appendChild(li);
+          });
+          modalOverlay.style.display = 'flex';
+        });
         calendarEl.appendChild(cell);
       }
     }
 
-    prevBtn.addEventListener('click', () => {
-      current.setMonth(current.getMonth() - 1);
-      renderCalendar();
-    });
-    nextBtn.addEventListener('click', () => {
-      current.setMonth(current.getMonth() + 1);
-      renderCalendar();
-    });
+    prevBtn.addEventListener('click', () => { current.setMonth(current.getMonth() - 1); renderCalendar(); });
+    nextBtn.addEventListener('click', () => { current.setMonth(current.getMonth() + 1); renderCalendar(); });
+
+    modalClose.addEventListener('click', () => { modalOverlay.style.display = 'none'; });
+    modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) modalOverlay.style.display = 'none'; });
 
     renderCalendar();
   </script>
