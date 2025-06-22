@@ -15,8 +15,7 @@
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col items-start justify-center p-4">
   <h2 class="text-lg font-semibold mb-2">Próximas Atividades</h2>
-  <ul id="upcoming-list" class="w-full max-w-md space-y-2 mb-2"></ul>
-  <button id="see-more" class="px-4 py-2 bg-indigo-500 text-white rounded mb-6">Ver mais</button>
+  <ul id="upcoming-list" class="w-full max-w-md space-y-2 mb-6"></ul>
 
   <h2 class="text-lg font-semibold mb-2">Atividades Recorrentes</h2>
   <ul id="recurring-list" class="w-full max-w-md space-y-2"></ul>
@@ -28,10 +27,8 @@
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const todayKey = 'DailyEvents_' + today.toISOString().slice(0,10);
-      let renderedCount = 0;
 
       const upcomingEl = document.getElementById('upcoming-list');
-      const seeMoreBtn = document.getElementById('see-more');
       const recurEl    = document.getElementById('recurring-list');
 
       // Carrega eventos pontuais e fixos para criar array de intervalos ocupados
@@ -68,12 +65,11 @@
         return t;
       }
 
-      function appendNextBatch() {
+      function renderUpcoming() {
+        upcomingEl.innerHTML = '';
         const items = getUpcomingItems();
-        const batch = items.slice(renderedCount, renderedCount+5);
-        let baseMin = now.getHours()*60 + now.getMinutes() + renderedCount*20;
-
-        batch.forEach(({a,idx}) => {
+        let baseMin = now.getHours()*60 + now.getMinutes();
+        items.forEach(({a,idx}) => {
           const startMin = nextFree(baseMin);
           const endMin   = startMin + 20;
           baseMin = endMin;
@@ -106,35 +102,29 @@
           upcomingEl.appendChild(li);
         });
 
-        renderedCount += batch.length;
-        seeMoreBtn.disabled = renderedCount >= getUpcomingItems().length;
+        // Habilita drag-and-drop
+        Sortable.create(upcomingEl, {
+          animation: 150,
+          onEnd: () => {
+            const newOrder = Array.from(upcomingEl.children).map(el => +el.dataset.index);
+            const items = getUpcomingItems();
+            items.map(x => x.idx).sort((a,b)=>b-a).forEach(i => all.splice(i,1));
+            let pos = newOrder.length ? Math.min(...newOrder) : 0;
+            newOrder.forEach(origIdx => {
+              const obj = items.find(x => x.idx === origIdx);
+              all.splice(pos++, 0, obj.a);
+            });
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+            // rerender
+            busy = [...dailyEvents, ...fixedEvents].map(o=>[o.startMin,o.endMin]).sort((a,b)=>a[0]-b[0]);
+            renderUpcoming();
+          }
+        });
       }
 
-      Sortable.create(upcomingEl, {
-        animation: 150,
-        onEnd: () => {
-          const newOrder = Array.from(upcomingEl.children).map(el => +el.dataset.index);
-          const items = getUpcomingItems();
-          // remove originais
-          items.map(x => x.idx).sort((a,b)=>b-a).forEach(i => all.splice(i,1));
-          // reinsere
-          let pos = newOrder.length ? Math.min(...newOrder) : 0;
-          newOrder.forEach(origIdx => {
-            const obj = items.find(x => x.idx === origIdx);
-            all.splice(pos++, 0, obj.a);
-          });
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
-          // Reset render
-          renderedCount = 0;
-          upcomingEl.innerHTML = '';
-          busy = [...dailyEvents, ...fixedEvents].map(o => [o.startMin,o.endMin]).sort((a,b)=>a[0]-b[0]);
-          appendNextBatch();
-        }
-      });
-
       function renderRecurring() {
-        const recs = getRecurringItems();
         recurEl.innerHTML = '';
+        const recs = getRecurringItems();
         if (!recs.length) {
           recurEl.innerHTML = '<li class="text-center text-gray-500">Nenhuma recorrente cadastrada.</li>';
           return;
@@ -149,7 +139,6 @@
             <span>${mark}${a.text}</span>
             <span class="text-xs text-gray-500">${a.recurrence}</span>
           `;
-          // duplo clique: copiar como fixo com data de hoje
           li.addEventListener('dblclick', () => {
             const todayStr = today.toISOString().slice(0,10);
             const newAct = {
@@ -163,18 +152,16 @@
             };
             all.push(newAct);
             localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
-            renderedCount = 0;
-            upcomingEl.innerHTML = '';
             busy = [...dailyEvents, ...fixedEvents].map(o=>[o.startMin,o.endMin]).sort((a,b)=>a[0]-b[0]);
-            appendNextBatch();
+            renderUpcoming();
           });
           recurEl.appendChild(li);
         });
       }
 
-      appendNextBatch();
+      // Inicialização
+      renderUpcoming();
       renderRecurring();
-      seeMoreBtn.addEventListener('click', appendNextBatch);
     });
   </script>
 </body>
