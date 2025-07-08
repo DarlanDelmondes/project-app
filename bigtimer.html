@@ -133,7 +133,7 @@
   </style>
 </head>
 <body>
-  <div id="theme-toggle">🌙</div>
+  <div id="theme-toggle">☀️</div>
   <div id="main">
     <div id="timer-container">
       <div class="size-controls">
@@ -186,7 +186,7 @@
     const quickButtons = document.querySelectorAll('.quick-buttons button');
 
     let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
-    let theme = localStorage.getItem('theme') || 'light';
+    let theme = localStorage.getItem('theme') || 'dark';
     let timerSize = parseInt(localStorage.getItem('timerSize')) || 400;
     let currentTimer = null;
     let remainingSec = 0;
@@ -237,13 +237,17 @@
       taskList.innerHTML = '';
       tasks.forEach((t, i) => {
         const li = document.createElement('li');
-        li.textContent = t.title;
         li.dataset.index = i;
+        li.textContent = t.title;
         if (t.completed) li.classList.add('completed');
         const completeBtn = document.createElement('button');
         completeBtn.textContent = '✅';
         completeBtn.addEventListener('click', () => toggleComplete(i));
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = '🗑️';
+        deleteBtn.addEventListener('click', () => deleteTask(i));
         li.appendChild(completeBtn);
+        li.appendChild(deleteBtn);
         taskList.appendChild(li);
       });
       localStorage.setItem('tasks', JSON.stringify(tasks));
@@ -257,6 +261,10 @@
     }
     function toggleComplete(i) {
       tasks[i].completed = !tasks[i].completed;
+      renderTasks();
+    }
+    function deleteTask(i) {
+      tasks.splice(i, 1);
       renderTasks();
     }
 
