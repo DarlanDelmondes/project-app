@@ -14,40 +14,42 @@
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
   <div class="bg-white rounded-2xl w-full max-w-md p-6 relative">
+    <h1 class="text-xl font-semibold mb-4 text-center">Nova Atividade</h1>
     <form id="activity-form" class="flex flex-col space-y-3">
       <input type="text" id="task-input" placeholder="Descrição da atividade"
              class="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" required />
       <div class="flex items-center space-x-2">
         <input type="date" id="date-input"
-               class="w-32 border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+               class="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         <button type="button" id="btn-today" class="text-xs px-2 py-1 bg-gray-200 rounded hover:bg-gray-300">Hoje</button>
         <button type="button" id="btn-tomorrow" class="text-xs px-2 py-1 bg-gray-200 rounded hover:bg-gray-300">Amanhã</button>
       </div>
       <div class="flex flex-col">
-        <label class="text-gray-700 text-sm mb-1">Tipo:</label>
+        <label class="text-gray-700 mb-1">Tipo:</label>
         <div id="type-labels" class="flex flex-wrap gap-2 mb-2"></div>
       </div>
       <div id="frequency-container" class="hidden flex items-center space-x-2">
-        <label for="frequency-select" class="text-gray-700 text-sm">Frequência:</label>
-        <select id="frequency-select" class="border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <label for="frequency-select" class="text-gray-700">Frequência:</label>
+        <select id="frequency-select"
+                class="border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500">
           <option value="daily">Diária</option>
           <option value="weekly">Semanal</option>
           <option value="monthly">Mensal</option>
         </select>
       </div>
       <div class="flex flex-col">
-        <label class="text-gray-700 text-sm mb-1">OKR Ativos:</label>
+        <label class="text-gray-700 mb-1">OKR Ativos:</label>
         <div id="okr-labels" class="flex flex-wrap gap-2 mb-2"></div>
         <button type="button" id="add-okr-btn" class="text-xs px-2 py-1 bg-indigo-200 rounded hover:bg-indigo-300 w-fit">+ OKR</button>
       </div>
       <button type="submit" class="self-end bg-indigo-500 text-white rounded-lg px-4 py-2 hover:bg-indigo-600 transition">Criar</button>
     </form>
-    <div class="mt-6">
-      <label class="text-gray-700 text-sm mb-1">OKRs Arquivados:</label>
-      <div id="archived-okr-labels" class="flex flex-wrap gap-2"></div>
-    </div>
     <div id="toast" class="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded opacity-0 transition-opacity duration-300">
       Atividade adicionada!
+    </div>
+    <div class="mt-4">
+      <label class="text-gray-700 mb-1">OKRs Arquivados:</label>
+      <div id="archived-okr-labels" class="flex flex-wrap gap-2 mb-2"></div>
     </div>
   </div>
 
@@ -70,16 +72,18 @@
       const typeLabels = document.getElementById('type-labels');
       const freqContainer = document.getElementById('frequency-container');
       const freqSelect = document.getElementById('frequency-select');
-      const okrLabels = document.getElementById('okr-labels');
-      const archivedContainer = document.getElementById('archived-okr-labels');
-      const addOkrBtn = document.getElementById('add-okr-btn');
       const toast = document.getElementById('toast');
       const btnToday = document.getElementById('btn-today');
       const btnTomorrow = document.getElementById('btn-tomorrow');
+      const okrLabels = document.getElementById('okr-labels');
+      const archivedContainer = document.getElementById('archived-okr-labels');
+      const addOkrBtn = document.getElementById('add-okr-btn');
 
+      // Quick date buttons
       btnToday.onclick = () => dateInput.value = new Date().toISOString().slice(0,10);
       btnTomorrow.onclick = () => { const t=new Date(); t.setDate(t.getDate()+1); dateInput.value = t.toISOString().slice(0,10); };
 
+      // Render type labels
       function renderTypes() {
         typeLabels.innerHTML = '';
         types.forEach(t => {
@@ -90,11 +94,16 @@
             span.classList.remove('opacity-50');
             span.classList.add('opacity-100','ring-1','ring-indigo-500');
           }
-          span.onclick = () => { selectedType = t; renderTypes(); freqContainer.classList.toggle('hidden', t!=='recurring'); };
+          span.onclick = () => {
+            selectedType = t;
+            renderTypes();
+            freqContainer.classList.toggle('hidden', t !== 'recurring');
+          };
           typeLabels.appendChild(span);
         });
       }
 
+      // Render OKRs ativos
       function renderOKRs() {
         okrLabels.innerHTML = '';
         okrs.forEach(o => {
@@ -102,7 +111,7 @@
           wrapper.className = 'flex items-center space-x-1';
           const span = document.createElement('span');
           span.textContent = o;
-          span.className = `text-xs px-2 py-1 rounded-full cursor-pointer ${o===selectedOKR ? 'bg-indigo-700 text-white' : 'bg-indigo-100 text-indigo-700 opacity-50'}`;
+          span.className = `text-xs px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full cursor-pointer ${o === selectedOKR ? 'opacity-100 ring-1 ring-indigo-500' : 'opacity-50'}`;
           span.onclick = () => { selectedOKR = o; renderOKRs(); };
           const btn = document.createElement('button');
           btn.textContent = 'Arquivar';
@@ -112,7 +121,7 @@
             archivedOkrs.push(o);
             localStorage.setItem(OKR_KEY, JSON.stringify(okrs));
             localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archivedOkrs));
-            if (selectedOKR===o) selectedOKR = null;
+            if (selectedOKR === o) selectedOKR = null;
             renderOKRs(); renderArchivedOKRs();
           };
           wrapper.appendChild(span);
@@ -121,6 +130,7 @@
         });
       }
 
+      // Render OKRs arquivados
       function renderArchivedOKRs() {
         archivedContainer.innerHTML = '';
         archivedOkrs.forEach(o => {
@@ -128,7 +138,7 @@
           wrapper.className = 'flex items-center space-x-1';
           const span = document.createElement('span');
           span.textContent = o;
-          span.className = 'text-xs px-2 py-1 bg-gray-300 text-gray-600 rounded-full';
+          span.className = 'text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded-full';
           const btn = document.createElement('button');
           btn.textContent = 'Reativar';
           btn.className = 'text-xs px-1 py-0.5 text-green-600 hover:underline';
@@ -145,34 +155,57 @@
         });
       }
 
+      // Add OKR
       addOkrBtn.onclick = () => {
-        const newOKR = prompt('Digite o nome do novo OKR:');
-        if (newOKR && !okrs.includes(newOKR) && !archivedOkrs.includes(newOKR)) {
-          okrs.push(newOKR);
-          localStorage.setItem(OKR_KEY, JSON.stringify(okrs));
-          renderOKRs();
+        const name = prompt('Nome do OKR:');
+        if (name) {
+          const trimmed = name.trim();
+          if (!okrs.includes(trimmed) && !archivedOkrs.includes(trimmed)) {
+            okrs.push(trimmed);
+            localStorage.setItem(OKR_KEY, JSON.stringify(okrs));
+            selectedOKR = trimmed;
+            renderOKRs();
+          }
         }
       };
 
+      // Toast
       function showToast() {
-        toast.classList.add('opacity-100');
-        setTimeout(() => toast.classList.remove('opacity-100'), 2000);
+        toast.classList.remove('opacity-0');
+        setTimeout(() => toast.classList.add('opacity-0'), 2000);
       }
 
+      // Submit
       form.onsubmit = e => {
         e.preventDefault();
-        const newAct = { description: input.value, date: dateInput.value||null,
-                         type: selectedType, frequency: selectedType==='recurring'?freqSelect.value:null,
-                         okr: selectedOKR, createdAt: new Date().toISOString() };
+        if (!selectedType) { alert('Selecione um tipo.'); return; }
+        if (selectedType === 'deadline' && !dateInput.value) { alert('Deadline requer data'); return; }
+        const newAct = {
+          text: input.value.trim(),
+          date: dateInput.value,
+          done: false,
+          type: selectedType,
+          recurrence: selectedType === 'recurring' ? freqSelect.value : null,
+          okr: selectedOKR,
+          createdAt: new Date().toISOString()
+        };
         activities.push(newAct);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(activities));
-        input.value=''; dateInput.value=''; selectedType=null; renderTypes(); freqContainer.classList.add('hidden'); freqSelect.value='daily';
-        selectedOKR=null; renderOKRs();
+        input.value = '';
+        dateInput.value = '';
+        selectedType = null;
+        renderTypes();
+        freqContainer.classList.add('hidden');
+        freqSelect.value = 'daily';
+        selectedOKR = null;
+        renderOKRs();
         showToast();
       };
 
-      // Inicializa
-      renderTypes(); renderOKRs(); renderArchivedOKRs();
+      // Inicialização
+      renderTypes();
+      renderOKRs();
+      renderArchivedOKRs();
     });
   </script>
 </body>
