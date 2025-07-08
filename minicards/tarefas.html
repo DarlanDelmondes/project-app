@@ -36,22 +36,29 @@
         </select>
       </div>
       <div class="flex flex-col">
-        <label class="text-gray-700 text-sm mb-1">OKR:</label>
+        <label class="text-gray-700 text-sm mb-1">OKR Ativos:</label>
         <div id="okr-labels" class="flex flex-wrap gap-2 mb-2"></div>
         <button type="button" id="add-okr-btn" class="text-xs px-2 py-1 bg-indigo-200 rounded hover:bg-indigo-300 w-fit">+ OKR</button>
       </div>
       <button type="submit" class="self-end bg-indigo-500 text-white rounded-lg px-4 py-2 hover:bg-indigo-600 transition">Criar</button>
     </form>
+    <div class="mt-6">
+      <label class="text-gray-700 text-sm mb-1">OKRs Arquivados:</label>
+      <div id="archived-okr-labels" class="flex flex-wrap gap-2"></div>
+    </div>
     <div id="toast" class="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded opacity-0 transition-opacity duration-300">
       Atividade adicionada!
     </div>
   </div>
+
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const STORAGE_KEY = 'Atividades';
       const OKR_KEY = 'OKRs';
+      const ARCHIVE_KEY = 'OKRsArquivados';
       let activities = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
       let okrs = JSON.parse(localStorage.getItem(OKR_KEY)) || [];
+      let archivedOkrs = JSON.parse(localStorage.getItem(ARCHIVE_KEY)) || [];
       const types = ['fixed','recurring','deadline'];
       const typeNames = {fixed:'Fixo',recurring:'Recorrente',deadline:'Deadline'};
       let selectedType = null;
@@ -63,17 +70,16 @@
       const typeLabels = document.getElementById('type-labels');
       const freqContainer = document.getElementById('frequency-container');
       const freqSelect = document.getElementById('frequency-select');
+      const okrLabels = document.getElementById('okr-labels');
+      const archivedContainer = document.getElementById('archived-okr-labels');
+      const addOkrBtn = document.getElementById('add-okr-btn');
       const toast = document.getElementById('toast');
       const btnToday = document.getElementById('btn-today');
       const btnTomorrow = document.getElementById('btn-tomorrow');
-      const okrLabels = document.getElementById('okr-labels');
-      const addOkrBtn = document.getElementById('add-okr-btn');
 
-      // Quick date buttons
       btnToday.onclick = () => dateInput.value = new Date().toISOString().slice(0,10);
       btnTomorrow.onclick = () => { const t=new Date(); t.setDate(t.getDate()+1); dateInput.value = t.toISOString().slice(0,10); };
 
-      // Render type labels
       function renderTypes() {
         typeLabels.innerHTML = '';
         types.forEach(t => {
@@ -84,72 +90,89 @@
             span.classList.remove('opacity-50');
             span.classList.add('opacity-100','ring-1','ring-indigo-500');
           }
-          span.onclick = () => {
-            selectedType = t;
-            renderTypes();
-            freqContainer.classList.toggle('hidden', t!=='recurring');
-          };
+          span.onclick = () => { selectedType = t; renderTypes(); freqContainer.classList.toggle('hidden', t!=='recurring'); };
           typeLabels.appendChild(span);
         });
       }
-      renderTypes();
 
-      // Render OKR labels
       function renderOKRs() {
         okrLabels.innerHTML = '';
         okrs.forEach(o => {
+          const wrapper = document.createElement('div');
+          wrapper.className = 'flex items-center space-x-1';
           const span = document.createElement('span');
           span.textContent = o;
-          span.className = 'text-xs px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full opacity-50 cursor-pointer';
-          if (o === selectedOKR) {
-            span.classList.remove('opacity-50');
-            span.classList.add('opacity-100','ring-1','ring-indigo-500');
-          }
+          span.className = `text-xs px-2 py-1 rounded-full cursor-pointer ${o===selectedOKR ? 'bg-indigo-700 text-white' : 'bg-indigo-100 text-indigo-700 opacity-50'}`;
           span.onclick = () => { selectedOKR = o; renderOKRs(); };
-          okrLabels.appendChild(span);
+          const btn = document.createElement('button');
+          btn.textContent = 'Arquivar';
+          btn.className = 'text-xs px-1 py-0.5 text-red-600 hover:underline';
+          btn.onclick = () => {
+            okrs = okrs.filter(item => item !== o);
+            archivedOkrs.push(o);
+            localStorage.setItem(OKR_KEY, JSON.stringify(okrs));
+            localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archivedOkrs));
+            if (selectedOKR===o) selectedOKR = null;
+            renderOKRs(); renderArchivedOKRs();
+          };
+          wrapper.appendChild(span);
+          wrapper.appendChild(btn);
+          okrLabels.appendChild(wrapper);
         });
       }
-      renderOKRs();
 
-      // Add OKR
+      function renderArchivedOKRs() {
+        archivedContainer.innerHTML = '';
+        archivedOkrs.forEach(o => {
+          const wrapper = document.createElement('div');
+          wrapper.className = 'flex items-center space-x-1';
+          const span = document.createElement('span');
+          span.textContent = o;
+          span.className = 'text-xs px-2 py-1 bg-gray-300 text-gray-600 rounded-full';
+          const btn = document.createElement('button');
+          btn.textContent = 'Reativar';
+          btn.className = 'text-xs px-1 py-0.5 text-green-600 hover:underline';
+          btn.onclick = () => {
+            archivedOkrs = archivedOkrs.filter(item => item !== o);
+            okrs.push(o);
+            localStorage.setItem(OKR_KEY, JSON.stringify(okrs));
+            localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archivedOkrs));
+            renderOKRs(); renderArchivedOKRs();
+          };
+          wrapper.appendChild(span);
+          wrapper.appendChild(btn);
+          archivedContainer.appendChild(wrapper);
+        });
+      }
+
       addOkrBtn.onclick = () => {
-        const name = prompt('Nome do OKR:');
-        if (name) {
-          okrs.push(name.trim());
+        const newOKR = prompt('Digite o nome do novo OKR:');
+        if (newOKR && !okrs.includes(newOKR) && !archivedOkrs.includes(newOKR)) {
+          okrs.push(newOKR);
           localStorage.setItem(OKR_KEY, JSON.stringify(okrs));
-          selectedOKR = name.trim();
           renderOKRs();
         }
       };
 
-      // Toast
       function showToast() {
-        toast.classList.remove('opacity-0');
-        setTimeout(() => toast.classList.add('opacity-0'), 2000);
+        toast.classList.add('opacity-100');
+        setTimeout(() => toast.classList.remove('opacity-100'), 2000);
       }
 
-      // Submit
       form.onsubmit = e => {
         e.preventDefault();
-        if (!selectedType) { alert('Selecione um tipo.'); return; }
-        if (selectedType==='deadline' && !dateInput.value) { alert('Deadline requer data'); return; }
-        const newAct = {
-          text: input.value.trim(),
-          date: dateInput.value,
-          done: false,
-          type: selectedType,
-          recurrence: selectedType==='recurring'?freqSelect.value:null,
-          okr: selectedOKR,
-          createdAt: new Date().toISOString()
-        };
+        const newAct = { description: input.value, date: dateInput.value||null,
+                         type: selectedType, frequency: selectedType==='recurring'?freqSelect.value:null,
+                         okr: selectedOKR, createdAt: new Date().toISOString() };
         activities.push(newAct);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(activities));
-        input.value = ''; dateInput.value = '';
-        selectedType = null; renderTypes();
-        freqContainer.classList.add('hidden'); freqSelect.value='daily';
-        selectedOKR = null; renderOKRs();
+        input.value=''; dateInput.value=''; selectedType=null; renderTypes(); freqContainer.classList.add('hidden'); freqSelect.value='daily';
+        selectedOKR=null; renderOKRs();
         showToast();
       };
+
+      // Inicializa
+      renderTypes(); renderOKRs(); renderArchivedOKRs();
     });
   </script>
 </body>
