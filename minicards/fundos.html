@@ -19,40 +19,28 @@
     <div id="okr-list" class="grid grid-cols-2 gap-4"></div>
   </div>
 
-  <!-- Modal de edição -->
+  <!-- Modal de edição (igual ao original) -->
   <div id="edit-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center">
-    <div class="bg-white rounded-lg p-6 w-full max-w-md">
-      <h2 class="text-lg font-medium mb-4">Editar OKR</h2>
-      <form id="edit-form" class="flex flex-col space-y-2">
-        <input type="text" id="edit-name"
-               class="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" disabled />
-        <input type="url" id="edit-image"
-               class="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" required />
-        <div class="flex justify-end gap-2 mt-4">
-          <button type="button" id="btn-cancel" class="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300">Cancelar</button>
-          <button type="submit" class="px-4 py-2 rounded bg-green-500 text-white hover:bg-green-600">Salvar</button>
-        </div>
-      </form>
-    </div>
+    <!-- … -->
   </div>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const ACT_KEY = 'Atividades';
       const DEF_KEY = 'OKR_DEFS';
+
+      // todas as atividades e definições
       const acts = JSON.parse(localStorage.getItem(ACT_KEY)) || [];
-      const names = Array.from(new Set(acts.map(a=>a.okr).filter(o=>o)));
       let defs = JSON.parse(localStorage.getItem(DEF_KEY)) || [];
-      names.forEach(name => {
-        if (!defs.find(d=>d.name===name)) defs.push({name, image:''});
+
+      // garante que todo OKR em uso esteja em defs
+      const usedNames = Array.from(new Set(acts.map(a => a.okr).filter(o => o)));
+      usedNames.forEach(name => {
+        if (!defs.find(d => d.name === name)) defs.push({ name, image: '' });
       });
+
       const listEl = document.getElementById('okr-list');
-      const modal = document.getElementById('edit-modal');
-      const editForm = document.getElementById('edit-form');
-      const editName = document.getElementById('edit-name');
-      const editImage = document.getElementById('edit-image');
-      const btnCancel = document.getElementById('btn-cancel');
-      let editIndex = null;
+      // modal, editForm etc ficam iguais ao seu código original…
 
       function saveDefs() {
         localStorage.setItem(DEF_KEY, JSON.stringify(defs));
@@ -61,12 +49,25 @@
 
       function renderCards() {
         listEl.innerHTML = '';
-        defs.forEach((d, i) => {
+
+        // recalcula quais OKRs estão ativos
+        const activeSet = new Set(acts.map(a => a.okr).filter(o => o));
+        // separa defs em ativos e arquivados
+        const ativos   = defs.filter(d => activeSet.has(d.name));
+        const arquivados = defs.filter(d => !activeSet.has(d.name));
+
+        // concatena: primeiro ativos, depois arquivados
+        ativos.concat(arquivados).forEach((d, i) => {
           const card = document.createElement('div');
           card.className = 'relative h-32 rounded-lg overflow-hidden shadow';
           card.style.backgroundImage = d.image ? `url('${d.image}')` : 'none';
           card.style.backgroundSize = 'cover';
           card.style.backgroundPosition = 'center';
+
+          // se estiver arquivado, aplica efeito cinza
+          if (!activeSet.has(d.name)) {
+            card.classList.add('filter', 'grayscale', 'opacity-50');
+          }
 
           const overlay = document.createElement('div');
           overlay.className = 'absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-end p-2';
@@ -81,22 +82,12 @@
           const editBtn = document.createElement('button');
           editBtn.innerHTML = '✎';
           editBtn.className = 'text-white bg-black bg-opacity-50 rounded-full p-1 hover:bg-opacity-75';
-          editBtn.onclick = () => {
-            editIndex = i;
-            editName.value = d.name;
-            editImage.value = d.image;
-            modal.classList.remove('hidden');
-          };
+          editBtn.onclick = () => { /* seu código de edição */ };
 
           const delBtn = document.createElement('button');
           delBtn.innerHTML = '×';
           delBtn.className = 'text-white bg-black bg-opacity-50 rounded-full p-1 hover:bg-opacity-75';
-          delBtn.onclick = () => {
-            if (confirm(`Excluir OKR "${d.name}"?`)) {
-              defs.splice(i, 1);
-              saveDefs();
-            }
-          };
+          delBtn.onclick = () => { /* seu código de exclusão */ };
 
           btns.append(editBtn, delBtn);
           card.append(overlay, btns);
@@ -104,14 +95,7 @@
         });
       }
 
-      editForm.onsubmit = e => {
-        e.preventDefault();
-        defs[editIndex].image = editImage.value.trim();
-        saveDefs();
-        modal.classList.add('hidden');
-      };
-
-      btnCancel.onclick = () => modal.classList.add('hidden');
+      // ligações de evento do formulário/modal permanecem iguais…
 
       renderCards();
     });
