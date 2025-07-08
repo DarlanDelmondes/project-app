@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Timer WebApp</title>
+  <style>
+    :root {
+      --bg-light: #f0f0f0;
+      --bg-dark: #1e1e1e;
+      --text-light: #333;
+      --text-dark: #f0f0f0;
+      --accent: #3498db;
+    }
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: var(--bg-light);
+      color: var(--text-light);
+      transition: background 0.3s, color 0.3s;
+    }
+    body.dark {
+      background: var(--bg-dark);
+      color: var(--text-dark);
+    }
+    #theme-toggle {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      cursor: pointer;
+      font-size: 1.5rem;
+    }
+    #main {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 300px;
+      bottom: 0;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+    #timer-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 30px;
+    }
+    .size-controls {
+      margin-bottom: 10px;
+    }
+    .size-controls button {
+      font-size: 1.2rem;
+      padding: 5px 10px;
+      margin: 0 5px;
+      cursor: pointer;
+    }
+    #timer {
+      border-radius: 50%;
+      border: 10px solid var(--accent);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      transition: background 0.5s linear, width 0.3s, height 0.3s;
+    }
+    #timer.pulse {
+      animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+    #timer-text {
+      font-size: 2rem;
+      outline: none;
+      text-align: center;
+      width: 80%;
+      color: inherit;
+    }
+    #minutes-display {
+      margin-top: 10px;
+      font-size: 1.5rem;
+    }
+    #sidebar {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 300px;
+      height: 100%;
+      background: rgba(0,0,0,0.05);
+      padding: 20px;
+      box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+      overflow-y: auto;
+    }
+    #new-task {
+      display: flex;
+      gap: 5px;
+      margin-bottom: 10px;
+    }
+    #new-task input { flex: 1; padding: 5px; }
+    #new-task button { padding: 5px 10px; }
+    #task-list { list-style: none; padding: 0; margin: 0; }
+    #task-list li {
+      padding: 5px;
+      border-bottom: 1px solid #ccc;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+    }
+    #task-list li.completed { text-decoration: line-through; opacity: 0.6; }
+    #task-list li button { margin-left: 5px; }
+    .modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .hidden { display: none; }
+    .modal-content {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+      min-width: 250px;
+    }
+    .quick-buttons { margin: 10px 0; }
+    .quick-buttons button { margin: 0 5px; }
+  </style>
+</head>
+<body>
+  <div id="theme-toggle">🌙</div>
+  <div id="main">
+    <div id="timer-container">
+      <div class="size-controls">
+        <button id="decrease-size">-</button>
+        <button id="increase-size">+</button>
+      </div>
+      <div id="timer">
+        <div id="timer-text" contenteditable="true">Edite aqui</div>
+      </div>
+      <div id="minutes-display">00:00</div>
+    </div>
+  </div>
+  <div id="sidebar">
+    <h2>Checklist</h2>
+    <div id="new-task">
+      <input id="task-input" placeholder="Nova tarefa" />
+      <button id="add-task-btn">Criar</button>
+    </div>
+    <ul id="task-list"></ul>
+  </div>
+
+  <div id="modal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Defina o tempo (min)</h3>
+      <input type="number" id="minutes-input" min="1" placeholder="Minutos" />
+      <div class="quick-buttons">
+        <button data-min="5">5m</button>
+        <button data-min="10">10m</button>
+        <button data-min="25">25m</button>
+      </div>
+      <button id="start-timer-btn">Iniciar</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+  <script>
+    const themeToggle = document.getElementById('theme-toggle');
+    const body = document.body;
+    const timerEl = document.getElementById('timer');
+    const timerText = document.getElementById('timer-text');
+    const minutesDisplay = document.getElementById('minutes-display');
+    const decreaseBtn = document.getElementById('decrease-size');
+    const increaseBtn = document.getElementById('increase-size');
+    const taskInput = document.getElementById('task-input');
+    const addTaskBtn = document.getElementById('add-task-btn');
+    const taskList = document.getElementById('task-list');
+    const modal = document.getElementById('modal');
+    const minutesInput = document.getElementById('minutes-input');
+    const startTimerBtn = document.getElementById('start-timer-btn');
+    const quickButtons = document.querySelectorAll('.quick-buttons button');
+
+    let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+    let theme = localStorage.getItem('theme') || 'light';
+    let timerSize = parseInt(localStorage.getItem('timerSize')) || 400;
+    let currentTimer = null;
+    let remainingSec = 0;
+    let totalSec = 0;
+    let currentTaskIndex = null;
+
+    function init() {
+      applyTheme();
+      applySize();
+      renderTasks();
+      themeToggle.addEventListener('click', toggleTheme);
+      decreaseBtn.addEventListener('click', () => adjustSize(-50));
+      increaseBtn.addEventListener('click', () => adjustSize(50));
+      addTaskBtn.addEventListener('click', addTask);
+      quickButtons.forEach(btn => btn.addEventListener('click', () => {
+        minutesInput.value = btn.dataset.min;
+      }));
+      startTimerBtn.addEventListener('click', startTimerFromModal);
+      taskList.addEventListener('dblclick', (e) => {
+        const li = e.target.closest('li');
+        if (!li) return;
+        const idx = li.dataset.index;
+        openModal(tasks[idx].title, idx);
+      });
+    }
+
+    function applyTheme() {
+      body.classList.toggle('dark', theme === 'dark');
+      themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+    }
+    function toggleTheme() {
+      theme = theme === 'dark' ? 'light' : 'dark';
+      localStorage.setItem('theme', theme);
+      applyTheme();
+    }
+
+    function applySize() {
+      timerEl.style.width = timerSize + 'px';
+      timerEl.style.height = timerSize + 'px';
+      localStorage.setItem('timerSize', timerSize);
+    }
+    function adjustSize(delta) {
+      timerSize = Math.max(100, Math.min(800, timerSize + delta));
+      applySize();
+    }
+
+    function renderTasks() {
+      taskList.innerHTML = '';
+      tasks.forEach((t, i) => {
+        const li = document.createElement('li');
+        li.textContent = t.title;
+        li.dataset.index = i;
+        if (t.completed) li.classList.add('completed');
+        const completeBtn = document.createElement('button');
+        completeBtn.textContent = '✅';
+        completeBtn.addEventListener('click', () => toggleComplete(i));
+        li.appendChild(completeBtn);
+        taskList.appendChild(li);
+      });
+      localStorage.setItem('tasks', JSON.stringify(tasks));
+    }
+    function addTask() {
+      const title = taskInput.value.trim();
+      if (!title) return;
+      tasks.push({ title, completed: false });
+      taskInput.value = '';
+      renderTasks();
+    }
+    function toggleComplete(i) {
+      tasks[i].completed = !tasks[i].completed;
+      renderTasks();
+    }
+
+    function openModal(title, idx) {
+      timerText.textContent = title;
+      minutesDisplay.textContent = '00:00';
+      currentTaskIndex = idx;
+      minutesInput.value = '';
+      modal.classList.remove('hidden');
+    }
+    function startTimerFromModal() {
+      const mins = parseInt(minutesInput.value);
+      if (!mins || mins <= 0) return;
+      modal.classList.add('hidden');
+      startTimer(mins * 60);
+    }
+    function startTimer(sec) {
+      if (currentTimer) clearInterval(currentTimer);
+      totalSec = remainingSec = sec;
+      updateTick();
+      currentTimer = setInterval(updateTick, 1000);
+    }
+    function updateTick() {
+      const pct = ((totalSec - remainingSec) / totalSec) * 360;
+      if (theme === 'dark') {
+        timerEl.style.background = `conic-gradient(var(--accent) ${pct}deg, var(--bg-dark) ${pct}deg)`;
+      } else {
+        timerEl.style.background = `conic-gradient(var(--accent) ${pct}deg, var(--bg-light) ${pct}deg)`;
+      }
+      const m = Math.floor(remainingSec / 60);
+      const s = remainingSec % 60;
+      minutesDisplay.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+      if (remainingSec <= 300) timerEl.classList.add('pulse');
+      if (remainingSec <= 0) {
+        clearInterval(currentTimer);
+        timerEl.classList.remove('pulse');
+        confetti({ particleCount: 200, spread: 60 });
+      }
+      remainingSec--;
+    }
+
+    init();
+  </script>
+</body>
+</html>
