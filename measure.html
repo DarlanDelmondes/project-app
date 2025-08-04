@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>LagCast Remodelado com Import/Export e WYSIWYG</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>
+  :root {
+    --radius:10px;
+    --speed:.25s;
+    --shadow:0 20px 50px -10px rgba(0,0,0,.08);
+    --bg:#f0f4fb;
+    --card:#ffffff;
+    --text:#1f2f44;
+    --muted:#6f7a98;
+    --border:#e2e8f7;
+    --primary:#2563eb;
+    --primary-hover:#1f51c9;
+    --danger:#ef4444;
+    --success:#16a34a;
+    --toolbar:#f5f8fc;
+    font-family: "Inter","Segoe UI",system-ui,-apple-system,BlinkMacSystemFont,sans-serif;
+  }
+  [data-theme="dark"] {
+    --bg:#0f1221;
+    --card:#1e274f;
+    --text:#e3e9ff;
+    --muted:#8f9ed3;
+    --border:rgba(255,255,255,.08);
+    --toolbar:#1e2a55;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    transition:background var(--speed),color var(--speed);
+  }
+  .layout{
+    max-width:1120px;
+    margin:0 auto;
+    padding:16px 14px 120px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+  }
+  .card{
+    background:var(--card);
+    border-radius:16px;
+    box-shadow:var(--shadow);
+    padding:18px 20px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    position:relative;
+  }
+  .flex{display:flex;gap:14px;flex-wrap:wrap;}
+  .title{margin:0;font-size:1.5rem;font-weight:600;display:flex;gap:8px;align-items:center;}
+  .sub{font-size:13px;color:var(--muted);}
+  .person-list{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;}
+  .person-card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:10px 14px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    min-width:160px;
+    position:relative;
+    font-size:13px;
+  }
+  .person-header{display:flex;justify-content:space-between;align-items:start;gap:6px;}
+  .tiny{font-size:11px;color:var(--muted);}
+  .pill{display:inline-flex;align-items:center;gap:4px;background:rgba(37,99,235,.1);color:var(--primary);padding:6px 12px;border-radius:999px;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;}
+  .person-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(22,163,74,.1);color:#0f766e;padding:6px 12px;border-radius:999px;font-size:12px;cursor:pointer;}
+  .alert-strip{
+    background:rgba(255,243,237,.9);
+    border:1px solid rgba(239,148,64,.4);
+    padding:10px 14px;
+    border-radius:8px;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    font-size:13px;
+  }
+  .alert-pill{
+    background:#fff1e6;
+    border:1px solid #f5d1b5;
+    border-radius:999px;
+    padding:6px 14px;
+    display:inline-flex;
+    gap:6px;
+    align-items:center;
+    cursor:pointer;
+    font-weight:500;
+    font-size:12px;
+  }
+  .btn-icon{
+    background:transparent;
+    border:none;
+    cursor:pointer;
+    padding:8px;
+    border-radius:8px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+    transition:background var(--speed);
+    color: var(--text);
+  }
+  .btn-icon:hover{background:rgba(0,0,0,.04);}
+  .btn-primary{
+    background:var(--primary);
+    color:#fff;
+    border:none;
+    border-radius:8px;
+    padding:10px;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+  }
+  .btn-secondary{
+    background:transparent;
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:10px;
+    cursor:pointer;
+  }
+  .progress{flex:1;height:10px;background:rgba(0,0,0,.05);border-radius:999px;overflow:hidden;position:relative;}
+  .progress-inner{height:100%;background:var(--success);transition:width .3s;border-radius:999px;}
+  .toolbar{
+    display:flex;
+    gap:6px;
+    padding:8px 10px;
+    background:var(--toolbar);
+    border-radius:8px;
+    flex-wrap:wrap;
+    margin-bottom:6px;
+  }
+  .tool-btn{
+    background:transparent;
+    border:none;
+    padding:6px 8px;
+    border-radius:6px;
+    cursor:pointer;
+    font-size:12px;
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    position:relative;
+    transition:background var(--speed);
+  }
+  .tool-btn.active{background:rgba(37,99,235,.12);}
+  .tool-btn:hover{background:rgba(0,0,0,.03);}
+  .editable{
+    min-height:100px;
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:10px;
+    background:var(--card);
+    outline:none;
+    font-size:14px;
+    line-height:1.4;
+    overflow:auto;
+    position:relative;
+    color: var(--text);
+    transition:color .2s;
+  }
+  .lead-list{display:flex;flex-direction:column;gap:10px;margin-top:6px;}
+  .lead{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    padding:12px 14px;
+    border-radius:10px;
+    border:1px solid var(--border);
+    background:rgba(255,255,255,.04);
+    position:relative;
+    flex-wrap:wrap;
+  }
+  .lead-left{display:flex;gap:12px;align-items:center;flex:1;flex-wrap:wrap;}
+  .lead-people{display:flex;gap:6px;flex-wrap:wrap;margin-left:6px;}
+  .link-section{display:flex;flex-direction:column;gap:8px;margin-top:6px;}
+  .link-card{
+    display:flex;
+    justify-content:space-between;
+    align-items:start;
+    gap:10px;
+    padding:10px 14px;
+    border-radius:10px;
+    border:1px solid var(--border);
+    background:rgba(255,255,255,.06);
+    position:relative;
+  }
+  .link-info{flex:1;display:flex;flex-direction:column;gap:4px;}
+  .link-title{margin:0;font-weight:600;font-size:14px;}
+  .link-url{font-size:13px;color:var(--primary);word-break:break-all;text-decoration:none;}
+  .assigned-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;}
+  .filter-indicator{display:inline-flex;gap:6px;background:rgba(37,99,235,.08);padding:6px 14px;border-radius:999px;font-size:12px;font-weight:500;cursor:pointer;}
+  .panel-content{
+    position:absolute;
+    top:38px;
+    left:0;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:14px;
+    min-width:220px;
+    box-shadow:0 25px 60px -10px rgba(0,0,0,.25);
+    z-index:30;
+  }
+  .assign-btn{
+    background:rgba(0,0,0,.04);
+    border:none;
+    padding:6px 12px;
+    border-radius:6px;
+    cursor:pointer;
+    font-size:12px;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+  }
+  .corner-toggle{
+    position:fixed;
+    bottom:16px;
+    right:16px;
+    z-index:200;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    border-radius:999px;
+    padding:10px 16px;
+    background:#fff;
+    font-weight:600;
+    cursor:pointer;
+    border:2px solid var(--primary);
+    box-shadow:0 30px 80px -10px rgba(37,99,235,.2);
+    font-size:14px;
+    transition:all .25s;
+  }
+  [data-theme="dark"] .corner-toggle{
+    background:rgba(255,255,255,.05);
+    border:2px solid #8f9ed3;
+    color:#fff;
+  }
+  .icon{width:16px;height:16px;display:inline-block;flex-shrink:0;}
+</style>
+</head>
+<body>
+  <div class="layout" id="app">
+    <!-- topo -->
+    <div class="card">
+      <div class="flex" style="justify-content:space-between;align-items:flex-start;">
+        <div style="flex:1;min-width:240px;">
+          <div class="title">Pessoas</div>
+          <div class="sub">Quem está atribuído às iniciativas. Clique para filtrar; alerta mostra leads pendentes.</div>
+        </div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;flex:2;">
+          <div class="person-list" id="people-list"></div>
+          <button class="btn-icon" title="Nova pessoa" aria-label="Nova pessoa" onclick="addPerson()">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+          </button>
+          <div style="display:flex;gap:6px;">
+            <button class="btn-secondary" title="Exportar JSON" onclick="exportJSON()" aria-label="Exportar">
+              <svg class="icon" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2h10a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zm5 2v6m0 0l-2-2m2 2l2-2M2 5h12"/></svg>
+            </button>
+            <button class="btn-secondary" title="Importar JSON" onclick="importJSON()" aria-label="Importar">
+              <svg class="icon" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2h10a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zm5 4v6m0-6l-2 2m2-2l2 2M2 11h12"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:8px;">
+        <div class="alert-strip" id="incomplete-alerts"></div>
+        <div style="margin-top:6px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          <div id="active-filter-display"></div>
+          <div class="sub">Duplo clique no título da Lag para renomear. Clique fora dos painéis para fechar.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lags header -->
+    <div class="card" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+      <div>
+        <div class="title">Lag Measures</div>
+        <div class="sub">Metas com leads e pessoas atribuídas.</div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+        <div id="filter-indicator-wrapper"></div>
+        <button class="btn-primary" title="Nova Lag" aria-label="Nova Lag" onclick="addLag()">
+          <svg class="icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a.5.5 0 0 1 .5.5V7H14a.5.5 0 0 1 0 1H8.5v5.5a.5.5 0 0 1-1 0V8H2a.5.5 0 0 1 0-1h5.5V1.5A.5.5 0 0 1 8 1Z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Lags -->
+    <div id="lags-container" class="section"></div>
+  </div>
+
+  <div class="corner-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="Alternar tema">
+    <div id="theme-icon">🌙</div>
+    <div id="theme-text">Escuro</div>
+  </div>
+
+<script>
+  const STORAGE_KEY='lagcast_icons_assoc_v3';
+  let state=load();
+  let filteredPersonId=null;
+
+  function load(){
+    try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {people:[], lags:[], theme:'light'}; }catch{ return {people:[], lags:[], theme:'light'}; }
+  }
+  function persist(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  function genId(){ return crypto.randomUUID(); }
+
+  // theme
+  function applyTheme(){
+    const isDark=state.theme==='dark';
+    document.documentElement.setAttribute('data-theme', isDark?'dark':'light');
+    const icon=document.getElementById('theme-icon');
+    const txt=document.getElementById('theme-text');
+    if(isDark){
+      icon.textContent='☀️'; txt.textContent='Claro';
+    } else {
+      icon.textContent='🌙'; txt.textContent='Escuro';
+    }
+  }
+  function toggleTheme(){
+    state.theme = state.theme==='dark'?'light':'dark';
+    persist();
+    applyTheme();
+    render();
+  }
+
+  // PEOPLE
+  function addPerson(){
+    const name=prompt('Nome da pessoa:')?.trim();
+    if(!name) return;
+    const role=prompt('Cargo / função:')?.trim()||'';
+    state.people.unshift({id:genId(), name, role});
+    persist(); render();
+  }
+  function editPerson(id){
+    const p=state.people.find(x=>x.id===id);
+    if(!p) return;
+    const n=prompt('Nome', p.name);
+    if(n!==null && n.trim()!=='') p.name=n.trim();
+    const r=prompt('Cargo / função', p.role);
+    if(r!==null) p.role=r.trim();
+    persist(); render();
+  }
+  function deletePerson(id){
+    if(!confirm('Remover pessoa? Isso desfaz associações.')) return;
+    state.people=state.people.filter(p=>p.id!==id);
+    state.lags.forEach(l=>{
+      if(l.assignedPeople) l.assignedPeople=l.assignedPeople.filter(pid=>pid!==id);
+      l.leads.forEach(ld=>{
+        if(ld.assignedPeople) ld.assignedPeople=ld.assignedPeople.filter(pid=>pid!==id);
+      });
+    });
+    if(filteredPersonId===id) filteredPersonId=null;
+    persist(); render();
+  }
+  function togglePersonFilter(id){
+    filteredPersonId = filteredPersonId===id ? null : id;
+    render();
+  }
+  function clearPersonFilter(){ filteredPersonId=null; render(); }
+
+  // LAG / LEAD / LINK
+  function addLag(){
+    const name=prompt('Nome da Lag (meta):','Ex: Aumentar MRR')?.trim();
+    if(!name) return;
+    state.lags.unshift({
+      id:genId(),
+      name,
+      description:'',
+      leads:[],
+      links:[],
+      expanded:true,
+      assignedPeople:[]
+    });
+    persist(); render();
+  }
+  function renameLagPrompt(id){
+    const lag=state.lags.find(l=>l.id===id);
+    if(!lag) return;
+    const n=prompt('Editar nome da Lag', lag.name);
+    if(n!==null && n.trim()!==''){
+      lag.name=n.trim();
+      persist(); render();
+    }
+  }
+  function deleteLag(id){
+    if(!confirm('Excluir essa Lag?')) return;
+    state.lags=state.lags.filter(l=>l.id!==id);
+    persist(); render();
+  }
+  function toggleExpand(id){
+    const lag=state.lags.find(l=>l.id===id);
+    if(!lag) return;
+    lag.expanded=!lag.expanded;
+    persist(); render();
+  }
+  function addLead(lagId){
+    const lag=state.lags.find(l=>l.id===lagId);
+    if(!lag) return;
+    const title=prompt('Título da Lead','Ex: Fazer 5 ligações')?.trim();
+    if(!title) return;
+    lag.leads.push({id:genId(), title, done:false, assignedPeople:[]});
+    persist(); render();
+  }
+  function toggleLead(lagId, leadId){
+    const lag=state.lags.find(l=>l.id===lagId);
+    if(!lag) return;
+    const lead=lag.leads.find(l=>l.id===leadId);
+    if(!lead) return;
+    lead.done=!lead.done;
+    persist(); render();
+  }
+  function editLeadTitle(lagId, leadId){
+    const lag=state.lags.find(l=>l.id===lagId);
+    if(!lag) return;
+    const lead=lag.leads.find(l=>l.id===leadId);
+    if(!lead) return;
+    const t=prompt('Editar título da Lead', lead.title);
+    if(t!==null && t.trim()!==''){ lead.title=t.trim(); persist(); render(); }
+  }
+  function deleteLead(lagId, leadId){
+    const lag=state.lags.find(l=>l.id===lagId);
+    if(!lag) return;
+    lag.leads=lag.leads.filter(l=>l.id!==leadId);
+    persist(); render();
+  }
+  function addLink(lagId){
+    const lag=state.lags.find(l=>l.id===lagId);
+    if(!lag) return;
+    const title=prompt('Título do favorito','Dashboard')?.trim();
+    if(!title) return;
+    const url=prompt('URL:','https://')?.trim();
+    if(!url) return;
+    lag.links.push({id:genId(), title, url});
+    persist(); render();
+  }
+  function editLink(lagId, linkId){
+    const lag=state.lags.find(l=>l.id===lagId);
+    if(!lag) return;
+    const link=lag.links.find(l=>l.id===linkId);
+    if(!link) return;
+    const t=prompt('Editar título', link.title);
+    if(t!==null && t.trim()!=='') link.title=t.trim();
+    const u=prompt('Editar URL', link.url);
+    if(u!==null && u.trim()!=='') link.url=u.trim();
+    persist(); render();
+  }
+  function deleteLink(lagId, linkId){
+    const lag=state.lags.find(l=>l.id===lagId);
+    if(!lag) return;
+    lag.links=lag.links.filter(l=>l.id!==linkId);
+    persist(); render();
+  }
+  function updateDescription(lagId, html){
+    const lag=state.lags.find(l=>l.id===lagId);
+    if(!lag) return;
+    lag.description=html;
+    persist();
+  }
+
+  // assigning
+  function assignPeopleToLagToggle(e, lagId){
+    e.stopPropagation();
+    closeAllPanels();
+    const lag=state.lags.find(l=>l.id===lagId);
+    if(!lag) return;
+    const parent=e.currentTarget.parentElement;
+    const existing=document.getElementById(`panel-lag-${lagId}`);
+    if(existing){ existing.remove(); return; }
+    const panel=document.createElement('div');
+    panel.className='panel-content';
+    panel.id=`panel-lag-${lagId}`;
+    panel.addEventListener('click', ev=>ev.stopPropagation());
+    panel.innerHTML=state.people.map(p=>{
+      const checked=(lag.assignedPeople||[]).includes(p.id);
+      return `<label style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
+        <input type="checkbox" data-person="${p.id}" ${checked?'checked':''}/> ${p.name} (${p.role})
+      </label>`;
+    }).join('') + `<div style="text-align:right;margin-top:6px;"><button class="btn-secondary btn-sm" onclick="closeAllPanels()">Fechar</button></div>`;
+    parent.appendChild(panel);
+    panel.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+      cb.onchange=()=>{
+        const pid=cb.getAttribute('data-person');
+        if(!lag.assignedPeople) lag.assignedPeople=[];
+        if(cb.checked){
+          if(!lag.assignedPeople.includes(pid)) lag.assignedPeople.push(pid);
+        } else {
+          lag.assignedPeople=lag.assignedPeople.filter(x=>x!==pid);
+        }
+        persist(); render();
+      };
+    });
+  }
+  function assignPeopleToLeadToggle(e, lagId, leadId){
+    e.stopPropagation();
+    closeAllPanels();
+    const lead=state.lags.find(l=>l.id===lagId)?.leads.find(ld=>ld.id===leadId);
+    if(!lead) return;
+    const parent=e.currentTarget.parentElement.parentElement;
+    const existing=document.getElementById(`panel-lead-${lagId}-${leadId}`);
+    if(existing){ existing.remove(); return; }
+    const panel=document.createElement('div');
+    panel.className='panel-content';
+    panel.id=`panel-lead-${lagId}-${leadId}`;
+    panel.addEventListener('click', ev=>ev.stopPropagation());
+    panel.innerHTML=state.people.map(p=>{
+      const checked=(lead.assignedPeople||[]).includes(p.id);
+      return `<label style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
+        <input type="checkbox" data-person="${p.id}" ${checked?'checked':''}/> ${p.name} (${p.role})
+      </label>`;
+    }).join('') + `<div style="text-align:right;margin-top:6px;"><button class="btn-secondary btn-sm" onclick="closeAllPanels()">Fechar</button></div>`;
+    parent.appendChild(panel);
+    panel.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+      cb.onchange=()=>{
+        const pid=cb.getAttribute('data-person');
+        if(!lead.assignedPeople) lead.assignedPeople=[];
+        if(cb.checked){
+          if(!lead.assignedPeople.includes(pid)) lead.assignedPeople.push(pid);
+        } else {
+          lead.assignedPeople=lead.assignedPeople.filter(x=>x!==pid);
+        }
+        persist(); render();
+      };
+    });
+  }
+
+  // toolbar
+  function execCmd(cmd,val=null,toolbarEl){
+    document.execCommand(cmd,false,val);
+    updateToolbarState(toolbarEl);
+  }
+  function updateToolbarState(toolbarEl){
+    if(!toolbarEl) return;
+    toolbarEl.querySelectorAll('.tool-btn').forEach(btn=>{
+      const cmd=btn.getAttribute('data-cmd');
+      if(['bold','italic','underline','insertUnorderedList','insertOrderedList'].includes(cmd)){
+        const active=document.queryCommandState(cmd);
+        btn.classList.toggle('active', active);
+      }
+    });
+  }
+
+  // visibility & status
+  function peopleWithIncompleteLeads(){
+    const map={};
+    state.lags.forEach(lag=>{
+      lag.leads.forEach(lead=>{
+        if(lead.done) return;
+        (lead.assignedPeople||[]).forEach(pid=>{
+          map[pid]=(map[pid]||0)+1;
+        });
+      });
+    });
+    return map;
+  }
+  function lagStatus(lag){
+    if(!lag.leads.length) return {percent:0,label:'(sem leads)'};
+    const done=lag.leads.filter(l=>l.done).length;
+    const total=lag.leads.length;
+    const pct=Math.round((done/total)*100);
+    return {percent:pct,label:`${done}/${total}`};
+  }
+  function leadVisible(lead){
+    if(!filteredPersonId) return true;
+    return (lead.assignedPeople||[]).includes(filteredPersonId);
+  }
+  function lagVisible(lag){
+    if(!filteredPersonId) return true;
+    if((lag.assignedPeople||[]).includes(filteredPersonId)) return true;
+    return lag.leads.some(lead=>leadVisible(lead));
+  }
+  function closeAllPanels(){ document.querySelectorAll('.panel-content').forEach(el=>el.remove()); }
+
+  // import/export
+  function exportJSON(){
+    const data = JSON.stringify(state, null, 2);
+    const blob = new Blob([data], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download='lagcast_export.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+  function importJSON(){
+    const inp=document.createElement('input');
+    inp.type='file';
+    inp.accept='application/json';
+    inp.onchange=e=>{
+      const file=e.target.files[0];
+      if(!file) return;
+      const reader=new FileReader();
+      reader.onload=ev=>{
+        try{
+          const imported=JSON.parse(ev.target.result);
+          if(!imported.lags || !imported.people){
+            alert('JSON inválido: precisa ter "lags" e "people".');
+            return;
+          }
+          const escolha=confirm('Substituir os dados atuais? Cancelar fará merge (união).');
+          if(escolha){
+            state=imported;
+          } else {
+            // merge: concat sem duplicar por id
+            const existingPeopleIds=new Set(state.people.map(p=>p.id));
+            imported.people.forEach(p=>{ if(!existingPeopleIds.has(p.id)) state.people.push(p); });
+            const existingLagIds=new Set(state.lags.map(l=>l.id));
+            imported.lags.forEach(l=>{ if(!existingLagIds.has(l.id)) state.lags.push(l); });
+          }
+          persist(); render();
+        }catch(err){
+          alert('Erro ao parsear JSON: '+err);
+        }
+      };
+      reader.readAsText(file);
+    };
+    inp.click();
+  }
+
+  // render
+  function render(){
+    applyTheme();
+    // pessoas
+    const ppl=document.getElementById('people-list');
+    ppl.innerHTML='';
+    state.people.forEach(p=>{
+      const wrapper=document.createElement('div');
+      wrapper.className='person-card';
+      if(filteredPersonId===p.id) wrapper.style.boxShadow='0 0 0 2px var(--primary)';
+      wrapper.innerHTML=`
+        <div class="person-header">
+          <div>
+            <div><strong>${p.name}</strong></div>
+            <div class="tiny">${p.role}</div>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button class="btn-icon" title="Editar" aria-label="Editar" onclick="editPerson('${p.id}')">
+              <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12.3 2.7a1 1 0 0 1 1.4 1.4L5.4 12.4H3v-2.4L12.3 2.7z"/>
+              </svg>
+            </button>
+            <button class="btn-icon" title="Remover" aria-label="Remover" onclick="deletePerson('${p.id}')">
+              <svg class="icon" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M4.5 4.5l7 7m0-7l-7 7"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+          <div class="pill" onclick="togglePersonFilter('${p.id}')">${filteredPersonId===p.id?'Filtro ativo':'Filtrar'}</div>
+        </div>
+      `;
+      ppl.appendChild(wrapper);
+    });
+
+    // alertas
+    const alertContainer=document.getElementById('incomplete-alerts');
+    alertContainer.innerHTML='';
+    const incomplete=peopleWithIncompleteLeads();
+    if(Object.keys(incomplete).length){
+      Object.entries(incomplete).forEach(([pid,count])=>{
+        const person=state.people.find(x=>x.id===pid);
+        if(!person) return;
+        const pill=document.createElement('div');
+        pill.className='alert-pill';
+        pill.innerHTML=`<div><strong>${person.name}</strong> tem <strong>${count}</strong> lead(s) pendente(s)</div>`;
+        pill.onclick=()=>{ filteredPersonId=pid; render(); };
+        alertContainer.appendChild(pill);
+      });
+    } else {
+      alertContainer.innerHTML=`<div class="tiny">Nenhuma pessoa com leads pendentes atribuídos.</div>`;
+    }
+
+    // filtro ativo
+    const active=document.getElementById('active-filter-display');
+    active.innerHTML='';
+    if(filteredPersonId){
+      const p=state.people.find(x=>x.id===filteredPersonId);
+      if(p){
+        const d=document.createElement('div');
+        d.className='filter-indicator';
+        d.textContent=`Filtro: ${p.name} (${p.role}) ×`;
+        d.onclick=()=>{ filteredPersonId=null; render(); };
+        active.appendChild(d);
+      }
+    }
+
+    // filtro indicator wrapper
+    const fiw=document.getElementById('filter-indicator-wrapper');
+    fiw.innerHTML='';
+    if(filteredPersonId){
+      const p=state.people.find(x=>x.id===filteredPersonId);
+      if(p){
+        const f=document.createElement('div');
+        f.className='filter-indicator';
+        f.textContent=`Filtrando por: ${p.name}`;
+        f.onclick=()=>{ filteredPersonId=null; render(); };
+        fiw.appendChild(f);
+      }
+    }
+
+    // lags
+    const container=document.getElementById('lags-container');
+    container.innerHTML='';
+    state.lags.forEach(lag=>{
+      if(!lagVisible(lag)) return;
+      const status=lagStatus(lag);
+      const card=document.createElement('div');
+      card.className='card';
+      card.innerHTML=`
+        <div class="flex" style="justify-content:space-between;align-items:start;">
+          <div style="flex:1;min-width:220px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+            <div style="display:flex;flex-direction:column;gap:6px;flex:1;">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <div style="font-size:1.25rem;font-weight:600;cursor:text;" ondblclick="renameLagPrompt('${lag.id}')">${lag.name}</div>
+                <div class="pill">${status.percent}%</div>
+                <div class="tiny">[${status.label}]</div>
+              </div>
+              <div class="assigned-badges">
+                ${(lag.assignedPeople||[]).map(pid=>{
+                  const p=state.people.find(x=>x.id===pid);
+                  if(!p) return '';
+                  return `<div class="person-pill" onclick="togglePersonFilter('${p.id}')">${p.name}</div>`;
+                }).join('')}
+                <button class="assign-btn" title="Associar pessoas à Lag" onclick="assignPeopleToLagToggle(event,'${lag.id}')">
+                  <svg class="icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 3a5 5 0 1 1-4.546 2.914"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <div style="min-width:160px;display:flex;gap:6px;align-items:center;">
+              <div class="progress" aria-label="Progresso da lag">
+                <div class="progress-inner" style="width:${status.percent}%;"></div>
+              </div>
+              <div class="tiny">${status.label}</div>
+            </div>
+            <button class="btn-icon" title="Excluir Lag" aria-label="Excluir Lag" onclick="deleteLag('${lag.id}')">
+              <svg class="icon" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M4.5 4.5l7 7m0-7l-7 7"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        ${lag.expanded?`
+          <div style="margin-top:14px;position:relative;">
+            <div class="flex" style="gap:24px;flex-wrap:wrap;">
+              <div style="flex:1;min-width:300px;display:flex;flex-direction:column;gap:10px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                  <div><strong>Descrição</strong></div>
+                </div>
+                <div class="toolbar" data-for="${lag.id}">
+                  <button class="tool-btn" data-cmd="bold" title="Negrito"><strong>B</strong></button>
+                  <button class="tool-btn" data-cmd="italic" title="Itálico"><em>I</em></button>
+                  <button class="tool-btn" data-cmd="underline" title="Sublinhado"><u>U</u></button>
+                  <button class="tool-btn" data-cmd="insertUnorderedList" title="Lista">•</button>
+                  <button class="tool-btn" data-cmd="insertOrderedList" title="Lista num.">1.</button>
+                  <button class="tool-btn" data-cmd="createLink" title="Link">🔗</button>
+                  <button class="tool-btn" data-cmd="undo" title="Desfazer">↺</button>
+                  <button class="tool-btn" data-cmd="redo" title="Refazer">↻</button>
+                  <button class="tool-btn" data-cmd="removeFormat" title="Limpar">Tx</button>
+                </div>
+                <div contenteditable="true" class="editable" data-lag="${lag.id}" spellcheck="false">${lag.description || '<div style="color:rgba(159,170,210,.7);">Descreva a meta...</div>'}</div>
+                <div class="tiny">Clique fora para salvar.</div>
+              </div>
+              <div style="flex:1;min-width:260px;display:flex;flex-direction:column;gap:6px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                  <div><strong>Favoritos</strong></div>
+                  <button class="btn-icon" title="Adicionar favorito" aria-label="Adicionar favorito" onclick="addLink('${lag.id}')">
+                    <svg class="icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a.5.5 0 0 1 .5.5V7H14a.5.5 0 0 1 0 1H8.5v5.5a.5.5 0 0 1-1 0V8H2a.5.5 0 0 1 0-1h5.5V1.5A.5.5 0 0 1 8 1Z"/></svg>
+                  </button>
+                </div>
+                <div class="link-section">
+                  ${lag.links.length?lag.links.map(link=>`
+                    <div class="link-card">
+                      <div class="link-info">
+                        <div class="link-title" ondblclick="editLink('${lag.id}','${link.id}')">${link.title}</div>
+                        <a class="link-url" href="${link.url}" target="_blank" rel="noreferrer">${link.url}</a>
+                      </div>
+                      <div style="display:flex;flex-direction:column;gap:6px;">
+                        <button class="btn-icon" title="Editar favorito" onclick="editLink('${lag.id}','${link.id}')">
+                          <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12.3 2.7a1 1 0 0 1 1.4 1.4L5.4 12.4H3v-2.4L12.3 2.7z"/>
+                          </svg>
+                        </button>
+                        <button class="btn-icon" title="Remover favorito" onclick="deleteLink('${lag.id}','${link.id}')">
+                          <svg class="icon" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M4.5 4.5l7 7m0-7l-7 7"/>
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  `).join('') : '<div class="tiny">Nenhum favorito.</div>'}
+                </div>
+              </div>
+            </div>
+            <div style="margin-top:24px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div><strong>Leads</strong> <span class="tiny" style="margin-left:6px;">ações binárias</span></div>
+                <button class="btn-primary" title="Adicionar Lead" aria-label="Adicionar Lead" onclick="addLead('${lag.id}')">
+                  <svg class="icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a.5.5 0 0 1 .5.5V7H14a.5.5 0 0 1 0 1H8.5v5.5a.5.5 0 0 1-1 0V8H2a.5.5 0 0 1 0-1h5.5V1.5A.5.5 0 0 1 8 1Z"/></svg>
+                </button>
+              </div>
+              <div class="lead-list">
+                ${lag.leads.map(lead=>`
+                  ${leadVisible(lead)?`
+                    <div class="lead">
+                      <div class="lead-left">
+                        <label style="display:inline-flex;align-items:center;gap:10px;cursor:pointer;">
+                          <input type="checkbox" ${lead.done?'checked':''} onchange="toggleLead('${lag.id}','${lead.id}')" />
+                          <div>${lead.title}</div>
+                        </label>
+                        <div class="lead-people">
+                          ${(lead.assignedPeople||[]).map(pid=>{
+                            const p=state.people.find(x=>x.id===pid);
+                            if(!p) return '';
+                            return `<div class="person-pill" onclick="togglePersonFilter('${p.id}')">${p.name}</div>`;
+                          }).join('')}
+                          <button class="assign-btn" title="Associar pessoas" onclick="assignPeopleToLeadToggle(event,'${lag.id}','${lead.id}')">
+                            <svg class="icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 3a5 5 0 1 1-4.546 2.914"/></svg>
+                          </button>
+                        </div>
+                      </div>
+                      <div style="display:flex;gap:8px;align-items:center;">
+                        <button class="btn-icon" title="Editar lead" onclick="editLeadTitle('${lag.id}','${lead.id}')">
+                          <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12.3 2.7a1 1 0 0 1 1.4 1.4L5.4 12.4H3v-2.4L12.3 2.7z"/>
+                          </svg>
+                        </button>
+                        <button class="btn-icon" title="Remover lead" onclick="deleteLead('${lag.id}','${lead.id}')">
+                          <svg class="icon" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M4.5 4.5l7 7m0-7l-7 7"/>
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  `:''}
+                `).join('')||'<div class="tiny">Sem leads ainda.</div>'}
+              </div>
+            </div>
+          </div>
+        `:''}
+      `;
+      container.appendChild(card);
+    });
+
+    // bind editable with first-click clearing placeholder
+    document.querySelectorAll('[contenteditable][data-lag]').forEach(el=>{
+      // setup initial placeholder detection
+      el.dataset.initialized = el.dataset.initialized || 'false';
+      el.addEventListener('focus', e=>{
+        if(el.dataset.initialized==='false'){
+          // clear if contains placeholder-like content
+          el.innerHTML='';
+          el.style.color=''; // respect theme variable
+          el.dataset.initialized='true';
+        }
+      }, {once:false});
+      el.onblur=e=>{
+        const id=el.getAttribute('data-lag');
+        updateDescription(id, el.innerHTML);
+      };
+      el.addEventListener('keyup', e=>{
+        const tb=findToolbarFor(el);
+        updateToolbarState(tb);
+      });
+      el.addEventListener('mouseup', e=>{
+        const tb=findToolbarFor(el);
+        updateToolbarState(tb);
+      });
+    });
+    document.querySelectorAll('.toolbar').forEach(tb=>{
+      tb.querySelectorAll('.tool-btn').forEach(btn=>{
+        btn.onclick=e=>{
+          const cmd=btn.getAttribute('data-cmd');
+          if(cmd==='createLink'){
+            const url=prompt('URL (https://...)','https://');
+            if(url) execCmd('createLink', url, tb);
+          } else execCmd(cmd,null,tb);
+          setTimeout(()=>updateToolbarState(tb),50);
+        };
+      });
+    });
+    document.body.addEventListener('click', closeAllPanels);
+
+  }
+
+  function findToolbarFor(el){
+    const id=el.getAttribute('data-lag');
+    return document.querySelector(`.toolbar[data-for="${id}"]`);
+  }
+
+  function execCmd(cmd,val,toolbarEl){ document.execCommand(cmd,false,val); updateToolbarState(toolbarEl); }
+
+  // inicialização
+  if(!state.theme) state.theme='light';
+  applyTheme();
+  render();
+</script>
+</body>
+</html>
