@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8" />
-<title>LagCast Remodelado com Import/Export e WYSIWYG</title>
+<title>LagCast Remodelado com Expand/Collapse</title>
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <style>
   :root {
@@ -42,7 +42,7 @@
     padding:16px 14px 120px;
     display:flex;
     flex-direction:column;
-    gap:14px;
+    gap:18px;
   }
   .card{
     background:var(--card);
@@ -53,6 +53,7 @@
     flex-direction:column;
     gap:14px;
     position:relative;
+    transition:all .25s;
   }
   .flex{display:flex;gap:14px;flex-wrap:wrap;}
   .title{margin:0;font-size:1.5rem;font-weight:600;display:flex;gap:8px;align-items:center;}
@@ -246,7 +247,10 @@
     border:2px solid #8f9ed3;
     color:#fff;
   }
-  .icon{width:16px;height:16px;display:inline-block;flex-shrink:0;}
+  .icon{width:16px;height:16px;display:inline-block;flex-shrink:0;transition:transform .25s;}
+  .chevron{transition:transform .25s;display:inline-block;}
+  .lag-wrapper{margin-bottom:18px;} /* espaçamento visível entre lags */
+  .clickable-header{cursor:pointer;display:flex;align-items:center;gap:8px;}
 </style>
 </head>
 <body>
@@ -279,7 +283,7 @@
         <div class="alert-strip" id="incomplete-alerts"></div>
         <div style="margin-top:6px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
           <div id="active-filter-display"></div>
-          <div class="sub">Duplo clique no título da Lag para renomear. Clique fora dos painéis para fechar.</div>
+          <div class="sub">Duplo clique no título da Lag para renomear. Clique no cabeçalho para expandir/retrair. Clique fora dos painéis para fechar.</div>
         </div>
       </div>
     </div>
@@ -308,7 +312,7 @@
   </div>
 
 <script>
-  const STORAGE_KEY='lagcast_icons_assoc_v3';
+  const STORAGE_KEY='lagcast_icons_assoc_v4';
   let state=load();
   let filteredPersonId=null;
 
@@ -489,7 +493,7 @@
       return `<label style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
         <input type="checkbox" data-person="${p.id}" ${checked?'checked':''}/> ${p.name} (${p.role})
       </label>`;
-    }).join('') + `<div style="text-align:right;margin-top:6px;"><button class="btn-secondary btn-sm" onclick="closeAllPanels()">Fechar</button></div>`;
+    }).join('') + `<div style="text-align:right;margin-top:6px;"><button class="btn-secondary" onclick="closeAllPanels()">Fechar</button></div>`;
     parent.appendChild(panel);
     panel.querySelectorAll('input[type=checkbox]').forEach(cb=>{
       cb.onchange=()=>{
@@ -521,7 +525,7 @@
       return `<label style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
         <input type="checkbox" data-person="${p.id}" ${checked?'checked':''}/> ${p.name} (${p.role})
       </label>`;
-    }).join('') + `<div style="text-align:right;margin-top:6px;"><button class="btn-secondary btn-sm" onclick="closeAllPanels()">Fechar</button></div>`;
+    }).join('') + `<div style="text-align:right;margin-top:6px;"><button class="btn-secondary" onclick="closeAllPanels()">Fechar</button></div>`;
     parent.appendChild(panel);
     panel.querySelectorAll('input[type=checkbox]').forEach(cb=>{
       cb.onchange=()=>{
@@ -616,7 +620,7 @@
           if(escolha){
             state=imported;
           } else {
-            // merge: concat sem duplicar por id
+            // merge
             const existingPeopleIds=new Set(state.people.map(p=>p.id));
             imported.people.forEach(p=>{ if(!existingPeopleIds.has(p.id)) state.people.push(p); });
             const existingLagIds=new Set(state.lags.map(l=>l.id));
@@ -635,6 +639,7 @@
   // render
   function render(){
     applyTheme();
+
     // pessoas
     const ppl=document.getElementById('people-list');
     ppl.innerHTML='';
@@ -720,6 +725,8 @@
     state.lags.forEach(lag=>{
       if(!lagVisible(lag)) return;
       const status=lagStatus(lag);
+      const wrapper=document.createElement('div');
+      wrapper.className='lag-wrapper';
       const card=document.createElement('div');
       card.className='card';
       card.innerHTML=`
@@ -727,7 +734,14 @@
           <div style="flex:1;min-width:220px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
             <div style="display:flex;flex-direction:column;gap:6px;flex:1;">
               <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                <div style="font-size:1.25rem;font-weight:600;cursor:text;" ondblclick="renameLagPrompt('${lag.id}')">${lag.name}</div>
+                <div class="clickable-header" style="font-size:1.25rem;font-weight:600;" onclick="toggleExpand('${lag.id}')">
+                  <div ondblclick="renameLagPrompt('${lag.id}')">${lag.name}</div>
+                  <div class="chevron" style="transform: rotate(${lag.expanded?0: -90}deg);">
+                    <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M4.5 6.5l3.5 3.5 3.5-3.5"/>
+                    </svg>
+                  </div>
+                </div>
                 <div class="pill">${status.percent}%</div>
                 <div class="tiny">[${status.label}]</div>
               </div>
@@ -739,6 +753,7 @@
                 }).join('')}
                 <button class="assign-btn" title="Associar pessoas à Lag" onclick="assignPeopleToLagToggle(event,'${lag.id}')">
                   <svg class="icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 3a5 5 0 1 1-4.546 2.914"/></svg>
+                  <div style="margin-left:4px;">Atribuir</div>
                 </button>
               </div>
             </div>
@@ -856,18 +871,17 @@
           </div>
         `:''}
       `;
-      container.appendChild(card);
+      wrapper.appendChild(card);
+      container.appendChild(wrapper);
     });
 
     // bind editable with first-click clearing placeholder
     document.querySelectorAll('[contenteditable][data-lag]').forEach(el=>{
-      // setup initial placeholder detection
       el.dataset.initialized = el.dataset.initialized || 'false';
       el.addEventListener('focus', e=>{
         if(el.dataset.initialized==='false'){
-          // clear if contains placeholder-like content
           el.innerHTML='';
-          el.style.color=''; // respect theme variable
+          el.style.color=''; 
           el.dataset.initialized='true';
         }
       }, {once:false});
@@ -897,20 +911,277 @@
       });
     });
     document.body.addEventListener('click', closeAllPanels);
-
   }
 
   function findToolbarFor(el){
     const id=el.getAttribute('data-lag');
     return document.querySelector(`.toolbar[data-for="${id}"]`);
   }
-
   function execCmd(cmd,val,toolbarEl){ document.execCommand(cmd,false,val); updateToolbarState(toolbarEl); }
 
-  // inicialização
   if(!state.theme) state.theme='light';
   applyTheme();
   render();
 </script>
 </body>
+
+<script>
+    (() => {
+      // utilitário de debounce simples
+      function debounce(fn, delay) {
+        let t;
+        return (...args) => {
+          clearTimeout(t);
+          t = setTimeout(() => fn(...args), delay);
+        };
+      }
+    
+      // ====== ícones SVG reutilizáveis ======
+      const ICONS = {
+        add: (size=18) => {
+          const ns="http://www.w3.org/2000/svg";
+          const svg = document.createElementNS(ns,'svg');
+          svg.setAttribute('viewBox','0 0 24 24');
+          svg.setAttribute('width', size);
+          svg.setAttribute('height', size);
+          svg.setAttribute('aria-hidden','true');
+          svg.innerHTML = `
+            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" fill="none"/>
+            <path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          `;
+          return svg;
+        },
+        edit: (size=18) => {
+          const ns="http://www.w3.org/2000/svg";
+          const svg = document.createElementNS(ns,'svg');
+          svg.setAttribute('viewBox','0 0 24 24');
+          svg.setAttribute('width', size);
+          svg.setAttribute('height', size);
+          svg.setAttribute('aria-hidden','true');
+          svg.innerHTML=`
+            <path d="M4 17.25V21h3.75L17.81 10.94l-3.75-3.75L4 17.25z" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="M20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="none" stroke="currentColor" stroke-width="2"/>
+          `;
+          return svg;
+        },
+        delete: (size=18) => {
+          const ns="http://www.w3.org/2000/svg";
+          const svg=document.createElementNS(ns,'svg');
+          svg.setAttribute('viewBox','0 0 24 24');
+          svg.setAttribute('width', size);
+          svg.setAttribute('height', size);
+          svg.setAttribute('aria-hidden','true');
+          svg.innerHTML=`
+            <path d="M3 6h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M8 6V4h8v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <rect x="6" y="6" width="12" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          `;
+          return svg;
+        },
+        assign: (size=18) => {
+          const ns="http://www.w3.org/2000/svg";
+          const svg=document.createElementNS(ns,'svg');
+          svg.setAttribute('viewBox','0 0 24 24');
+          svg.setAttribute('width', size);
+          svg.setAttribute('height', size);
+          svg.setAttribute('aria-hidden','true');
+          svg.innerHTML=`
+            <path d="M16 11c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3z" stroke="currentColor" stroke-width="2" fill="none"/>
+            <path d="M8 11c1.66 0 3-1.34 3-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3z" stroke="currentColor" stroke-width="2" fill="none"/>
+            <path d="M5 17c0-2.21 1.79-4 4-4h6c2.21 0 4 1.79 4 4v1H5v-1z" stroke="currentColor" stroke-width="2" fill="none"/>
+          `;
+          return svg;
+        },
+        link: (size=18) => {
+          const ns="http://www.w3.org/2000/svg";
+          const svg=document.createElementNS(ns,'svg');
+          svg.setAttribute('viewBox','0 0 24 24');
+          svg.setAttribute('width', size);
+          svg.setAttribute('height', size);
+          svg.setAttribute('aria-hidden','true');
+          svg.innerHTML=`
+            <path d="M10 13a5 5 0 0 1 0-7l1-1a5 5 0 0 1 7 7l-1 1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M14 11a5 5 0 0 1 0 7l-1 1a5 5 0 0 1-7-7l1-1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          `;
+          return svg;
+        },
+        import: (size=18) => {
+          const ns="http://www.w3.org/2000/svg";
+          const svg=document.createElementNS(ns,'svg');
+          svg.setAttribute('viewBox','0 0 24 24');
+          svg.setAttribute('width', size);
+          svg.setAttribute('height', size);
+          svg.setAttribute('aria-hidden','true');
+          svg.innerHTML=`
+            <path d="M12 3v12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M8 11l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <rect x="4" y="17" width="16" height="4" rx="1" stroke="currentColor" stroke-width="2" fill="none"/>
+          `;
+          return svg;
+        },
+        export: (size=18) => {
+          const ns="http://www.w3.org/2000/svg";
+          const svg=document.createElementNS(ns,'svg');
+          svg.setAttribute('viewBox','0 0 24 24');
+          svg.setAttribute('width', size);
+          svg.setAttribute('height', size);
+          svg.setAttribute('aria-hidden','true');
+          svg.innerHTML=`
+            <path d="M12 21V9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M8 13l4-4 4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <rect x="4" y="3" width="16" height="4" rx="1" stroke="currentColor" stroke-width="2" fill="none"/>
+          `;
+          return svg;
+        },
+        filter: (size=18) => {
+          const ns="http://www.w3.org/2000/svg";
+          const svg=document.createElementNS(ns,'svg');
+          svg.setAttribute('viewBox','0 0 24 24');
+          svg.setAttribute('width', size);
+          svg.setAttribute('height', size);
+          svg.setAttribute('aria-hidden','true');
+          svg.innerHTML=`
+            <path d="M3 5h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M6 12h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M10 19h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          `;
+          return svg;
+        },
+        chevron: (size=16) => {
+          const ns="http://www.w3.org/2000/svg";
+          const svg=document.createElementNS(ns,'svg');
+          svg.setAttribute('viewBox','0 0 24 24');
+          svg.setAttribute('width', size);
+          svg.setAttribute('height', size);
+          svg.setAttribute('aria-hidden','true');
+          svg.innerHTML=`
+            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          `;
+          return svg;
+        }
+      };
+    
+      // ====== substituição leve dos ícones (idempotente) ======
+      function patchIcons(){
+        const rules = [
+          {test: /nova lag|nova pessoa|adicionar lead/i, icon: ICONS.add},
+          {test: /editar/i, icon: ICONS.edit},
+          {test: /remover|excluir|delete/i, icon: ICONS.delete},
+          {test: /atribuir pessoas|associar pessoas/i, icon: ICONS.assign},
+          {test: /favorito/i, icon: ICONS.link},
+          {test: /link/i, icon: ICONS.link},
+          {test: /exportar/i, icon: ICONS.export},
+          {test: /importar/i, icon: ICONS.import},
+          {test: /filtrar/i, icon: ICONS.filter}
+        ];
+        document.querySelectorAll('button').forEach(btn => {
+          if (btn.dataset.iconPatched === "true") return;
+          const label = (btn.getAttribute('aria-label') || btn.title || '').toLowerCase();
+          for (const r of rules) {
+            if (r.test.test(label)) {
+              btn.innerHTML = '';
+              const svg = r.icon(18);
+              svg.style.pointerEvents = 'none';
+              btn.appendChild(svg);
+              btn.dataset.iconPatched = "true";
+              break;
+            }
+          }
+        });
+        // chevrons: adiciona se não existir
+        document.querySelectorAll('.clickable-header').forEach(header => {
+          if (header.dataset.chevronPatched === "true") return;
+          const chevronWrapper = document.createElement('div');
+          chevronWrapper.style.display = 'inline-flex';
+          chevronWrapper.style.marginLeft = '4px';
+          chevronWrapper.className = 'chevron';
+          chevronWrapper.appendChild(ICONS.chevron(16));
+          header.appendChild(chevronWrapper);
+          header.dataset.chevronPatched = "true";
+        });
+      }
+    
+      // ====== sincroniza chevrons ======
+      function syncChevrons(){
+        if (!window.state || !Array.isArray(window.state.lags)) return;
+        document.querySelectorAll('.card').forEach(card => {
+          const titleEl = card.querySelector('[ondblclick^="renameLagPrompt"]');
+          if (!titleEl) return;
+          const match = titleEl.getAttribute('ondblclick')?.match(/'([^']+)'/);
+          if (!match) return;
+          const lagId = match[1];
+          const lag = window.state.lags.find(l => l.id === lagId);
+          if (!lag) return;
+          const chevron = card.querySelector('.clickable-header .chevron');
+          if (!chevron) return;
+          const deg = lag.expanded ? 0 : -90;
+          chevron.style.transform = `rotate(${deg}deg)`;
+        });
+      }
+    
+      // intercepta toggleExpand se existir para atualizar imediatamente
+      if (window.toggleExpand && !window._patchedToggleExpand) {
+        window._patchedToggleExpand = true;
+        const original = window.toggleExpand;
+        window.toggleExpand = function(id) {
+          original(id);
+          requestAnimationFrame(() => {
+            syncChevrons();
+          });
+        };
+      }
+    
+      // ====== ajuste de cards de pessoa ======
+      function adjustPersonCards(){
+        const container = document.getElementById('people-list');
+        if (!container) return;
+        const cards = Array.from(container.querySelectorAll('.person-card'));
+        if (!cards.length) return;
+        const containerWidth = container.clientWidth;
+        const style = getComputedStyle(container);
+        const gap = parseFloat(style.gap) || 10;
+        const minCard = 160;
+        let perRow = Math.floor((containerWidth + gap) / (minCard + gap));
+        if (perRow < 1) perRow = 1;
+        const totalGaps = gap * (perRow - 1);
+        let cardWidth = Math.floor((containerWidth - totalGaps) / perRow);
+        if (cardWidth < 100) cardWidth = 100;
+        cards.forEach(c => {
+          c.style.flex = `0 0 ${cardWidth}px`;
+          c.style.maxWidth = `${cardWidth}px`;
+        });
+        // garantir quebra natural
+        container.style.display = 'flex';
+        container.style.flexWrap = 'wrap';
+        container.style.overflowX = 'hidden';
+      }
+    
+      const debouncedAdjust = debounce(() => {
+        adjustPersonCards();
+      }, 100);
+    
+      // ====== observadores ======
+      const root = document.getElementById('app') || document.body;
+      const mo = new MutationObserver(() => {
+        patchIcons();
+        syncChevrons();
+        debouncedAdjust();
+      });
+      mo.observe(root, {childList: true, subtree: true});
+    
+      window.addEventListener('resize', debouncedAdjust);
+    
+      // inicialização
+      document.addEventListener('DOMContentLoaded', () => {
+        patchIcons();
+        syncChevrons();
+        adjustPersonCards();
+      });
+      // caso já esteja carregado
+      patchIcons();
+      syncChevrons();
+      adjustPersonCards();
+    })();
+    </script>
 </html>
