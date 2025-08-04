@@ -1184,4 +1184,32 @@
       adjustPersonCards();
     })();
     </script>
+
+<script>
+    (() => {
+      // marca todos os WYSIWYG para que o focus não limpe o conteúdo
+      function disableAutoClear(el) {
+        if (el && el.dataset) {
+          el.dataset.initialized = 'true';
+        }
+      }
+    
+      // aplica imediatamente aos já existentes
+      document.querySelectorAll('[contenteditable][data-lag]').forEach(disableAutoClear);
+    
+      // observa inserção de novos editores e também os marca
+      const mo = new MutationObserver(muts => {
+        for (const m of muts) {
+          for (const node of m.addedNodes) {
+            if (node.nodeType !== 1) continue;
+            if (node.matches && node.matches('[contenteditable][data-lag]')) {
+              disableAutoClear(node);
+            }
+            node.querySelectorAll && node.querySelectorAll('[contenteditable][data-lag]').forEach(disableAutoClear);
+          }
+        }
+      });
+      mo.observe(document.body, { childList: true, subtree: true });
+    })();
+    </script>
 </html>
