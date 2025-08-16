@@ -2390,5 +2390,300 @@
     })();
     </script>
 
+<script>
+    // === FAVORITES PATCH v1 — área visível, CRUD, ícones com iniciais, rolagem horizontal ===
+    (function waitReady(tries=0){
+      const ready = typeof window.renderLists === 'function' && document.getElementById('todoList');
+      if(!ready){
+        if(tries<80) return setTimeout(()=>waitReady(tries+1), 120);
+        console.warn('[Favorites Patch] App não ficou pronto a tempo.');
+        return;
+      }
+    
+      // ---------- Storage ----------
+      const LS_KEY = 'rpgEnergyChecklist_v5';
+      const $ = s => document.querySelector(s);
+      const pad = n => String(n).padStart(2,'0');
+    
+      function readState(){
+        try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch { return {}; }
+      }
+      function writeState(s){
+        localStorage.setItem(LS_KEY, JSON.stringify(s));
+      }
+      function ensureDefaults(){
+        const s = readState();
+        if(!Array.isArray(s.favorites)) s.favorites = []; // [{id,title,url}]
+        writeState(s);
+        return s;
+      }
+      // Garante que backup/restore do app preserve favoritos
+      if(typeof window.defaultState === 'function' && !window.__favPatchedDefaultState){
+        window.__favPatchedDefaultState = true;
+        const orig = window.defaultState;
+        window.defaultState = function(){
+          const base = orig();
+          if(!Array.isArray(base.favorites)) base.favorites = [];
+          return base;
+        };
+      }
+    
+      // ---------- UI host ----------
+      function ensureFavoritesCard(){
+        const todoUL = $('#todoList');
+        const checklistCard = todoUL?.closest('.card');
+    
+        let card = document.getElementById('favoritesCard');
+        if(!card){
+          card = document.createElement('div');
+          card.id = 'favoritesCard';
+          card.className = 'card mb-4';
+          card.innerHTML = `
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="h5 m-0"><i class="bi bi-stars me-2"></i>Favoritos</div>
+                <div class="d-flex gap-2">
+                  <button id="favAddToggle" class="btn btn-sm btn-outline-light">
+                    <i class="bi bi-plus-lg me-1"></i>Novo favorito
+                  </button>
+                </div>
+              </div>
+              <form id="favForm" class="row g-2 mt-2" style="display:none">
+                <div class="col-md-4">
+                  <label class="form-label mb-1">Título</label>
+                  <input id="favTitle" type="text" class="form-control" placeholder="Nome do favorito">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label mb-1">URL</label>
+                  <input id="favUrl" type="url" class="form-control" placeholder="https://exemplo.com">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                  <button id="favSave" type="button" class="btn btn-primary w-100"><i class="bi bi-check2 me-1"></i>Salvar</button>
+                </div>
+              </form>
+    
+              <div id="favStrip" class="fav-strip mt-3"></div>
+            </div>
+          `;
+    
+          if(checklistCard && checklistCard.parentElement){
+            checklistCard.parentElement.insertBefore(card, checklistCard);
+          }else{
+            // fallback: topo do container
+            (document.querySelector('.container') || document.body).prepend(card);
+          }
+    
+          // Eventos do form
+          const btnToggle = document.getElementById('favAddToggle');
+          const form = document.getElementById('favForm');
+          const btnSave = document.getElementById('favSave');
+          btnToggle.addEventListener('click', ()=>{
+            form.style.display = (form.style.display==='none' || !form.style.display) ? '' : 'none';
+          });
+          btnSave.addEventListener('click', onSaveFavorite);
+          // Enter no form salva também
+          form.addEventListener('keydown', (e)=>{
+            if(e.key === 'Enter'){ e.preventDefault(); onSaveFavorite(); }
+          });
+        }
+        return card;
+      }
+    
+      // ---------- Helpers visuais ----------
+      // Iniciais do título (duas letras)
+      function initials(str){
+        if(!str) return '?';
+        const words = String(str).trim().split(/\s+/).filter(Boolean);
+        const first = words[0]?.[0] || '';
+        const last  = (words[1]?.[0]) || (words[0]?.[1] || '');
+        return (first + (last||'')).toUpperCase();
+      }
+      // Cor estável a partir do título
+      function colorFromTitle(t){
+        let h=0; for(let i=0;i<t.length;i++){ h = (h*31 + t.charCodeAt(i)) % 360; }
+        return `hsl(${h}, 70%, 55%)`;
+      }
+      // ID simples
+      function uid(){ return 'fav_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+    
+      // ---------- CRUD ----------
+      let editingId = null; // se estiver editando, guardamos o id
+    
+      function onSaveFavorite(){
+        const s = ensureDefaults();
+        const title = (document.getElementById('favTitle').value || '').trim();
+        const url   = (document.getElementById('favUrl').value || '').trim();
+    
+        if(!title || !url){ shake('#favForm'); return; }
+        const safeUrl = normalizeUrl(url);
+        if(!safeUrl){ shake('#favUrl'); return; }
+    
+        if(editingId){
+          const idx = s.favorites.findIndex(f=>f.id===editingId);
+          if(idx>=0){
+            s.favorites[idx].title = title;
+            s.favorites[idx].url   = safeUrl;
+          }
+          editingId = null;
+        }else{
+          s.favorites.push({ id: uid(), title, url: safeUrl });
+        }
+    
+        writeState(s);
+        // limpa form e fecha
+        document.getElementById('favTitle').value = '';
+        document.getElementById('favUrl').value   = '';
+        document.getElementById('favForm').style.display = 'none';
+        renderFavorites();
+      }
+    
+      function normalizeUrl(u){
+        try{
+          // adiciona https:// se o usuário não colocou esquema
+          if(!/^https?:\/\//i.test(u)) u = 'https://' + u;
+          const url = new URL(u);
+          return url.href;
+        }catch{ return null; }
+      }
+    
+      function onEditFavorite(id){
+        const s = ensureDefaults();
+        const fav = s.favorites.find(f=>f.id===id); if(!fav) return;
+        editingId = id;
+        document.getElementById('favTitle').value = fav.title;
+        document.getElementById('favUrl').value   = fav.url;
+        document.getElementById('favForm').style.display = '';
+        document.getElementById('favTitle').focus();
+      }
+    
+      function onDeleteFavorite(id){
+        const s = ensureDefaults();
+        const idx = s.favorites.findIndex(f=>f.id===id);
+        if(idx<0) return;
+        // confirmação simples
+        if(!confirm('Remover este favorito?')) return;
+        s.favorites.splice(idx,1);
+        writeState(s);
+        renderFavorites();
+      }
+    
+      // ---------- Render ----------
+      function renderFavorites(){
+        ensureFavoritesCard();
+        const strip = document.getElementById('favStrip');
+        strip.innerHTML = '';
+    
+        const s = ensureDefaults();
+        if(s.favorites.length === 0){
+          strip.innerHTML = `<div class="fav-empty muted">Sem favoritos ainda. Clique em “Novo favorito”.</div>`;
+          return;
+        }
+    
+        s.favorites.forEach(f=>{
+          const tile = document.createElement('div');
+          tile.className = 'fav-tile';
+    
+          const color = colorFromTitle(f.title);
+          const ini   = initials(f.title);
+    
+          tile.innerHTML = `
+            <a class="fav-link" href="${f.url}" target="_blank" rel="noopener noreferrer" title="${f.title}">
+              <div class="fav-avatar" style="--fav-color:${color};">${ini}</div>
+              <div class="fav-title">${f.title}</div>
+            </a>
+            <div class="fav-actions">
+              <button class="btn btn-sm btn-outline-light fav-edit" title="Editar"><i class="bi bi-pencil"></i></button>
+              <button class="btn btn-sm btn-outline-danger fav-del" title="Excluir"><i class="bi bi-trash"></i></button>
+            </div>
+          `;
+    
+          tile.querySelector('.fav-edit').addEventListener('click', (e)=>{ e.preventDefault(); onEditFavorite(f.id); });
+          tile.querySelector('.fav-del').addEventListener('click',  (e)=>{ e.preventDefault(); onDeleteFavorite(f.id); });
+    
+          strip.appendChild(tile);
+        });
+      }
+    
+      function shake(selector){
+        const el = document.querySelector(selector);
+        if(!el) return;
+        el.classList.add('shake');
+        setTimeout(()=>el.classList.remove('shake'), 450);
+      }
+    
+      // ---------- Hook no renderLists (atualiza favoritos quando a UI renderiza) ----------
+      if(!window.__renderListsOrigForFavs){
+        window.__renderListsOrigForFavs = window.renderLists;
+        window.renderLists = function(){
+          window.__renderListsOrigForFavs();
+          try { renderFavorites(); } catch(e){ console.error('[Favorites Patch] render falhou:', e); }
+        };
+      }
+    
+      // Primeira renderização
+      try { renderFavorites(); } catch(e){}
+    
+      // ---------- CSS ----------
+      const style = document.createElement('style');
+      style.textContent = `
+        #favoritesCard .h5 { color:#fff; }
+        .fav-strip{
+          display:flex; gap:12px;
+          overflow-x:auto; overflow-y:hidden;
+          padding-bottom:6px;
+          -webkit-overflow-scrolling: touch;
+        }
+        .fav-strip::-webkit-scrollbar{ height:6px; }
+        .fav-strip::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.15); border-radius:6px; }
+    
+        .fav-empty{ color:#c0c7d1; padding:.25rem 0; }
+    
+        .fav-tile{
+          flex:0 0 auto;
+          width:180px; max-width:220px;
+          background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
+          border:1px solid rgba(255,255,255,.12);
+          border-radius:14px; padding:10px;
+          box-shadow: 0 6px 20px rgba(0,0,0,.22);
+          display:flex; flex-direction:column; gap:8px;
+        }
+        .fav-link{ text-decoration:none; color:inherit; display:flex; align-items:center; gap:10px; }
+        .fav-avatar{
+          width:44px; height:44px; border-radius:50%;
+          background: var(--fav-color);
+          display:flex; align-items:center; justify-content:center;
+          font-weight:700; color:#fff; letter-spacing:.5px;
+          box-shadow: 0 4px 12px rgba(0,0,0,.25), 0 0 0 2px rgba(255,255,255,.15) inset;
+          flex:0 0 auto;
+        }
+        .fav-title{
+          font-weight:600; line-height:1.1;
+          white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+          max-width: 110px;
+        }
+        .fav-actions{ display:flex; gap:8px; margin-left:auto; }
+        .shake{ animation: favShake .45s ease; }
+        @keyframes favShake{
+          10% { transform: translateX(-2px); }
+          20% { transform: translateX( 2px); }
+          30% { transform: translateX(-2px); }
+          40% { transform: translateX( 2px); }
+          50% { transform: translateX(-1px); }
+          60% { transform: translateX( 1px); }
+          70% { transform: translateX(-1px); }
+          80% { transform: translateX( 1px); }
+          90% { transform: translateX(0); }
+          100%{ transform: translateX(0); }
+        }
+        @media (max-width: 520px){
+          .fav-tile{ width: 160px; }
+          .fav-title{ max-width: 96px; }
+        }
+      `;
+      document.head.appendChild(style);
+    
+      console.info('[Favorites Patch] ativo ✅');
+    })();
+    </script>
 
 </html>
