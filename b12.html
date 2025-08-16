@@ -2686,4 +2686,312 @@
     })();
     </script>
 
+<script>
+    // === RECURRING TASKS PATCH v1 (Diário / Semanal) ===
+    (function waitReady(tries=0){
+      const ready = typeof window.renderLists === 'function'
+                 && typeof window.saveState   === 'function'
+                 && document.getElementById('todoList')
+                 && document.getElementById('taskDesc'); // campo padrão do formulário
+      if(!ready){
+        if(tries<80) return setTimeout(()=>waitReady(tries+1), 120);
+        console.warn('[Recurrence Patch] App não ficou pronto a tempo.');
+        return;
+      }
+    
+      // ---------------------- Helpers ----------------------
+      const $  = s => document.querySelector(s);
+      const $$ = s => Array.from(document.querySelectorAll(s));
+      const WDN_FULL = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+      const pad = n => String(n).padStart(2,'0');
+      const ymd = (d=new Date()) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    
+      function readState(){
+        try { return JSON.parse(localStorage.getItem('rpgEnergyChecklist_v5') || '{}'); } catch { return {}; }
+      }
+      function writeState(s){ localStorage.setItem('rpgEnergyChecklist_v5', JSON.stringify(s)); }
+    
+      // Patch do defaultState para incluir campos de recorrência nas tasks novas
+      if(typeof window.defaultState === 'function' && !window.__recurrencePatchedDefault){
+        window.__recurrencePatchedDefault = true;
+        const orig = window.defaultState;
+        window.defaultState = function(){
+          const base = orig();
+          // nada específico global; os campos são por task
+          return base;
+        };
+      }
+    
+      // ---------------------- UI (Formulário de criação) ----------------------
+      function ensureCreateUI(){
+        const formRow = $('#taskDesc')?.closest('.row');
+        if(!formRow) return;
+    
+        // Evitar duplicar UI
+        if($('#recurrenceBlock')) return;
+    
+        const block = document.createElement('div');
+        block.id = 'recurrenceBlock';
+        block.className = 'col-12 mt-2';
+        block.innerHTML = `
+          <div class="rec-box">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+              <span class="label">Recorrência:</span>
+              <div class="btn-group" role="group" aria-label="Recorrência">
+                <input class="btn-check" type="radio" name="recurrenceType" id="recNone" value="none" checked>
+                <label class="btn btn-sm btn-outline-light" for="recNone">Nenhuma</label>
+    
+                <input class="btn-check" type="radio" name="recurrenceType" id="recDaily" value="daily">
+                <label class="btn btn-sm btn-outline-light" for="recDaily">Diária</label>
+    
+                <input class="btn-check" type="radio" name="recurrenceType" id="recWeekly" value="weekly">
+                <label class="btn btn-sm btn-outline-light" for="recWeekly">Semanal</label>
+              </div>
+    
+              <div id="recWeekdays" class="weekdays ms-2" style="display:none">
+                ${WDN_FULL.map((d,idx)=>`
+                  <input class="btn-check" type="checkbox" id="wd${idx}" value="${idx}">
+                  <label class="btn btn-sm btn-outline-light" for="wd${idx}">${d}</label>
+                `).join('')}
+              </div>
+            </div>
+            <div class="hint mt-1">Itens recorrentes se **reabrem** automaticamente no início de cada ciclo (dia/semana).</div>
+          </div>
+        `;
+        formRow.appendChild(block);
+    
+        // Alterna exibição dos dias da semana
+        const radios = $$('input[name="recurrenceType"]');
+        const weekCtl = $('#recWeekdays');
+        radios.forEach(r=>{
+          r.addEventListener('change', ()=>{
+            weekCtl.style.display = (r.id==='recWeekly' && r.checked) ? '' : 'none';
+          });
+        });
+      }
+    
+      // ---------------------- Hook de criação da task ----------------------
+      // Intercepta o "Salvar/Adicionar" da sua task (sem conhecer o handler original).
+      // Estratégia: ao próximo render, aplicamos recorrência nos itens recém-criados se encontrarmos
+      // campos temporários guardados em data-attributes do form (sem precisar mexer no seu handler).
+      function installCreateInterceptor(){
+        const desc = $('#taskDesc');
+        if(!desc) return;
+    
+        // Antes de salvar, guardamos a seleção atual do usuário em window.__pendingRecurrence
+        function snapshotRecurrenceSelection(){
+          const type = $('input[name="recurrenceType"]:checked')?.value || 'none';
+          const days = $$('#recWeekdays input[type="checkbox"]:checked').map(c=>parseInt(c.value,10));
+          window.__pendingRecurrence = { type, days };
+          // Limpa seleção (opcional): volta para Nenhuma
+          // $('#recNone').checked = true; $('#recWeekdays').style.display='none';
+        }
+    
+        // Tenta detectar o botão de adicionar
+        const addBtn = document.querySelector('button[type="submit"], #addTaskBtn, .add-task-btn');
+        if(addBtn && !addBtn.__recurrenceHooked){
+          addBtn.__recurrenceHooked = true;
+          addBtn.addEventListener('click', snapshotRecurrenceSelection, { capture:true });
+        }
+    
+        // Também captura Enter no campo de descrição
+        if(!desc.__recurrenceHooked){
+          desc.__recurrenceHooked = true;
+          desc.addEventListener('keydown', (e)=>{
+            if(e.key==='Enter'){ snapshotRecurrenceSelection(); }
+          });
+        }
+      }
+    
+      // Após cada renderLists, aplicamos a recorrência na task mais recente, se houver __pendingRecurrence
+      function adoptRecurrenceOnLastTask(){
+        const sel = window.__pendingRecurrence;
+        if(!sel || !window.state || !Array.isArray(window.state.tasks)) return;
+    
+        // última task (mais recente adicionada)
+        const tasks = window.state.tasks;
+        const last = tasks[tasks.length-1];
+        if(!last || last.recurrence) { window.__pendingRecurrence = null; return; }
+    
+        if(sel.type === 'none'){ window.__pendingRecurrence = null; return; }
+    
+        if(sel.type === 'daily'){
+          last.recurrence = 'daily';
+          last.recurDays  = [];   // não usado para diário
+          last.recurLast  = ymd(new Date()); // data do último reset
+        } else if(sel.type === 'weekly'){
+          last.recurrence = 'weekly';
+          last.recurDays  = Array.isArray(sel.days) && sel.days.length ? sel.days : [new Date().getDay()];
+          last.recurLast  = ymd(new Date());
+        }
+        // Badge amigável (campo opcional)
+        last.recurLabel = makeRecurLabel(last);
+    
+        saveState();
+        window.__pendingRecurrence = null;
+        // re-render para já mostrar badge
+        window.__renderListsOrig ? window.__renderListsOrig() : renderLists();
+      }
+    
+      function makeRecurLabel(t){
+        if(t.recurrence==='daily') return 'Diário';
+        if(t.recurrence==='weekly'){
+          const days = (t.recurDays||[]).map(i=>WDN_FULL[i]||'').filter(Boolean);
+          return `Semanal: ${days.join('/') || '—'}`;
+        }
+        return '';
+      }
+    
+      // ---------------------- Motor de recorrência ----------------------
+      // Reabre automaticamente (done=false) e atualiza "recurLast" quando virar o dia/semana.
+      function processRecurrence(){
+        const s = readState();
+        if(!Array.isArray(s.tasks)) return;
+    
+        const today = new Date();
+        const todayYMD = ymd(today);
+        const todayWD  = today.getDay();
+    
+        let changed = false;
+    
+        s.tasks.forEach(t=>{
+          if(!t || !t.recurrence) return;
+    
+          const last = t.recurLast || null;
+          const readyDaily  = t.recurrence==='daily'  && last !== todayYMD;
+          const readyWeekly = t.recurrence==='weekly' && last !== todayYMD && Array.isArray(t.recurDays) && t.recurDays.includes(todayWD);
+    
+          if(readyDaily || readyWeekly){
+            // "reabrir" o item para o novo ciclo
+            if(t.done) t.done = false;
+            if(t.completed) t.completed = false;
+            if(t.status === 'done') t.status = 'pending';
+            // volta da área de concluídos para a lista normal (se seu app usa outra flag, isso já resolve na UI)
+            t.recurLast = todayYMD;
+            t.recurLabel = makeRecurLabel(t);
+            changed = true;
+          }
+        });
+    
+        if(changed){
+          writeState(s);
+          // atualiza UI
+          try{ renderLists(); }catch(e){}
+          try{ renderFolders(); }catch(e){}
+        }
+      }
+    
+      // Roda a cada 60s e também em cada renderLists
+      setInterval(processRecurrence, 60*1000);
+    
+      // ---------------------- Badges na UI dos itens ----------------------
+      function decorateItemBadges(){
+        const s = readState();
+        const map = {};
+        if(Array.isArray(s.tasks)){
+          s.tasks.forEach(t=>{ if(t?.id) map[t.id] = t; });
+        }
+    
+        const items = $$('#todoList > li.list-group-item');
+        items.forEach(li=>{
+          // evita duplicar
+          li.querySelectorAll('.recur-badge').forEach(n=>n.remove());
+    
+          // tenta achar ID da task (se seu DOM tiver data-id)
+          const id = li.dataset.taskId || li.getAttribute('data-id') || null;
+          let recurLabel = '';
+    
+          if(id && map[id]){
+            recurLabel = makeRecurLabel(map[id]);
+          }else{
+            // fallback pobre: procura por texto/ícones já renderizados no item (não confiável, mas não quebra nada)
+            // se não achar nada, não coloca badge
+          }
+    
+          if(recurLabel){
+            const main = li.querySelector('.flex-grow-1') || li;
+            const badge = document.createElement('span');
+            badge.className = 'recur-badge';
+            badge.innerHTML = `<i class="bi bi-arrow-repeat me-1"></i>${recurLabel}`;
+            main.appendChild(badge);
+          }
+        });
+      }
+    
+      // ---------------------- Hook de render ----------------------
+      if(!window.__renderListsOrigRecurrence){
+        window.__renderListsOrigRecurrence = window.renderLists;
+        window.renderLists = function(){
+          window.__renderListsOrigRecurrence();
+          try{
+            ensureCreateUI();
+            installCreateInterceptor();
+            adoptRecurrenceOnLastTask();
+            processRecurrence();
+            decorateItemBadges();
+          }catch(e){ console.error('[Recurrence Patch] pós-render falhou:', e); }
+        };
+      }
+    
+      // Primeira execução
+      try{
+        ensureCreateUI();
+        installCreateInterceptor();
+        processRecurrence();
+        decorateItemBadges();
+      }catch(e){}
+    
+      // ---------------------- CSS ----------------------
+      const style = document.createElement('style');
+      style.textContent = `
+        /* bloco do formulário */
+        .rec-box{
+          border:1px dashed rgba(255,255,255,.18);
+          border-radius:12px;
+          padding:.6rem .75rem;
+          background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+        }
+        .rec-box .label{ font-size:.9rem; opacity:.9; }
+        .rec-box .weekdays .btn{ margin-right:.25rem; margin-bottom:.25rem; }
+        .rec-box .hint{ font-size:.8rem; opacity:.8; }
+    
+        /* badge no item */
+        .recur-badge{
+          display:inline-flex; align-items:center; gap:.25rem;
+          margin-left:.5rem; margin-top:.25rem;
+          padding:.2rem .5rem;
+          border-radius:999px;
+          border:1px solid rgba(255,255,255,.16);
+          background:rgba(255,255,255,.06);
+          font-size:.8rem; color:#f5f6ff;
+        }
+      `;
+      document.head.appendChild(style);
+    
+      console.info('[Recurrence Patch] recorrência diária/semanal ativada ✅');
+    })();
+    </script>
+
+
+<style>
+    /* Corrige contraste dos botões de recorrência */
+#recurrenceBlock .btn-outline-light:hover,
+#recurrenceBlock .btn-outline-light:focus,
+#recurrenceBlock .btn-check:checked + .btn-outline-light {
+  background-color: #f8f9fa !important; /* fundo claro */
+  color: #000 !important;              /* texto escuro */
+  border-color: #f8f9fa !important;
+}
+
+/* Se quiser hover inverso para escuro, use isso:
+#recurrenceBlock .btn-outline-light:hover,
+#recurrenceBlock .btn-outline-light:focus,
+#recurrenceBlock .btn-check:checked + .btn-outline-light {
+  background-color: #0d6efd !important; 
+  color: #fff !important;
+  border-color: #0d6efd !important;
+}
+*/
+</style>
+
 </html>
