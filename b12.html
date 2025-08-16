@@ -1,0 +1,2394 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>RPG Energy & Checklist + Pastas + Deadlines + Backup</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Bootstrap 5 (CSS) -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+  <style>
+    :root{
+      --rpg-bg:#0f0f1a;
+      --rpg-card:#181828;
+      --rpg-accent:#7c4dff;
+      --rpg-accent-2:#00d1b2;
+      --rpg-ink:#dfe6ff;
+      --rpg-muted:#9aa3b2;
+      --rpg-danger:#ff4d6d;
+      --rpg-warning:#ffb020;
+      --rpg-success:#38d39f;
+      --rpg-energy:#ffd54f;
+    }
+    body{background: radial-gradient(1200px 600px at 30% -10%, #1d1d2e 0%, #0c0c14 60%, #05050a 100%), var(--rpg-bg); color:var(--rpg-ink);}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.00)), var(--rpg-card); border:1px solid rgba(255,255,255,0.08); box-shadow:0 10px 30px rgba(0,0,0,0.35); border-radius:18px;}
+    .title-accent{color:var(--rpg-accent)}
+    .btn-accent{background:linear-gradient(90deg, var(--rpg-accent), #5c6cff); border:0;}
+    .btn-accent:hover{filter:brightness(1.05);}
+    .btn-mct{background:linear-gradient(90deg, var(--rpg-accent-2), #20e3b2); border:0;}
+    .btn-mct:hover{filter:brightness(1.05);}
+    .energy-bar{height:18px; background:#2b2b40; border-radius:999px; overflow:hidden; border:1px solid rgba(255,255,255,0.08)}
+    .energy-fill{height:100%; background:linear-gradient(90deg, #ffce31, #ffd54f, #ffe082); box-shadow:0 0 16px rgba(255, 205, 49, 0.5) inset;}
+    .muted{color:var(--rpg-muted)}
+    .stat-badge{border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:6px 10px; background:rgba(255,255,255,0.03)}
+    .surplus{color:var(--rpg-success)}
+    .deficit{color:var(--rpg-danger)}
+    .lightning{font-size:1.2rem; cursor:pointer; transition:transform .05s ease;}
+    .lightning.active{color:var(--rpg-energy); text-shadow:0 0 8px rgba(255,213,79,.7);}
+    .lightning:hover{transform:scale(1.1)}
+    .list-group-item{background-color:transparent; color:var(--rpg-ink); border-color:rgba(255,255,255,.08)}
+    .list-group-item.completed{color:var(--rpg-muted); text-decoration:line-through;}
+    .pointer{cursor:pointer}
+    .form-control, .form-select{background:#151527; color:var(--rpg-ink); border:1px solid rgba(255,255,255,0.1)}
+    .form-control:focus, .form-select:focus{border-color:var(--rpg-accent); box-shadow:0 0 0 .25rem rgba(124,77,255,.25)}
+    .small-help{font-size:.85rem; color:var(--rpg-muted)}
+    .hr-soft{border-color:rgba(255,255,255,.08)}
+    .icon-btn{color:#fff; opacity:.85}
+    .icon-btn:hover{opacity:1}
+    .folder-active{background:rgba(124,77,255,.18) !important; border-color:rgba(124,77,255,.45) !important;}
+    .badge-soft{background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15)}
+    .deadline-soon{border-color: rgba(255,176,32,.6) !important; background: linear-gradient(180deg, rgba(255,176,32,.10), rgba(255,176,32,.03)) !important;}
+    .deadline-overdue{border-color: rgba(255,77,109,.7) !important; background: linear-gradient(180deg, rgba(255,77,109,.12), rgba(255,77,109,.04)) !important;}
+  </style>
+</head>
+<body>
+  <div class="container py-4 py-md-5">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h1 class="h3 m-0">⚔️ <span class="title-accent">RPG Energy</span> & Checklist</h1>
+      <div class="d-flex align-items-center gap-2">
+        <div class="stat-badge me-2"><i class="bi bi-clock-history me-1"></i><span id="nowTime">--:--</span></div>
+        <button id="openSettings" class="btn btn-sm btn-outline-light"><i class="bi bi-gear"></i> Configurações</button>
+
+        <!-- Dropdown de Backup -->
+        <div class="btn-group">
+          <button class="btn btn-sm btn-outline-light dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-hdd-network"></i> Backup
+          </button>
+          <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
+            <li><a class="dropdown-item" id="btnExportBackup"><i class="bi bi-download me-2"></i>Exportar backup (.json)</a></li>
+            <li><a class="dropdown-item" id="btnImportBackup"><i class="bi bi-upload me-2"></i>Importar backup (.json)</a></li>
+          </ul>
+        </div>
+        <!-- input de arquivo oculto para import -->
+        <input type="file" id="fileImport" accept="application/json,.json" hidden>
+      </div>
+    </div>
+
+    <!-- ENERGY PANEL -->
+    <div class="card mb-4">
+      <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between align-items-end gap-3">
+          <div class="flex-grow-1">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="h5 m-0"><i class="bi bi-battery-charging me-2"></i>Energia</div>
+              <div class="small-help">Regras: <strong>08:00–09:30 +10</strong>/10min • <strong>09:30–18:00 -10</strong>/10min</div>
+            </div>
+            <div class="energy-bar">
+              <div id="energyFill" class="energy-fill" style="width:0%"></div>
+            </div>
+            <div class="d-flex justify-content-between mt-2">
+              <div class="muted">Atual: <span id="energyValue">0</span></div>
+              <div class="muted">Cap: <span id="energyCapLabel">500</span></div>
+            </div>
+          </div>
+          <div class="text-end">
+            <div class="mb-2 small-help"><i class="bi bi-info-circle me-1"></i>1 raio = <span id="boltUnitLabel">10</span> de energia</div>
+            <div class="btn-group">
+              <button id="btnCoffee" class="btn btn-accent"><i class="bi bi-cup-hot me-1"></i>☕ Café</button>
+              <button id="btnMCT" class="btn btn-mct"><i class="bi bi-lightning-charge-fill me-1"></i>🧪 MCT</button>
+            </div>
+          </div>
+        </div>
+        <hr class="hr-soft">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="stat-badge w-100 d-flex justify-content-between">
+              <span><i class="bi bi-calculator me-2"></i>Energia necessária (pendentes)</span>
+              <strong id="requiredEnergy">0</strong>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="stat-badge w-100 d-flex justify-content-between">
+              <span><i class="bi bi-graph-up-arrow me-2"></i>Saldo</span>
+              <strong id="surplusText" class="surplus">+0</strong>
+            </div>
+          </div>
+          <div class="col-md-4 text-md-end">
+            <div class="small-help">
+              <i class="bi bi-arrow-repeat me-1"></i>Última atualização: <span id="lastTickLabel">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN AREA WITH FOLDERS + CHECKLIST -->
+    <div class="row g-4">
+      <!-- FOLDERS SIDEBAR -->
+      <div class="col-lg-3">
+        <div class="card h-100">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="h5 m-0"><i class="bi bi-folder2-open me-2"></i>Pastas</div>
+              <div class="btn-group">
+                <button id="btnAddFolder" class="btn btn-sm btn-outline-light" title="Nova pasta"><i class="bi bi-folder-plus"></i></button>
+                <button id="btnRenameFolder" class="btn btn-sm btn-outline-light" title="Renomear pasta"><i class="bi bi-pencil-square"></i></button>
+                <button id="btnDeleteFolder" class="btn btn-sm btn-outline-danger" title="Excluir pasta"><i class="bi bi-folder-x"></i></button>
+              </div>
+            </div>
+            <ul id="folderList" class="list-group"></ul>
+            <div class="small-help mt-3">
+              Selecione uma pasta para filtrar os itens.<br>
+              Ao excluir, os itens vão para <strong>Geral</strong>.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CHECKLIST + DONE -->
+      <div class="col-lg-9">
+        <div class="row g-4">
+          <!-- Checklist -->
+          <div class="col-12">
+            <div class="card h-100">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <div class="h5 m-0">
+                    <i class="bi bi-list-check me-2"></i>
+                    Checklist
+                    <span class="small-help ms-2">(Duplo clique ou ✔️ para concluir)</span>
+                  </div>
+                  <div class="small-help">
+                    Pasta atual: <strong id="currentFolderName">Todas</strong>
+                  </div>
+                </div>
+
+                <div class="row g-2 mb-3">
+                  <div class="col-12 col-md-4">
+                    <input id="taskDesc" type="text" class="form-control" placeholder="Descrição da tarefa...">
+                  </div>
+                  <div class="col-6 col-md-2">
+                    <select id="taskFolder" class="form-select"></select>
+                    <div class="small-help mt-1">Pasta</div>
+                  </div>
+                  <div class="col-6 col-md-2">
+                    <input id="taskDate" type="date" class="form-control">
+                    <div class="small-help mt-1">Data</div>
+                  </div>
+                  <div class="col-6 col-md-2">
+                    <input id="taskTime" type="time" class="form-control">
+                    <div class="small-help mt-1">Hora</div>
+                  </div>
+                  <div class="col-6 col-md-2">
+                    <div class="d-flex align-items-center justify-content-between">
+                      <div id="ratingNew" class="me-2"></div>
+                      <button id="addTask" class="btn btn-sm btn-outline-light"><i class="bi bi-plus-lg me-1"></i>Adicionar</button>
+                    </div>
+                    <div class="small-help mt-1">Raios 1–5</div>
+                  </div>
+                </div>
+
+                <ul id="todoList" class="list-group"></ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Done -->
+          <div class="col-12">
+            <div class="card h-100">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <div class="h5 m-0"><i class="bi bi-check2-circle me-2"></i>Concluídos</div>
+                  <button id="clearDone" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash3 me-1"></i>Limpar concluídos</button>
+                </div>
+                <ul id="doneList" class="list-group"></ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div> <!-- /col-lg-9 -->
+    </div> <!-- /row -->
+  </div> <!-- /container -->
+
+  <!-- SETTINGS MODAL -->
+  <div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content" style="background:#121224; color:var(--rpg-ink); border:1px solid rgba(255,255,255,.1)">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-gear-wide-connected me-2"></i>Configurações</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Energia por ☕ Café</label>
+              <input id="cfgCoffee" type="number" class="form-control" min="0" step="5">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Energia por 🧪 MCT</label>
+              <input id="cfgMCT" type="number" class="form-control" min="0" step="5">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Energia por 1 raio (rating)</label>
+              <input id="cfgBoltUnit" type="number" class="form-control" min="1" step="1">
+              <div class="small-help mt-1">Define o débito por raio ao concluir tarefa</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Capacidade máxima (cap)</label>
+              <input id="cfgCap" type="number" class="form-control" min="50" step="10">
+            </div>
+            <div class="col-12">
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" id="cfgClampZero">
+                <label class="form-check-label" for="cfgClampZero">
+                  Não permitir energia negativa (travar em 0)
+                </label>
+              </div>
+              <div class="small-help mt-1">Se desmarcado, o saldo pode ficar negativo (débito).</div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="saveSettings" class="btn btn-accent">Salvar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Templates -->
+  <template id="taskItemTemplate">
+    <li class="list-group-item d-flex align-items-center justify-content-between gap-2">
+      <div class="flex-grow-1">
+        <div class="d-flex align-items-center gap-2">
+          <span class="deadline-flag"></span>
+          <div class="fw-semibold pointer task-desc"></div>
+        </div>
+        <div class="small-help d-flex flex-wrap align-items-center gap-3 mt-1">
+          <span class="task-rating-label"></span>
+          <span class="d-flex align-items-center gap-1">
+            <i class="bi bi-folder2"></i>
+            <select class="form-select form-select-sm task-folder-select" style="width:auto; min-width:140px"></select>
+          </span>
+          <span class="d-flex align-items-center gap-2">
+            <i class="bi bi-hourglass-split"></i>
+            <input type="date" class="form-control form-control-sm deadline-date" style="width:auto">
+            <input type="time" class="form-control form-control-sm deadline-time" style="width:auto">
+            <span class="deadline-label"></span>
+          </span>
+        </div>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <div class="task-rating d-flex align-items-center gap-1"></div>
+        <button class="btn btn-sm btn-outline-success btn-done" title="Concluir"><i class="bi bi-check-lg"></i></button>
+        <button class="btn btn-sm btn-outline-danger btn-del" title="Excluir"><i class="bi bi-trash3"></i></button>
+      </div>
+    </li>
+  </template>
+
+  <!-- Bootstrap 5 (JS) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- App Script -->
+  <script>
+    // ======= STATE & STORAGE =======
+    const LS_KEY = 'rpgEnergyChecklist_v5';
+    const ROOT_ID = 'root';
+    const ALL_ID = 'all';
+    const FOUR_HOURS = 4 * 60 * 60 * 1000;
+
+    function defaultState(){
+      return {
+        energy: 0,
+        cap: 500,
+        coffeeVal: 40,
+        mctVal: 60,
+        boltUnit: 10,
+        clampZero: true,
+        lastTick: Date.now(),
+        folders: [{id: ROOT_ID, name: 'Geral'}],
+        currentFolder: ALL_ID,
+        tasks: [],
+        done: []
+      };
+    }
+
+    const state = defaultState();
+
+    function loadState(){
+      try{
+        const raw = localStorage.getItem(LS_KEY);
+        if(raw){
+          const obj = JSON.parse(raw);
+          Object.assign(state, defaultState(), obj);
+          if(!state.folders || !state.folders.length){
+            state.folders = [{id: ROOT_ID, name: 'Geral'}];
+          }
+        }
+      }catch(e){ console.error(e); }
+    }
+    function saveState(){
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    }
+
+    // ======= UTIL =======
+    function mkId(){ return Math.random().toString(36).slice(2,9); }
+    function fmtTime(d){return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
+    function fmtDateShort(ms){
+      const d = new Date(ms);
+      const pad = n => String(n).padStart(2,'0');
+      return `${pad(d.getDate())}/${pad(d.getMonth()+1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+    function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
+    function escapeHTML(s){ return s.replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[m]); }
+
+    function parseLocalDateTime(dateStr, timeStr){
+      if(!dateStr || !timeStr) return null;
+      const [y,m,d] = dateStr.split('-').map(Number);
+      const [hh,mm] = timeStr.split(':').map(Number);
+      const dt = new Date(y, (m||1)-1, d||1, hh||0, mm||0, 0, 0);
+      if(isNaN(dt.getTime())) return null;
+      return dt.getTime();
+    }
+    function isNearDeadline(task){
+      if(!task.deadline) return false;
+      const now = Date.now();
+      return now >= task.deadline - FOUR_HOURS && now < task.deadline;
+    }
+    function isOverdue(task){
+      return task.deadline && Date.now() >= task.deadline;
+    }
+
+    // ======= ENERGY =======
+    function setEnergy(newVal){
+      if(state.clampZero) newVal = Math.max(0, newVal);
+      state.energy = clamp(newVal, -9999, state.cap);
+      updateEnergyUI();
+      saveState();
+    }
+    function addEnergy(delta){ setEnergy(state.energy + delta); }
+
+    function updateClock(){
+      const now = new Date();
+      document.getElementById('nowTime').textContent = fmtTime(now);
+    }
+
+    function getVisibleTasks(){
+      if(state.currentFolder===ALL_ID) return state.tasks.slice();
+      return state.tasks.filter(t=>t.folderId===state.currentFolder);
+    }
+
+    function updateEnergyUI(){
+      document.getElementById('energyValue').textContent = Math.round(state.energy);
+      document.getElementById('energyCapLabel').textContent = state.cap;
+      const pct = clamp((state.energy/state.cap)*100, 0, 100);
+      document.getElementById('energyFill').style.width = pct + '%';
+      document.getElementById('boltUnitLabel').textContent = state.boltUnit;
+
+      const visibleTasks = getVisibleTasks();
+      const required = visibleTasks.reduce((acc,t)=> acc + (t.rating||0)*state.boltUnit, 0);
+      document.getElementById('requiredEnergy').textContent = required;
+
+      const surplus = Math.round(state.energy - required);
+      const sEl = document.getElementById('surplusText');
+      sEl.textContent = (surplus>=0?'+':'') + surplus;
+      sEl.classList.toggle('surplus', surplus>=0);
+      sEl.classList.toggle('deficit', surplus<0);
+    }
+
+    // ======= SCHEDULE =======
+    function processSchedule(){
+      const now = Date.now();
+      let t = state.lastTick;
+      const step = 10 * 60 * 1000; // 10min
+
+      while(t + step <= now){
+        const mid = new Date(t + step/2);
+        const minutes = mid.getHours()*60 + mid.getMinutes();
+
+        const plusStart = 8*60;      // 08:00
+        const plusEnd   = 9*60 + 30; // 09:30
+        const minusStart= 9*60 + 30; // 09:30
+        const minusEnd  = 18*60;     // 18:00
+
+        if(minutes >= plusStart && minutes < plusEnd){
+          addEnergy(+10);
+        } else if(minutes >= minusStart && minutes < minusEnd){
+          addEnergy(-10);
+        }
+        t += step;
+      }
+      state.lastTick = now;
+      document.getElementById('lastTickLabel').textContent = fmtTime(new Date(state.lastTick));
+      saveState();
+    }
+
+    // ======= FOLDERS =======
+    const folderListEl = document.getElementById('folderList');
+    const currentFolderNameEl = document.getElementById('currentFolderName');
+    const taskFolderSelectEl = document.getElementById('taskFolder');
+
+    function getFolderName(id){
+      if(id===ALL_ID) return 'Todas';
+      const f = state.folders.find(f=>f.id===id);
+      return f? f.name : '—';
+    }
+
+    function renderFolders(){
+      folderListEl.innerHTML = '';
+
+      const countAlertsForFolder = (folderId)=>{
+        const list = folderId===ALL_ID ? state.tasks : state.tasks.filter(t=>t.folderId===folderId);
+        return list.reduce((acc,t)=> acc + (isOverdue(t) || isNearDeadline(t) ? 1 : 0), 0);
+      };
+      const countTasksForFolder = (folderId)=>{
+        return folderId===ALL_ID ? state.tasks.length : state.tasks.filter(t=>t.folderId===folderId).length;
+      };
+
+      // "Todas"
+      const totalCnt = countTasksForFolder(ALL_ID);
+      const totalAlerts = countAlertsForFolder(ALL_ID);
+      const liAll = document.createElement('li');
+      liAll.className = 'list-group-item d-flex justify-content-between align-items-center pointer ' + (state.currentFolder===ALL_ID?'folder-active':'');
+      liAll.innerHTML = `
+        <span><i class="bi bi-collection me-2"></i>Todas</span>
+        <span class="d-flex align-items-center gap-2">
+          ${totalAlerts>0 ? `<span class="badge rounded-pill text-bg-warning"><i class="bi bi-exclamation-triangle-fill me-1"></i>${totalAlerts}</span>`:''}
+          <span class="badge rounded-pill badge-soft">${totalCnt}</span>
+        </span>`;
+      liAll.addEventListener('click', ()=>{ state.currentFolder = ALL_ID; renderAll(); });
+      folderListEl.appendChild(liAll);
+
+      // Pastas
+      state.folders.forEach(f=>{
+        const cnt = countTasksForFolder(f.id);
+        const alerts = countAlertsForFolder(f.id);
+        const li = document.createElement('li');
+        li.className = 'list-group-item d-flex justify-content-between align-items-center pointer ' + (state.currentFolder===f.id?'folder-active':'');
+        li.innerHTML = `
+          <span><i class="bi bi-folder me-2"></i>${escapeHTML(f.name)}</span>
+          <span class="d-flex align-items-center gap-2">
+            ${alerts>0 ? `<span class="badge rounded-pill text-bg-warning"><i class="bi bi-exclamation-triangle-fill me-1"></i>${alerts}</span>`:''}
+            <span class="badge rounded-pill badge-soft">${cnt}</span>
+          </span>`;
+        li.addEventListener('click', ()=>{ state.currentFolder = f.id; renderAll(); });
+        folderListEl.appendChild(li);
+      });
+
+      // Popular select de criação/movimentação
+      taskFolderSelectEl.innerHTML = '';
+      state.folders.forEach(f=>{
+        const opt = document.createElement('option');
+        opt.value = f.id; opt.textContent = f.name;
+        taskFolderSelectEl.appendChild(opt);
+      });
+
+      currentFolderNameEl.textContent = getFolderName(state.currentFolder);
+    }
+
+    function addFolder(){
+      const name = prompt('Nome da nova pasta:','Nova pasta');
+      if(!name || !name.trim()) return;
+      const id = mkId();
+      state.folders.push({id, name: name.trim()});
+      saveState();
+      renderFolders();
+    }
+    function renameFolder(){
+      if(state.currentFolder===ALL_ID){ alert('Selecione uma pasta específica para renomear.'); return; }
+      if(state.currentFolder===ROOT_ID){ alert('A pasta "Geral" não pode ser renomeada.'); return; }
+      const f = state.folders.find(f=>f.id===state.currentFolder);
+      if(!f) return;
+      const name = prompt('Novo nome da pasta:', f.name);
+      if(!name || !name.trim()) return;
+      f.name = name.trim();
+      saveState();
+      renderFolders();
+    }
+    function deleteFolder(){
+      if(state.currentFolder===ALL_ID){ alert('Selecione uma pasta específica para excluir.'); return; }
+      if(state.currentFolder===ROOT_ID){ alert('A pasta "Geral" não pode ser excluída.'); return; }
+      const f = state.folders.find(f=>f.id===state.currentFolder);
+      if(!f) return;
+      if(!confirm(`Excluir a pasta "${f.name}"? Os itens serão movidos para "Geral".`)) return;
+      state.tasks.forEach(t=>{ if(t.folderId===f.id) t.folderId = ROOT_ID; });
+      state.folders = state.folders.filter(x=>x.id!==f.id);
+      state.currentFolder = ALL_ID;
+      saveState();
+      renderAll();
+    }
+
+    document.getElementById('btnAddFolder').addEventListener('click', addFolder);
+    document.getElementById('btnRenameFolder').addEventListener('click', renameFolder);
+    document.getElementById('btnDeleteFolder').addEventListener('click', deleteFolder);
+
+    // ======= CHECKLIST =======
+    const todoListEl = document.getElementById('todoList');
+    const doneListEl = document.getElementById('doneList');
+    const taskTemplate = document.getElementById('taskItemTemplate');
+
+    function renderLists(){
+      // TODO (visíveis)
+      todoListEl.innerHTML = '';
+      const visible = getVisibleTasks();
+      visible.forEach(task=>{
+        const li = taskTemplate.content.firstElementChild.cloneNode(true);
+        const descEl = li.querySelector('.task-desc');
+        const ratingLabel = li.querySelector('.task-rating-label');
+        const ratingWrap = li.querySelector('.task-rating');
+        const folderSelect = li.querySelector('.task-folder-select');
+        const dDate = li.querySelector('.deadline-date');
+        const dTime = li.querySelector('.deadline-time');
+        const dLabel = li.querySelector('.deadline-label');
+        const dFlag = li.querySelector('.deadline-flag');
+
+        descEl.textContent = task.desc;
+        // Concluir por duplo clique
+        descEl.addEventListener('dblclick', (e)=>{ e.stopPropagation(); completeTask(task.id); });
+
+        // Rating
+        ratingWrap.replaceChildren(...createLightningRow(task.rating||0, (val)=>{
+          task.rating = val; saveState(); updateEnergyUI(); renderLists();
+        }).childNodes);
+        ratingLabel.textContent = `Rating: ${task.rating||0} raio(s) = ${(task.rating||0)*state.boltUnit} energia`;
+
+        // Folder dropdown (mover)
+        folderSelect.innerHTML = '';
+        state.folders.forEach(f=>{
+          const opt = document.createElement('option');
+          opt.value = f.id; opt.textContent = f.name;
+          if(task.folderId===f.id) opt.selected = true;
+          folderSelect.appendChild(opt);
+        });
+        folderSelect.addEventListener('change', ()=>{
+          task.folderId = folderSelect.value;
+          saveState(); renderFolders(); renderLists();
+        });
+
+        // Deadline inputs
+        if(task.deadline){
+          const dd = new Date(task.deadline);
+          dDate.value = `${dd.getFullYear()}-${String(dd.getMonth()+1).padStart(2,'0')}-${String(dd.getDate()).padStart(2,'0')}`;
+          dTime.value = `${String(dd.getHours()).padStart(2,'0')}:${String(dd.getMinutes()).padStart(2,'0')}`;
+          dLabel.textContent = `(${fmtDateShort(task.deadline)})`;
+        } else {
+          dDate.value = ''; dTime.value = ''; dLabel.textContent = '(sem deadline)';
+        }
+        const onDeadlineChange = ()=>{
+          const ms = parseLocalDateTime(dDate.value, dTime.value);
+          task.deadline = ms;
+          saveState(); renderFolders(); renderLists();
+        };
+        dDate.addEventListener('change', onDeadlineChange);
+        dTime.addEventListener('change', onDeadlineChange);
+
+        // Alert flags + estilos
+        li.classList.remove('deadline-soon','deadline-overdue');
+        dFlag.innerHTML = '';
+        if(isOverdue(task)){
+          li.classList.add('deadline-overdue');
+          dFlag.innerHTML = `<span class="badge text-bg-danger"><i class="bi bi-x-octagon-fill me-1"></i>Atrasado</span>`;
+        } else if(isNearDeadline(task)){
+          li.classList.add('deadline-soon');
+          dFlag.innerHTML = `<span class="badge text-bg-warning"><i class="bi bi-exclamation-triangle-fill me-1"></i>Em 4h</span>`;
+        }
+
+        // Botões
+        li.querySelector('.btn-done').addEventListener('click', ()=>completeTask(task.id));
+        li.querySelector('.btn-del').addEventListener('click', ()=>deleteTask(task.id));
+
+        todoListEl.appendChild(li);
+      });
+
+      // DONE (todos)
+      doneListEl.innerHTML = '';
+      state.done.forEach(task=>{
+        const li = document.createElement('li');
+        li.className = 'list-group-item completed d-flex justify-content-between align-items-center';
+        const left = document.createElement('div');
+        const folderName = getFolderName(task.folderId);
+        const deadlineInfo = task.deadline ? ` • ${fmtDateShort(task.deadline)}` : '';
+        left.innerHTML =
+          `<span class="fw-semibold">${escapeHTML(task.desc)}</span>
+           <span class="small-help ms-2">(${task.rating} raio(s) • -${task.rating*state.boltUnit} energia • ${escapeHTML(folderName)}${deadlineInfo})</span>`;
+        const right = document.createElement('div');
+        const undoBtn = document.createElement('button');
+        undoBtn.className = 'btn btn-sm btn-outline-light me-2';
+        undoBtn.innerHTML = '<i class="bi bi-arrow-counterclockwise"></i>';
+        undoBtn.title = 'Desfazer (não estorna energia)';
+        undoBtn.addEventListener('click', ()=>undoTask(task.id));
+        const delBtn = document.createElement('button');
+        delBtn.className = 'btn btn-sm btn-outline-danger';
+        delBtn.innerHTML = '<i class="bi bi-trash3"></i>';
+        delBtn.title = 'Excluir';
+        delBtn.addEventListener('click', ()=>deleteDone(task.id));
+        right.append(undoBtn, delBtn);
+        li.append(left, right);
+        doneListEl.appendChild(li);
+      });
+
+      updateEnergyUI();
+      saveState();
+    }
+
+    function createLightningRow(current, onChange){
+      const wrap = document.createElement('div');
+      for(let i=1;i<=5;i++){
+        const ic = document.createElement('i');
+        ic.className = 'bi bi-lightning-charge-fill lightning ' + (i<=current?'active':'');
+        ic.dataset.val = i;
+        ic.title = `${i} raio(s)`;
+        ic.addEventListener('click', ()=> onChange(i));
+        wrap.appendChild(ic);
+      }
+      return wrap;
+    }
+
+    function addTask(desc, rating, folderId, deadlineMs){
+      const t = {id: mkId(), desc: desc.trim(), rating: rating||0, folderId: folderId||ROOT_ID, deadline: deadlineMs||null};
+      state.tasks.unshift(t);
+      saveState();
+      renderFolders();
+      renderLists();
+    }
+
+    function deleteTask(id){
+      const idx = state.tasks.findIndex(t=>t.id===id);
+      if(idx>=0){ state.tasks.splice(idx,1); saveState(); renderFolders(); renderLists(); }
+    }
+
+    function completeTask(id){
+      const idx = state.tasks.findIndex(t=>t.id===id);
+      if(idx<0) return;
+      const t = state.tasks[idx];
+      const debit = (t.rating||0) * state.boltUnit;
+      if(debit>0){ addEnergy(-debit); }
+      state.tasks.splice(idx,1);
+      state.done.unshift({id: t.id, desc: t.desc, rating: t.rating||0, folderId: t.folderId, deadline: t.deadline||null, completedAt: Date.now()});
+      saveState();
+      renderFolders();
+      renderLists();
+    }
+
+    function undoTask(id){
+      const idx = state.done.findIndex(t=>t.id===id);
+      if(idx<0) return;
+      const t = state.done[idx];
+      state.done.splice(idx,1);
+      state.tasks.unshift({id: mkId(), desc: t.desc, rating: t.rating||0, folderId: t.folderId, deadline: t.deadline||null});
+      saveState();
+      renderFolders();
+      renderLists();
+    }
+
+    function deleteDone(id){
+      const idx = state.done.findIndex(t=>t.id===id);
+      if(idx>=0){ state.done.splice(idx,1); saveState(); renderLists(); }
+    }
+
+    // ======= NOVA TAREFA =======
+    const ratingNewEl = document.getElementById('ratingNew');
+    let newRating = 0;
+    function renderNewRating(){
+      ratingNewEl.innerHTML = '';
+      for(let i=1;i<=5;i++){
+        const ic = document.createElement('i');
+        ic.className = 'bi bi-lightning-charge-fill lightning ' + (i<=newRating?'active':'');
+        ic.dataset.val = i;
+        ic.title = `${i} raio(s)`;
+        ic.addEventListener('click', ()=>{
+          newRating = i;
+          renderNewRating();
+        });
+        ratingNewEl.appendChild(ic);
+      }
+    }
+
+    document.getElementById('addTask').addEventListener('click', ()=>{
+      const desc = document.getElementById('taskDesc').value;
+      if(!desc.trim()) return;
+      const folderId = taskFolderSelectEl.value || ROOT_ID;
+      const dateStr = document.getElementById('taskDate').value;
+      const timeStr = document.getElementById('taskTime').value;
+      const deadlineMs = parseLocalDateTime(dateStr, timeStr);
+      addTask(desc, newRating||1, folderId, deadlineMs);
+      document.getElementById('taskDesc').value = '';
+      document.getElementById('taskDate').value = '';
+      document.getElementById('taskTime').value = '';
+      newRating = 0; renderNewRating();
+    });
+
+    document.getElementById('clearDone').addEventListener('click', ()=>{
+      if(confirm('Remover todos os concluídos?')){ state.done = []; saveState(); renderLists(); }
+    });
+
+    // ======= SETTINGS (Modal) =======
+    let settingsModal = null;
+    document.getElementById('openSettings').addEventListener('click', ()=>{
+      if(!settingsModal){
+        settingsModal = new bootstrap.Modal(document.getElementById('settingsModal'));
+      }
+      document.getElementById('cfgCoffee').value = state.coffeeVal;
+      document.getElementById('cfgMCT').value = state.mctVal;
+      document.getElementById('cfgBoltUnit').value = state.boltUnit;
+      document.getElementById('cfgCap').value = state.cap;
+      document.getElementById('cfgClampZero').checked = !!state.clampZero;
+      settingsModal.show();
+    });
+
+    document.getElementById('saveSettings').addEventListener('click', ()=>{
+      const coffee = parseInt(document.getElementById('cfgCoffee').value||'0',10);
+      const mct = parseInt(document.getElementById('cfgMCT').value||'0',10);
+      const bolt = parseInt(document.getElementById('cfgBoltUnit').value||'10',10);
+      const cap  = parseInt(document.getElementById('cfgCap').value||'500',10);
+      const clampZero = document.getElementById('cfgClampZero').checked;
+
+      state.coffeeVal = Math.max(0, coffee);
+      state.mctVal = Math.max(0, mct);
+      state.boltUnit = Math.max(1, bolt);
+      state.cap = Math.max(50, cap);
+      state.clampZero = clampZero;
+      if(settingsModal) settingsModal.hide();
+      updateEnergyUI(); saveState(); renderLists();
+    });
+
+    // ======= RECHARGES =======
+    document.getElementById('btnCoffee').addEventListener('click', ()=> addEnergy(state.coffeeVal));
+    document.getElementById('btnMCT').addEventListener('click', ()=> addEnergy(state.mctVal));
+
+    // ======= BACKUP / RESTORE =======
+    const btnExportBackup = document.getElementById('btnExportBackup');
+    const btnImportBackup = document.getElementById('btnImportBackup');
+    const fileImport = document.getElementById('fileImport');
+
+    function buildBackup(){
+      return {
+        app: 'rpg-energy-checklist',
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        data: state
+      };
+    }
+
+    function downloadBackup(){
+      const payload = buildBackup();
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {type: 'application/json'});
+      const name = `rpg-energy-backup-${new Date().toISOString().replace(/[:.]/g,'-')}.json`;
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      URL.revokeObjectURL(a.href);
+      a.remove();
+    }
+
+    function restoreFromObject(obj){
+      if(!obj || typeof obj !== 'object' || !obj.data){
+        alert('Arquivo inválido de backup.');
+        return;
+      }
+      if(!confirm('Restaurar backup? Isso substituirá o estado atual.')) return;
+
+      // Merge com default para garantir campos presentes
+      const incoming = Object.assign(defaultState(), obj.data);
+
+      // Ajuste de segurança: evitar processamento retroativo pesado
+      incoming.lastTick = Date.now();
+
+      // Sobrescreve estado atual (mantendo referência)
+      Object.keys(state).forEach(k=> delete state[k]);
+      Object.assign(state, incoming);
+
+      saveState();
+      renderAll();
+      processSchedule();
+      alert('Backup restaurado com sucesso.');
+    }
+
+    btnExportBackup.addEventListener('click', ()=>{
+      downloadBackup();
+    });
+
+    btnImportBackup.addEventListener('click', ()=>{
+      fileImport.value = '';
+      fileImport.click();
+    });
+
+    fileImport.addEventListener('change', ()=>{
+      const file = fileImport.files && fileImport.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = ()=>{
+        try{
+          const obj = JSON.parse(reader.result);
+          restoreFromObject(obj);
+        }catch(e){
+          console.error(e);
+          alert('Não foi possível ler o arquivo de backup.');
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    // ======= BOOT =======
+    function renderAll(){
+      renderFolders();
+      renderLists();
+      updateEnergyUI();
+    }
+
+    function init(){
+      loadState();
+      if(!state.folders.find(f=>f.id===ROOT_ID)){
+        state.folders.unshift({id: ROOT_ID, name: 'Geral'});
+      }
+      if(state.currentFolder!==ALL_ID && !state.folders.find(f=>f.id===state.currentFolder)){
+        state.currentFolder = ALL_ID;
+      }
+
+      updateClock();
+      renderNewRating();
+      renderAll();
+
+      processSchedule();
+
+      setInterval(()=>{
+        updateClock();
+        processSchedule();
+        renderFolders();
+        renderLists();
+      }, 60*1000);
+
+      document.getElementById('lastTickLabel').textContent = fmtTime(new Date(state.lastTick));
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+
+  <style>
+    /* === MELHORIA DE CONTRASTE DE TEXTO === */
+    body, .card, .list-group-item, .form-control, .form-select {
+      color: #f8f9fa !important;
+    }
+    h1, h2, h3, h4, h5, h6,
+    .card-body .h5,
+    .title-accent {
+      color: #ffffff !important;
+    }
+    .muted, .small-help { color: #c0c7d1 !important; }
+    .list-group-item { background-color: rgba(255,255,255,0.04) !important; }
+    .form-control, .form-select {
+      background-color: #1e1e2f !important;
+      border-color: rgba(255,255,255,0.2) !important;
+      color: #f8f9fa !important;
+    }
+    .form-control:focus, .form-select:focus {
+      border-color: #7c4dff !important;
+      box-shadow: 0 0 0 0.25rem rgba(124, 77, 255, 0.4) !important;
+    }
+    .btn, .btn-outline-light { color: #ffffff !important; }
+    .energy-bar { background-color: #2d2d3f !important; }
+    .task-desc, .fw-semibold { color: #ffffff !important; }
+    .completed { color: #a0a8b8 !important; }
+  </style>
+
+  
+
+
+
+</body>
+
+
+
+
+<script>
+    // ==== PATCH: Detratores (Social/Interrupção) para RPG Energy v5 ====
+    (function(){
+      const LS_KEY = 'rpgEnergyChecklist_v5';
+      const DEF_SOCIAL = 10;
+      const DEF_INTERRUPT = 15;
+    
+      // Aguarda o app ficar pronto (funções globais + UI do topo)
+      function waitReady(tries=0){
+        const ok = typeof window.addEnergy === 'function' &&
+                   typeof window.defaultState === 'function' &&
+                   document.getElementById('btnMCT') &&
+                   document.getElementById('openSettings') &&
+                   document.getElementById('saveSettings') &&
+                   document.getElementById('settingsModal');
+        if(ok){ try{applyPatch();}catch(e){console.error('[Detratores] Falha ao aplicar patch:', e);} }
+        else if(tries < 50){ setTimeout(()=>waitReady(tries+1), 120); }
+        else { console.warn('[Detratores] App não ficou pronto a tempo.'); }
+      }
+    
+      function readState(){
+        try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}'); }
+        catch { return {}; }
+      }
+      function writeState(s){
+        localStorage.setItem(LS_KEY, JSON.stringify(s));
+      }
+      function ensureDefaultsInStorage(){
+        const s = readState();
+        if(!s.folders) s.folders = [{id:'root', name:'Geral'}];
+        if(typeof s.socialVal !== 'number') s.socialVal = DEF_SOCIAL;
+        if(typeof s.interruptVal !== 'number') s.interruptVal = DEF_INTERRUPT;
+        writeState(s);
+        return s;
+      }
+    
+      function applyPatch(){
+        // 1) Garantir defaults no LocalStorage
+        ensureDefaultsInStorage();
+    
+        // 2) Monkey-patch em defaultState() para backup/restore manter os campos
+        const origDefaultState = window.defaultState;
+        window.defaultState = function(){
+          const base = origDefaultState();
+          if(typeof base.socialVal !== 'number') base.socialVal = DEF_SOCIAL;
+          if(typeof base.interruptVal !== 'number') base.interruptVal = DEF_INTERRUPT;
+          return base;
+        };
+    
+        // 3) Injetar botões ao lado de Café/MCT
+        const btnMCT = document.getElementById('btnMCT');
+        const groupPromoters = btnMCT.parentElement; // .btn-group
+        const containerTopRight = groupPromoters?.parentElement;
+    
+        const groupDetractors = document.createElement('div');
+        groupDetractors.className = 'btn-group ms-2'; // encosta ao lado
+    
+        const btnSocial = document.createElement('button');
+        btnSocial.id = 'btnSocial';
+        btnSocial.className = 'btn btn-outline-danger';
+        btnSocial.innerHTML = `<i class="bi bi-person-dash me-1"></i>Social`;
+    
+        const btnInterrupt = document.createElement('button');
+        btnInterrupt.id = 'btnInterrupt';
+        btnInterrupt.className = 'btn btn-outline-danger';
+        btnInterrupt.innerHTML = `<i class="bi bi-bell-slash me-1"></i>Interrupção`;
+    
+        groupDetractors.appendChild(btnSocial);
+        groupDetractors.appendChild(btnInterrupt);
+        containerTopRight.appendChild(groupDetractors);
+    
+        // Badges com valores (opcional: aparecem em title)
+        function getSocial(){ return (readState().socialVal ?? DEF_SOCIAL) | 0; }
+        function getInterrupt(){ return (readState().interruptVal ?? DEF_INTERRUPT) | 0; }
+        btnSocial.title = `- ${getSocial()} energia`;
+        btnInterrupt.title = `- ${getInterrupt()} energia`;
+    
+        // Cliques: usam addEnergy (global do app)
+        btnSocial.addEventListener('click', ()=> window.addEnergy(-Math.max(0, getSocial())));
+        btnInterrupt.addEventListener('click', ()=> window.addEnergy(-Math.max(0, getInterrupt())));
+    
+        // 4) Injetar campos no modal de configurações
+        const settingsModalEl = document.getElementById('settingsModal');
+        const modalBodyGrid = settingsModalEl.querySelector('.modal-body .row.g-3') || settingsModalEl.querySelector('.modal-body');
+    
+        // separador "Detratores"
+        const sep = document.createElement('div');
+        sep.className = 'col-12';
+        sep.innerHTML = '<hr class="hr-soft"><h6 class="mt-1 mb-0">Detratores</h6>';
+        modalBodyGrid.appendChild(sep);
+    
+        // Campo Social
+        const colSocial = document.createElement('div');
+        colSocial.className = 'col-md-6';
+        colSocial.innerHTML = `
+          <label class="form-label" for="cfgSocial">Social (energia retirada)</label>
+          <input id="cfgSocial" type="number" class="form-control" min="0" step="1">
+          <div class="small-help mt-1">Valor subtraído ao clicar em "Social".</div>`;
+        modalBodyGrid.appendChild(colSocial);
+    
+        // Campo Interrupção
+        const colInterrupt = document.createElement('div');
+        colInterrupt.className = 'col-md-6';
+        colInterrupt.innerHTML = `
+          <label class="form-label" for="cfgInterrupt">Interrupção (energia retirada)</label>
+          <input id="cfgInterrupt" type="number" class="form-control" min="0" step="1">
+          <div class="small-help mt-1">Valor subtraído ao clicar em "Interrupção".</div>`;
+        modalBodyGrid.appendChild(colInterrupt);
+    
+        // 5) Sincronizar com abrir/salvar Configurações
+        const btnOpenSettings = document.getElementById('openSettings');
+        const btnSaveSettings = document.getElementById('saveSettings');
+    
+        btnOpenSettings.addEventListener('click', ()=>{
+          const s = readState();
+          const inpSocial = document.getElementById('cfgSocial');
+          const inpInterrupt = document.getElementById('cfgInterrupt');
+          if(inpSocial) inpSocial.value = s.socialVal ?? DEF_SOCIAL;
+          if(inpInterrupt) inpInterrupt.value = s.interruptVal ?? DEF_INTERRUPT;
+        });
+    
+        btnSaveSettings.addEventListener('click', ()=>{
+          const inpSocial = document.getElementById('cfgSocial');
+          const inpInterrupt = document.getElementById('cfgInterrupt');
+          const s = readState();
+          if(inpSocial){
+            const v = parseInt(inpSocial.value||'0',10);
+            s.socialVal = isNaN(v) ? DEF_SOCIAL : Math.max(0, v);
+          }
+          if(inpInterrupt){
+            const v = parseInt(inpInterrupt.value||'0',10);
+            s.interruptVal = isNaN(v) ? DEF_INTERRUPT : Math.max(0, v);
+          }
+          writeState(s);
+          // atualiza tooltip
+          btnSocial.title = `- ${getSocial()} energia`;
+          btnInterrupt.title = `- ${getInterrupt()} energia`;
+        });
+    
+        console.info('[Detratores] Social/Interrupção habilitados.');
+      }
+    
+      // start
+      waitReady();
+    })();
+    </script>
+
+
+<script>
+    // === DEADLINE BEAUTY PATCH v2 — toggle único pelo botão, com persistência ===
+    // Linhas dedicadas (Dia/Hora/Minuto) com chips, sem overflow interno.
+    // O editor abre/fecha somente pelo botão; cliques nos chips apenas salvam.
+    // Estado aberto/fechado por item persiste no LocalStorage.
+    (function waitReady(tries=0){
+      const ready = typeof window.renderLists === 'function'
+                 && typeof window.getVisibleTasks === 'function'
+                 && typeof window.saveState === 'function'
+                 && typeof window.renderFolders === 'function'
+                 && document.getElementById('todoList');
+    
+      if(!ready){
+        if(tries<80) return setTimeout(()=>waitReady(tries+1), 120);
+        console.warn('[Deadline Beauty Patch] App não ficou pronto a tempo.');
+        return;
+      }
+    
+      // ---------- Persistência do "aberto/fechado" por item ----------
+      const OPEN_KEY = 'rpgDeadlineEditorsOpen';
+      function loadOpenMap(){
+        try{ return JSON.parse(localStorage.getItem(OPEN_KEY) || '{}') || {}; }
+        catch{ return {}; }
+      }
+      function saveOpenMap(map){
+        localStorage.setItem(OPEN_KEY, JSON.stringify(map || {}));
+      }
+    
+      // ---------- Helpers ----------
+      const $$ = s=>Array.from(document.querySelectorAll(s));
+      const pad = n=>String(n).padStart(2,'0');
+    
+      function setDateInput(elDate, y,m,d){ if(elDate) elDate.value=`${y}-${pad(m)}-${pad(d)}`; }
+      function setTimeInput(elTime, hh,mm){ if(elTime) elTime.value=`${pad(hh)}:${pad(mm)}`; }
+    
+      function daysNext(n=15){
+        const out=[], now=new Date();
+        const wdn=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+        for(let i=0;i<n;i++){
+          const d=new Date(now.getFullYear(),now.getMonth(),now.getDate()+i);
+          out.push({
+            y:d.getFullYear(), m:d.getMonth()+1, d:d.getDate(),
+            key:`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`,
+            label:`${wdn[d.getDay()]} ${pad(d.getDate())}/${pad(d.getMonth()+1)}${i===0?' (hoje)': i===1?' (amanhã)':''}`
+          });
+        }
+        return out;
+      }
+      const hours24 = ()=> Array.from({length:24},(_,h)=>({h, key:String(h), label:pad(h)}));
+      const minutesStep = (step=5)=> Array.from({length:60/step},(_,i)=>{const m=i*step; return {m, key:String(m), label:pad(m)};});
+    
+      function makeSection(title){
+        const wrap=document.createElement('div');
+        wrap.className='deadline-sec';
+        const head=document.createElement('div');
+        head.className='deadline-sec-title';
+        head.textContent=title;
+        const deck=document.createElement('div');
+        deck.className='deadline-deck';
+        wrap.append(head, deck);
+        return {wrap, deck};
+      }
+    
+      function selectDeck(deck, key){
+        deck.querySelectorAll('.chip').forEach(btn=>{
+          btn.classList.toggle('active', btn.dataset.key===String(key));
+          btn.setAttribute('aria-pressed', btn.classList.contains('active')?'true':'false');
+        });
+      }
+    
+      function setDeadlineForTask(task, ms){
+        task.deadline = ms ?? null;
+        saveState();
+        renderFolders();
+        // Não fechamos editor aqui. Re-renderiza e reabrimos conforme mapa:
+        window.__renderListsOrig ? (window.__renderListsOrig(), enhanceItems()) : renderLists();
+      }
+    
+      // ---------- Monta UI em cada item ----------
+      function enhanceItems(){
+        const items   = $$('#todoList > li.list-group-item');
+        const visible = getVisibleTasks();
+        const openMap = loadOpenMap();
+    
+        items.forEach((li, idx)=>{
+          const task = visible[idx]; if(!task) return;
+    
+          // remove versões antigas (rails anteriores)
+          li.querySelectorAll('.dl-editor, .dl-toggle, .rails-toggle-row, .rails-block').forEach(n=>n.remove());
+    
+          const hostArea = li.querySelector('.flex-grow-1');
+          const dDate = li.querySelector('.deadline-date');
+          const dTime = li.querySelector('.deadline-time');
+          if(!hostArea || !dDate || !dTime) return;
+    
+          // Botão de abrir/fechar (única forma de mudar visibilidade)
+          const toggleRow = document.createElement('div');
+          toggleRow.className = 'dl-toggle';
+          toggleRow.innerHTML = `<button type="button" class="btn btn-sm btn-outline-light"><span class="me-1">⌛</span>Definir/Editar prazo</button>`;
+          hostArea.appendChild(toggleRow);
+          const toggleBtn = toggleRow.querySelector('button');
+    
+          // Editor
+          const editor = document.createElement('div');
+          editor.className = 'dl-editor';
+          hostArea.appendChild(editor);
+    
+          // Estado de abertura inicial segundo mapa
+          const shouldOpen = !!openMap[task.id];
+          editor.style.display = shouldOpen ? '' : 'none';
+    
+          // Inputs nativos SEMPRE visíveis (não escondemos automaticamente)
+          dDate.style.display = '';
+          dTime.style.display = '';
+          dDate.style.zIndex  = '';
+          dTime.style.zIndex  = '';
+    
+          // Estado inicial dos chips
+          let currDayKey=null, currH=null, currM=null;
+          if(task.deadline){
+            const dd=new Date(task.deadline);
+            currDayKey = `${dd.getFullYear()}-${pad(dd.getMonth()+1)}-${pad(dd.getDate())}`;
+            currH=dd.getHours();
+            currM=dd.getMinutes()- (dd.getMinutes()%5);
+            dDate.value=currDayKey;
+            dTime.value=`${pad(currH)}:${pad(currM)}`;
+          }else{
+            if(dDate.value) currDayKey=dDate.value;
+            if(dTime.value){
+              const [hh,mm]=(dTime.value||'0:0').split(':').map(Number);
+              if(!isNaN(hh)) currH=hh;
+              if(!isNaN(mm)) currM=mm - (mm%5);
+            }
+          }
+    
+          // Seções
+          const sDay = makeSection('Dia (próximos 15)');
+          const sHour= makeSection('Hora');
+          const sMin = makeSection('Minuto');
+    
+          // Chips dia
+          daysNext(15).forEach(opt=>{
+            const b=document.createElement('button');
+            b.type='button'; b.className='chip';
+            b.textContent=opt.label; b.dataset.key=opt.key;
+            b.addEventListener('click', ()=>{
+              currDayKey=opt.key;
+              setDateInput(dDate,opt.y,opt.m,opt.d);
+              selectDeck(sDay.deck, currDayKey);
+              commitIfComplete(); // só salva; não fecha
+            });
+            sDay.deck.appendChild(b);
+          });
+    
+          // Chips hora
+          hours24().forEach(opt=>{
+            const b=document.createElement('button');
+            b.type='button'; b.className='chip';
+            b.textContent=opt.label; b.dataset.key=opt.key;
+            b.addEventListener('click', ()=>{
+              currH = opt.h;
+              const mm = (typeof currM==='number')?currM:0;
+              setTimeInput(dTime, currH, mm);
+              selectDeck(sHour.deck, String(currH));
+              commitIfComplete(); // só salva
+            });
+            sHour.deck.appendChild(b);
+          });
+    
+          // Chips minuto
+          minutesStep(5).forEach(opt=>{
+            const b=document.createElement('button');
+            b.type='button'; b.className='chip';
+            b.textContent=opt.label; b.dataset.key=opt.key;
+            b.addEventListener('click', ()=>{
+              currM = opt.m;
+              const hh = (typeof currH==='number')?currH:0;
+              setTimeInput(dTime, hh, currM);
+              selectDeck(sMin.deck, String(currM));
+              commitIfComplete(); // só salva
+            });
+            sMin.deck.appendChild(b);
+          });
+    
+          // Preseleção visual
+          if(currDayKey) selectDeck(sDay.deck, currDayKey);
+          if(typeof currH==='number') selectDeck(sHour.deck, String(currH));
+          if(typeof currM==='number') selectDeck(sMin.deck, String(currM));
+    
+          // Botões utilitários
+          const utils=document.createElement('div');
+          utils.className='dl-utils';
+          utils.innerHTML = `
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-act="clear"><i class="bi bi-eraser me-1"></i>Limpar</button>
+            <button type="button" class="btn btn-sm btn-outline-light" data-act="plus1h">+1h</button>
+            <button type="button" class="btn btn-sm btn-outline-light" data-act="today18">Hoje 18:00</button>
+          `;
+          utils.addEventListener('click',(e)=>{
+            const btn=e.target.closest('button[data-act]'); if(!btn) return;
+            const act=btn.dataset.act;
+            if(act==='clear'){
+              currDayKey=null; currH=null; currM=null;
+              dDate.value=''; dTime.value='';
+              selectDeck(sDay.deck, null); selectDeck(sHour.deck, null); selectDeck(sMin.deck, null);
+              setDeadlineForTask(task, null);
+              return;
+            }
+            if(act==='plus1h'){
+              const base = new Date(Date.now() + 60*60*1000);
+              currDayKey = `${base.getFullYear()}-${pad(base.getMonth()+1)}-${pad(base.getDate())}`;
+              currH = base.getHours();
+              currM = base.getMinutes() - (base.getMinutes()%5);
+            }
+            if(act==='today18'){
+              const now = new Date();
+              const base = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 18, 0, 0, 0);
+              currDayKey = `${base.getFullYear()}-${pad(base.getMonth()+1)}-${pad(base.getDate())}`;
+              currH = 18; currM = 0;
+            }
+            const [Y,M,D] = currDayKey.split('-').map(Number);
+            setDateInput(dDate, Y,M,D);
+            setTimeInput(dTime, currH, currM);
+            selectDeck(sDay.deck, currDayKey);
+            selectDeck(sHour.deck, String(currH));
+            selectDeck(sMin.deck, String(currM));
+            commitIfComplete(); // só salva
+          });
+    
+          editor.append(sDay.wrap, sHour.wrap, sMin.wrap, utils);
+    
+          function commitIfComplete(){
+            if(!currDayKey || typeof currH!=='number' || typeof currM!=='number') return;
+            const [Y,M,D]=currDayKey.split('-').map(Number);
+            const when=new Date(Y, (M||1)-1, D||1, currH||0, currM||0, 0, 0).getTime();
+            setDeadlineForTask(task, when); // re-render respeita mapa de aberto/fechado
+          }
+    
+          // Inputs nativos também salvam (sem fechar)
+          const onNativeChange = ()=>{
+            if(!dDate.value || !dTime.value) return;
+            const dt = new Date(dDate.value + 'T' + dTime.value + ':00');
+            if(isNaN(dt)) return;
+            const dd = new Date(dt);
+            currDayKey = `${dd.getFullYear()}-${pad(dd.getMonth()+1)}-${pad(dd.getDate())}`;
+            currH = dd.getHours();
+            currM = dd.getMinutes() - (dd.getMinutes()%5);
+            selectDeck(sDay.deck, currDayKey);
+            selectDeck(sHour.deck, String(currH));
+            selectDeck(sMin.deck, String(currM));
+            setDeadlineForTask(task, dt.getTime());
+          };
+          dDate.addEventListener('change', onNativeChange);
+          dTime.addEventListener('change', onNativeChange);
+    
+          // Toggle único: só o botão manda
+          toggleBtn.addEventListener('click', ()=>{
+            const willOpen = editor.style.display === 'none';
+            editor.style.display = willOpen ? '' : 'none';
+            const map = loadOpenMap();
+            if(willOpen) map[task.id] = true; else delete map[task.id];
+            saveOpenMap(map);
+          });
+        });
+      }
+    
+      // Hook no renderLists
+      if(!window.__renderListsOrig){
+        window.__renderListsOrig = window.renderLists;
+        window.renderLists = function(){
+          window.__renderListsOrig();
+          try{ enhanceItems(); }catch(e){ console.error('[Deadline Beauty Patch] enhanceItems falhou:', e); }
+        };
+      }
+    
+      // Primeira aplicação
+      try{ enhanceItems(); }catch(e){}
+    
+      // ---------- CSS ----------
+      const style=document.createElement('style');
+      style.textContent = `
+        .dl-toggle { margin-top:.5rem; }
+        .dl-editor {
+          margin-top:.5rem; width:100%;
+          background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+          border:1px solid rgba(255,255,255,.12);
+          border-radius:14px; padding:.75rem;
+          box-shadow: 0 8px 24px rgba(0,0,0,.25) inset, 0 4px 18px rgba(0,0,0,.15);
+        }
+        .deadline-sec { margin-bottom:.75rem; }
+        .deadline-sec-title {
+          font-size:.85rem; letter-spacing:.3px; opacity:.9; margin-bottom:.35rem;
+          color:#eaeaff;
+        }
+        .deadline-deck { display:flex; flex-wrap:wrap; gap:.5rem; width:100%; }
+        .chip{
+          position:relative;
+          display:inline-flex; align-items:center; justify-content:center;
+          padding:.4rem .65rem; border-radius:999px;
+          border:1px solid rgba(255,255,255,.16);
+          background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.12));
+          color:#f5f6ff; font-size:.85rem; line-height:1; white-space:nowrap;
+          transition: transform .06s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease;
+          box-shadow: 0 2px 6px rgba(0,0,0,.25);
+        }
+        .chip:hover{ transform:translateY(-1px); background:rgba(255,255,255,.06); }
+        .chip:active{ transform:translateY(0); }
+        .chip.active{
+          border-color: transparent;
+          background: linear-gradient(90deg, #7c4dff, #5c6cff);
+          box-shadow: 0 4px 12px rgba(92,108,255,.35), inset 0 0 0 1px rgba(255,255,255,.12);
+        }
+        .dl-utils{ display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.25rem; }
+        .deadline-date, .deadline-time { position:relative; z-index:0; }
+      `;
+      document.head.appendChild(style);
+    
+      console.info('[Deadline Beauty Patch] toggle único + persistência ✅');
+    })();
+    </script>
+
+<script>
+    // === HORIZONTAL CALENDAR — TÍTULOS (10 dias, tooltip nativo) ===
+    (function waitReady(tries=0){
+      const ready = typeof window.renderLists === 'function'
+                 && document.getElementById('todoList');
+      if(!ready){
+        if(tries<80) return setTimeout(()=>waitReady(tries+1), 120);
+        console.warn('[WeekCalendar Titles] App não ficou pronto a tempo.');
+        return;
+      }
+    
+      // ---------- Helpers ----------
+      const $  = s => document.querySelector(s);
+      const $$ = s => Array.from(document.querySelectorAll(s));
+      const pad = n => String(n).padStart(2,'0');
+      const WDN = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+    
+      function daysNext(n=10){
+        const arr=[], now=new Date();
+        for(let i=0;i<n;i++){
+          const d = new Date(now.getFullYear(), now.getMonth(), now.getDate()+i, 0,0,0,0);
+          arr.push({ date:d, y:d.getFullYear(), m:d.getMonth()+1, d:d.getDate(), wd:d.getDay(),
+                     key: `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}` });
+        }
+        return arr;
+      }
+      const sameYMD = (a,b)=>a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+    
+      // Lê itens PENDENTES visíveis no DOM (lista principal), com títulos e deadlines
+      function getPendingTasksFromDOM(){
+        const tasks = [];
+        $$('#todoList > li.list-group-item').forEach(li=>{
+          const descEl = li.querySelector('.task-desc');
+          const dDate  = li.querySelector('.deadline-date');
+          const dTime  = li.querySelector('.deadline-time');
+          const desc   = (descEl?.textContent || '').trim();
+          const dateV  = dDate?.value || '';
+          const timeV  = dTime?.value || '';
+          if(!desc || !dateV || !timeV) return; // precisa ter deadline completo
+          const dt = new Date(`${dateV}T${timeV}:00`);
+          if (isNaN(dt)) return;
+          tasks.push({ desc, deadline: dt.getTime() });
+        });
+        return tasks;
+      }
+    
+      // ---------- UI ----------
+      function ensureCalendarHost(){
+        const todoUL = $('#todoList');
+        const checklistCard = todoUL?.closest('.card');
+        let calCard = $('#weekCalendarCard');
+        if(!calCard){
+          calCard = document.createElement('div');
+          calCard.id = 'weekCalendarCard';
+          calCard.className = 'card mb-4';
+          calCard.innerHTML = `
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="h5 m-0"><i class="bi bi-calendar3-week me-2"></i>Próximos 10 dias</div>
+                <div class="small-help" id="weekCalRange">—</div>
+              </div>
+              <div id="weekCalendarStrip" class="week-strip"></div>
+            </div>
+          `;
+          if(checklistCard && checklistCard.parentElement){
+            checklistCard.parentElement.insertBefore(calCard, checklistCard);
+          }else{
+            $('.container')?.appendChild(calCard);
+          }
+        }
+        return calCard;
+      }
+    
+      function renderWeekCalendar(){
+        const card  = ensureCalendarHost();
+        const strip = card.querySelector('#weekCalendarStrip');
+        if(!strip) return;
+    
+        const days = daysNext(10);
+        const now  = new Date();
+    
+        // Cabeçalho: range
+        const rangeEl = card.querySelector('#weekCalRange');
+        const first = days[0].date, last = days[days.length-1].date;
+        rangeEl.textContent = `${pad(first.getDate())}/${pad(first.getMonth()+1)} – ${pad(last.getDate())}/${pad(last.getMonth()+1)}`;
+    
+        // Agrupa por dia (sem pastas, só títulos)
+        const byDay = {};
+        for(const d of days) byDay[d.key] = [];
+        const tasks = getPendingTasksFromDOM();
+        for(const t of tasks){
+          const dt = new Date(t.deadline);
+          for(const d of days){
+            if(sameYMD(dt, d.date)){ byDay[d.key].push(t); break; }
+          }
+        }
+    
+        // Render
+        strip.innerHTML = '';
+        for(const d of days){
+          const list = byDay[d.key] || [];
+          const isToday = sameYMD(d.date, now);
+    
+          const dayCard = document.createElement('div');
+          dayCard.className = 'day-card' + (isToday ? ' today' : '');
+          dayCard.innerHTML = `
+            <div class="day-head">
+              <div class="weekday">${WDN[d.wd]}</div>
+              <div class="daynum">${pad(d.d)}</div>
+              <div class="month">${pad(d.m)}</div>
+              <span class="count badge-soft">${list.length}</span>
+            </div>
+            <div class="day-body">
+              ${list.length === 0 ? `<div class="empty muted">—</div>` : ''}
+            </div>
+          `;
+    
+          const body = dayCard.querySelector('.day-body');
+          const MAX_ITEMS = 8; // mostra até 8 títulos por dia
+          list.slice(0, MAX_ITEMS).forEach(t=>{
+            const it = document.createElement('div');
+            it.className = 'day-task';
+            it.textContent = t.desc || '(sem título)';
+            it.title = t.desc || ''; // tooltip nativo com título completo
+            body.appendChild(it);
+          });
+          if(list.length > MAX_ITEMS){
+            const more = document.createElement('div');
+            more.className = 'day-more';
+            more.textContent = `+${list.length - MAX_ITEMS} mais`;
+            body.appendChild(more);
+          }
+    
+          strip.appendChild(dayCard);
+        }
+      }
+    
+      // Hook no renderLists
+      if(!window.__renderListsOrigForWeekCalTitles){
+        window.__renderListsOrigForWeekCalTitles = window.renderLists;
+        window.renderLists = function(){
+          window.__renderListsOrigForWeekCalTitles();
+          try { renderWeekCalendar(); } catch(e){ console.error('[WeekCalendar Titles] render falhou:', e); }
+        };
+      }
+    
+      // Primeira renderização
+      try { renderWeekCalendar(); } catch(e){}
+    
+      // ---------- Estilo ----------
+      const style = document.createElement('style');
+      style.textContent = `
+        #weekCalendarCard .h5 { color:#fff; }
+        .week-strip{
+          display:flex; gap:12px; flex-wrap:wrap;
+          width:100%;
+        }
+        .day-card{
+          flex:1 1 180px;
+          min-width:180px; max-width:240px;
+          background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+          border:1px solid rgba(255,255,255,.12);
+          border-radius:14px;
+          padding:10px;
+          box-shadow: 0 6px 20px rgba(0,0,0,.25);
+        }
+        .day-card.today{
+          border-color: rgba(124,77,255,.6);
+          box-shadow: 0 8px 24px rgba(124,77,255,.20);
+        }
+        .day-head{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+        .weekday{ font-weight:600; letter-spacing:.3px; }
+        .daynum{ font-size:1.25rem; font-weight:700; }
+        .month{ font-size:.85rem; opacity:.85 }
+        .count{
+          margin-left:auto;
+          padding:.15rem .45rem;
+          border-radius:999px;
+          background:rgba(255,255,255,.08);
+          border:1px solid rgba(255,255,255,.14);
+          font-size:.8rem;
+        }
+        .day-body{ display:flex; flex-direction:column; gap:6px; }
+        .day-task{
+          padding:.35rem .5rem;
+          border:1px solid rgba(255,255,255,.12);
+          border-radius:10px;
+          background:rgba(255,255,255,.03);
+          font-size:.9rem; line-height:1.2;
+          white-space:nowrap; overflow:hidden; text-overflow:ellipsis; /* corta com "..." */
+          cursor:default; /* tooltip nativo aparece com hover */
+        }
+        .day-more{ font-size:.85rem; opacity:.9; }
+        .empty{ text-align:center; padding:.35rem 0; }
+        .muted{ color:#c0c7d1; }
+        @media (max-width: 520px){
+          .day-card{ min-width: 46%; }
+        }
+      `;
+      document.head.appendChild(style);
+    
+      console.info('[WeekCalendar Titles] ativo ✅');
+    })();
+    </script>
+
+
+<script>
+    // === CURA / MANCHAS — Área com contagem em dias e barra que se esgota ===
+    (function waitReady(tries=0){
+      const ready = typeof window.renderLists === 'function'
+                 && document.getElementById('todoList');
+      if(!ready){
+        if(tries<80) return setTimeout(()=>waitReady(tries+1), 120);
+        console.warn('[Cura/Manchas] App não ficou pronto a tempo.');
+        return;
+      }
+    
+      // -------------------- Storage --------------------
+      const LS_KEY = 'rpgCuraManchas';
+      const nowMs  = ()=> Date.now();
+      const dayMs  = 24*60*60*1000;
+    
+      function loadItems(){
+        try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]') || []; }
+        catch { return []; }
+      }
+      function saveItems(list){
+        localStorage.setItem(LS_KEY, JSON.stringify(list || []));
+      }
+      function uid(){ return Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-4); }
+    
+      // -------------------- UI Host --------------------
+      function ensureHost(){
+        const todoUL = document.getElementById('todoList');
+        const checklistCard = todoUL?.closest('.card');
+        let card = document.getElementById('curaManchasCard');
+        if(!card){
+          card = document.createElement('div');
+          card.id = 'curaManchasCard';
+          card.className = 'card mb-4';
+          card.innerHTML = `
+            <div class="card-body">
+              <div class="d-flex align-items-center justify-content-between mb-3">
+                <div class="h5 m-0"><i class="bi bi-eyedropper me-2"></i>Cura / Manchas</div>
+              </div>
+    
+              <form id="curaForm" class="row g-2 mb-3">
+                <div class="col-md-7">
+                  <input type="text" class="form-control" id="curaTitle" placeholder="Nome do tratamento (ex.: Gel Ácido X)" required>
+                </div>
+                <div class="col-md-3">
+                  <div class="input-group">
+                    <input type="number" min="1" step="1" class="form-control" id="curaDays" placeholder="Dias" required>
+                    <span class="input-group-text">dias</span>
+                  </div>
+                </div>
+                <div class="col-md-2 d-grid">
+                  <button class="btn btn-primary" type="submit">Adicionar</button>
+                </div>
+              </form>
+    
+              <div id="curaList" class="cura-list"></div>
+            </div>
+          `;
+          // Insere acima do checklist; se existir o calendário, insere depois dele
+          const weekCard = document.getElementById('weekCalendarCard');
+          if(weekCard && weekCard.parentElement){
+            weekCard.parentElement.insertBefore(card, weekCard.nextSibling);
+          } else if (checklistCard && checklistCard.parentElement){
+            checklistCard.parentElement.insertBefore(card, checklistCard);
+          } else {
+            document.querySelector('.container')?.appendChild(card);
+          }
+        }
+        return card;
+      }
+    
+      // -------------------- Render --------------------
+      function fmtDate(ms){
+        const d = new Date(ms);
+        const dd = String(d.getDate()).padStart(2,'0');
+        const mm = String(d.getMonth()+1).padStart(2,'0');
+        return `${dd}/${mm}`;
+      }
+      function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
+    
+      function render(){
+        const host = ensureHost();
+        const listEl = host.querySelector('#curaList');
+        const items = loadItems();
+    
+        if(!items.length){
+          listEl.innerHTML = `
+            <div class="empty muted">Nenhum item cadastrado. Adicione acima para iniciar a contagem.</div>
+          `;
+          return;
+        }
+    
+        // Monta cada cartão/linha
+        listEl.innerHTML = '';
+        items.forEach(item=>{
+          const total = Math.max(1, parseInt(item.days,10) || 1) * dayMs;
+          const elapsed = clamp(nowMs() - item.startAt, 0, total);
+          const remaining = clamp(total - elapsed, 0, total);
+          const pctRemain = clamp(Math.round((remaining/total)*100), 0, 100);
+    
+          const done = remaining === 0;
+    
+          // classes de cor da barra (depletando). Ao concluir, fica verde.
+          let barClass = 'bg-info';
+          if (pctRemain <= 66) barClass = 'bg-warning';
+          if (pctRemain <= 33) barClass = 'bg-danger';
+          if (done) barClass = 'bg-success';
+    
+          const card = document.createElement('div');
+          card.className = 'cura-item card-inner mb-3';
+          card.innerHTML = `
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+              <div class="title text-truncate" title="${item.title}">
+                <i class="bi bi-droplet-half me-2"></i>${item.title}
+              </div>
+              <div class="dates small text-muted">
+                início: <strong>${fmtDate(item.startAt)}</strong>
+                &nbsp;•&nbsp; fim: <strong>${fmtDate(item.endAt)}</strong>
+              </div>
+            </div>
+    
+            <div class="progress cura-progress mb-2" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pctRemain}" title="Restante: ${pctRemain}%">
+              <div class="progress-bar ${barClass}" style="width:${pctRemain}%"></div>
+            </div>
+    
+            <div class="d-flex align-items-center justify-content-between small">
+              <div class="muted">
+                Restante: <strong>${Math.ceil(remaining/dayMs)}d</strong> (${pctRemain}%)
+              </div>
+              <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-secondary" data-act="reiniciar" title="Reinicia a contagem a partir de agora">Reiniciar</button>
+                <button class="btn btn-sm ${done ? 'btn-success' : 'btn-outline-success'}" data-act="apagar" ${done ? '' : 'disabled'} title="${done ? 'Concluir e apagar' : 'Disponível ao concluir'}">
+                  ${done ? 'Concluir / Apagar' : 'Aguardando concluir'}
+                </button>
+              </div>
+            </div>
+          `;
+    
+          // handlers
+          card.querySelector('[data-act="reiniciar"]').addEventListener('click', ()=>{
+            const list = loadItems();
+            const idx = list.findIndex(x=>x.id===item.id);
+            if(idx>=0){
+              const start = nowMs();
+              list[idx].startAt = start;
+              list[idx].endAt   = start + total;
+              saveItems(list);
+              render();
+            }
+          });
+    
+          card.querySelector('[data-act="apagar"]').addEventListener('click', ()=>{
+            if(!done) return;
+            const list = loadItems().filter(x=>x.id!==item.id);
+            saveItems(list);
+            render();
+          });
+    
+          listEl.appendChild(card);
+        });
+      }
+    
+      // -------------------- Form --------------------
+      function wireForm(){
+        const host = ensureHost();
+        const form = host.querySelector('#curaForm');
+        const inTitle = host.querySelector('#curaTitle');
+        const inDays  = host.querySelector('#curaDays');
+    
+        form.addEventListener('submit', (e)=>{
+          e.preventDefault();
+          const title = (inTitle.value || '').trim();
+          const days  = parseInt(inDays.value,10);
+    
+          if(!title || !days || days<1){
+            inTitle.focus();
+            return;
+          }
+    
+          const start = nowMs();
+          const total = days * dayMs;
+    
+          const list = loadItems();
+          list.push({
+            id: uid(),
+            title,
+            days,
+            startAt: start,
+            endAt: start + total
+          });
+          saveItems(list);
+    
+          inTitle.value=''; inDays.value='';
+          render();
+        });
+      }
+    
+      // -------------------- Boot --------------------
+      ensureHost();
+      wireForm();
+      render();
+    
+      // Atualiza automaticamente a cada 60s
+      setInterval(render, 60*1000);
+    
+      // Re-render também sempre que a app principal renderizar (opcional)
+      if(!window.__renderListsOrig_Cura){
+        window.__renderListsOrig_Cura = window.renderLists;
+        window.renderLists = function(){
+          window.__renderListsOrig_Cura();
+          try{ render(); }catch(e){}
+        };
+      }
+    
+      // -------------------- Estilos --------------------
+      const style = document.createElement('style');
+      style.textContent = `
+        #curaManchasCard .h5 { color:#fff; }
+        .cura-list .empty { text-align:center; padding:.5rem 0; }
+        .muted { color:#c0c7d1; }
+        .card-inner{
+          background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+          border:1px solid rgba(255,255,255,.12);
+          border-radius:12px;
+          padding:12px;
+        }
+        .cura-item .title{
+          font-weight:600; max-width: 520px;
+          white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+        }
+        .cura-progress{
+          height: 12px;
+          background: rgba(255,255,255,.06);
+          border:1px solid rgba(255,255,255,.12);
+          border-radius: 999px;
+          overflow: hidden;
+        }
+        .progress-bar.bg-info{
+          background: linear-gradient(90deg, #5c6cff, #7c4dff);
+        }
+        .progress-bar.bg-warning{
+          background: linear-gradient(90deg, #ffcf66, #ff9f43);
+        }
+        .progress-bar.bg-danger{
+          background: linear-gradient(90deg, #ff7b7b, #ff4d4d);
+        }
+        .progress-bar.bg-success{
+          background: linear-gradient(90deg, #35d07f, #10b981);
+        }
+        @media (max-width: 576px){
+          .cura-item .title{ max-width: 100%; }
+        }
+      `;
+      document.head.appendChild(style);
+    
+      console.info('[Cura/Manchas] ativo ✅');
+    })();
+    </script>
+<script>
+    // === PATCH: Colapsar "Cura / Manchas" com resumo compacto (cor corrigida) ===
+    (function boot(tries=0){
+      const LS_ITEMS = 'rpgCuraManchas';
+      const LS_COLLAPSED = 'rpgCuraCollapsed';
+      const dayMs = 24*60*60*1000;
+      const $ = s => document.querySelector(s);
+    
+      function loadItems(){
+        try { return JSON.parse(localStorage.getItem(LS_ITEMS) || '[]') || []; }
+        catch { return []; }
+      }
+      function isCollapsed(){
+        try { return JSON.parse(localStorage.getItem(LS_COLLAPSED) || 'false'); }
+        catch { return false; }
+      }
+      function setCollapsed(v){
+        localStorage.setItem(LS_COLLAPSED, JSON.stringify(!!v));
+      }
+    
+      function ensureUI(){
+        const card = $('#curaManchasCard');
+        if(!card) return null;
+        const hdr = card.querySelector('.card-body > .d-flex.align-items-center.justify-content-between');
+        if(!hdr) return card;
+    
+        if(!card.querySelector('#curaSummary')){
+          const summary = document.createElement('div');
+          summary.id = 'curaSummary';
+          summary.className = 'cura-summary small'; // removi o text-muted
+          summary.textContent = '—';
+          hdr.appendChild(summary);
+        }
+    
+        if(!card.querySelector('#curaToggleBtn')){
+          const btn = document.createElement('button');
+          btn.id = 'curaToggleBtn';
+          btn.type = 'button';
+          btn.className = 'btn btn-sm btn-outline-light';
+          btn.innerHTML = '<span class="me-1">⯈</span>Ocultar';
+          hdr.appendChild(btn);
+          btn.addEventListener('click', ()=>{
+            const willCollapse = !isCollapsed();
+            setCollapsed(willCollapse);
+            applyCollapsedState();
+            refreshSummary();
+          });
+        }
+        return card;
+      }
+    
+      function computeSummaryText(){
+        const items = loadItems();
+        if(!items.length) return 'Sem itens';
+        const now = Date.now();
+        const total = items.length;
+        let active = 0;
+        let nearest = null;
+        for(const it of items){
+          const totalMs = Math.max(1, parseInt(it.days||1,10)) * dayMs;
+          const endAt = it.endAt ?? (it.startAt + totalMs);
+          const remaining = Math.max(0, endAt - now);
+          if(remaining > 0){
+            active++;
+            if(!nearest || endAt < nearest.endAt){
+              nearest = { endAt, inDays: Math.ceil(remaining/dayMs) };
+            }
+          }
+        }
+        if(active === 0){
+          return `${total} item(ns) • todos concluídos`;
+        }else{
+          const d = new Date(nearest.endAt);
+          const dd = String(d.getDate()).padStart(2,'0');
+          const mm = String(d.getMonth()+1).padStart(2,'0');
+          return `${total} item(ns) • ${active} ativo(s) • próximo: ${dd}/${mm} (em ${nearest.inDays}d)`;
+        }
+      }
+    
+      function refreshSummary(){
+        const sumEl = $('#curaSummary');
+        if(sumEl) sumEl.textContent = computeSummaryText();
+        const btn = $('#curaToggleBtn');
+        if(btn){
+          btn.innerHTML = isCollapsed() ? '<span class="me-1">⯆</span>Mostrar' : '<span class="me-1">⯈</span>Ocultar';
+        }
+      }
+    
+      function applyCollapsedState(){
+        const card = $('#curaManchasCard');
+        if(card) card.classList.toggle('collapsed', isCollapsed());
+      }
+    
+      function wireRenderHook(){
+        if(!window.__curaCollapseHooked){
+          window.__curaCollapseHooked = true;
+          const orig = window.renderLists;
+          if(typeof orig === 'function'){
+            window.renderLists = function(){
+              orig();
+              try{ refreshSummary(); }catch(e){}
+            };
+          }
+        }
+      }
+    
+      function start(){
+        const card = ensureUI();
+        if(!card) return false;
+        applyCollapsedState();
+        refreshSummary();
+        wireRenderHook();
+        setInterval(refreshSummary, 60*1000);
+        return true;
+      }
+    
+      function injectCSS(){
+        if(document.getElementById('curaCollapseCSS')) return;
+        const css = document.createElement('style');
+        css.id = 'curaCollapseCSS';
+        css.textContent = `
+          #curaManchasCard.collapsed #curaForm,
+          #curaManchasCard.collapsed #curaList { display: none !important; }
+          #curaSummary { display: none; margin-left: auto; }
+          #curaManchasCard.collapsed #curaSummary {
+            display: block;
+            color: #fff !important; /* força branco */
+            font-weight: 600;
+            text-shadow: 0 1px 2px rgba(0,0,0,.55);
+          }
+          #curaManchasCard .card-body > .d-flex.align-items-center.justify-content-between { gap: .5rem; }
+          #curaToggleBtn { white-space: nowrap; }
+        `;
+        document.head.appendChild(css);
+      }
+    
+      (function wait(){
+        if($('#curaManchasCard')){
+          injectCSS();
+          start();
+        }else if(tries<80){
+          setTimeout(()=>boot(tries+1), 120);
+        }
+      })();
+    })();
+    </script>
+
+<!-- Confetti (para a celebração ao concluir) -->
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
+<script>
+// === WORK TRACKER v4 — barra some quando parado ===
+(function waitReady(tries=0){
+  const ready = typeof window.renderLists === 'function' && document.getElementById('todoList');
+  if(!ready){
+    if(tries<80) return setTimeout(()=>waitReady(tries+1), 120);
+    console.warn('[WorkTracker v4] App não ficou pronto a tempo.');
+    return;
+  }
+
+  // --------- Storage ---------
+  const ACTIVE_KEY = 'rpgActiveWork';
+  const loadActive = ()=>{ try{ return JSON.parse(localStorage.getItem(ACTIVE_KEY)||'null'); }catch{ return null; } };
+  const saveActive = (obj)=>{ obj ? localStorage.setItem(ACTIVE_KEY, JSON.stringify(obj)) : localStorage.removeItem(ACTIVE_KEY); };
+
+  // --------- Helpers ---------
+  const $  = s=>document.querySelector(s);
+  const $$ = s=>Array.from(document.querySelectorAll(s));
+  const pad = n=>String(n).padStart(2,'0');
+  const fmtHMS = ms => { const t=Math.floor(ms/1000), h=Math.floor(t/3600), m=Math.floor((t%3600)/60), s=t%60; return `${pad(h)}:${pad(m)}:${pad(s)}`; };
+
+  function getVisibleTasksSafe(){
+    if(typeof window.getVisibleTasks === 'function'){ try{ return window.getVisibleTasks()||[]; }catch(e){} }
+    return $$('#todoList > li.list-group-item').map((li, idx)=>({
+      id: li.dataset.taskId || li.getAttribute('data-id') || `dom-${idx}`,
+      desc: (li.querySelector('.task-desc')?.textContent || '').trim(),
+      _li: li
+    }));
+  }
+
+  function concludeTaskById(taskId){
+    if(typeof window.markTaskDone === 'function'){ try{ window.markTaskDone(taskId); return true; }catch(e){} }
+    if(typeof window.completeTask === 'function'){ try{ window.completeTask(taskId); return true; }catch(e){} }
+    const li = $$('#todoList > li.list-group-item').find(el => (el.dataset.taskId||el.getAttribute('data-id')) == taskId);
+    if(li){ try{ li.dispatchEvent(new MouseEvent('dblclick',{bubbles:true})); return true; }catch(e){} }
+    return false;
+  }
+
+  // --------- Onde inserir a barra (logo após a área de energia) ---------
+  function findEnergyCard(){
+    let energyCard=null;
+    $$('.card').some(card=>{
+      const t=(card.querySelector('.card-title, .h5, .h4, .card-header')?.textContent||'').toLowerCase();
+      if(t.includes('energia')){ energyCard=card; return true; }
+      return false;
+    });
+    return energyCard;
+  }
+
+  // Cria a barra somente quando existir atividade ativa
+  function createTrackerBar(){
+    let bar = document.createElement('div');
+    bar.id = 'workTrackerBar';
+    bar.className = 'card mb-3 worktracker-card';
+    bar.innerHTML = `
+      <div class="card-body py-2">
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <div class="h6 m-0 d-flex align-items-center gap-2">
+            <i class="bi bi-play-circle"></i><span>Em progresso</span>
+          </div>
+          <span class="badge rounded-pill bg-secondary ms-auto" id="wtStatus">inativo</span>
+        </div>
+        <div class="wt-row">
+          <div class="wt-title text-truncate" id="wtTitle">—</div>
+          <div class="wt-time" id="wtTime">00:00:00</div>
+        </div>
+        <div class="progress wt-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="Décor">
+          <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%"></div>
+        </div>
+        <div class="d-flex gap-2 mt-2">
+          <button class="btn btn-sm btn-success shadow-sm" id="wtConclude" disabled><i class="bi bi-check2 me-1"></i>Concluir</button>
+          <button class="btn btn-sm btn-outline-warning" id="wtStop" disabled><i class="bi bi-stop-circle me-1"></i>Parar</button>
+          <button class="btn btn-sm btn-outline-light ms-auto d-none" id="wtResume"><i class="bi bi-play-fill me-1"></i>Retomar</button>
+        </div>
+      </div>
+    `;
+    const after = findEnergyCard();
+    if(after && after.parentElement) after.parentElement.insertBefore(bar, after.nextSibling);
+    else ($('.container')||document.body).prepend(bar);
+
+    // Eventos
+    bar.querySelector('#wtConclude').addEventListener('click', ()=>{
+      const active=loadActive(); if(!active) return;
+      try{ if(typeof confetti!=='undefined'){ confetti({particleCount:160,spread:70,ticks:180,origin:{y:0.7}}); } }catch(e){}
+      concludeTaskById(active.taskId);
+      saveActive(null);
+      renderTracker(); // remove a barra
+    });
+    bar.querySelector('#wtStop').addEventListener('click', ()=>{
+      // Parar = limpar ativo e remover barra
+      saveActive(null);
+      renderTracker();
+    });
+    bar.querySelector('#wtResume').addEventListener('click', ()=>{
+      const active=loadActive(); if(!active) return;
+      if(active.startedAt) return;
+      saveActive({...active, startedAt: Date.now(), paused:false});
+      renderTracker();
+    });
+    return bar;
+  }
+
+  // --------- Renderização ---------
+  let tickHandle=null;
+  function startTick(){ if(!tickHandle) tickHandle=setInterval(updateElapsedUI, 1000); }
+  function stopTick(){ if(tickHandle){ clearInterval(tickHandle); tickHandle=null; } }
+  function updateElapsedUI(){
+    const active=loadActive(); const tEl=$('#wtTime'); if(!active||!tEl) return;
+    const now=Date.now(), base=active.elapsedMs||0, dyn=active.startedAt?(now-active.startedAt):0;
+    tEl.textContent = fmtHMS(base + dyn);
+  }
+
+  function renderTracker(){
+    const active = loadActive();
+    let bar = $('#workTrackerBar');
+
+    // Se não houver ativo: remove a barra (não fica nada visível)
+    if(!active){
+      stopTick();
+      if(bar) bar.remove();
+      return;
+    }
+
+    // Se houver ativo e não existir barra, cria agora
+    if(!bar) bar = createTrackerBar();
+
+    const titleEl=$('#wtTitle'), timeEl=$('#wtTime'), badge=$('#wtStatus');
+    const btnStop=$('#wtStop'), btnCon=$('#wtConclude'), btnRes=$('#wtResume');
+
+    bar.classList.remove('running','paused','idle');
+
+    titleEl.textContent = active.title || '(sem título)';
+    titleEl.title = active.title || '';
+    const now=Date.now(), base=active.elapsedMs||0, dyn=active.startedAt?(now-active.startedAt):0;
+    timeEl.textContent = fmtHMS(base + dyn);
+
+    const running = !!active.startedAt;
+    badge.textContent = running ? 'rodando' : 'pausado';
+    badge.className   = 'badge rounded-pill ' + (running ? 'bg-success' : 'bg-warning');
+
+    btnCon.disabled = false;
+    if(running){
+      btnStop.disabled=false; btnRes.classList.add('d-none');
+      bar.classList.add('running'); startTick();
+    }else{
+      btnStop.disabled=true; btnRes.classList.remove('d-none');
+      bar.classList.add('paused'); stopTick();
+    }
+  }
+
+  // --------- Botão Play no topo direito do item ---------
+  function enhancePlayButtons(){
+    const items = $$('#todoList > li.list-group-item');
+    const visible = getVisibleTasksSafe();
+
+    items.forEach((li, idx)=>{
+      const task = visible[idx]; if(!task) return;
+      if(li.querySelector('.btn-play-task')) return;
+
+      li.classList.add('wt-relative');
+      const toolbar = document.createElement('div');
+      toolbar.className = 'wt-toolbar';
+      toolbar.innerHTML = `
+        <button type="button" class="btn btn-sm btn-outline-light btn-play-task" title="Iniciar esta atividade">
+          <i class="bi bi-play-fill"></i>
+        </button>`;
+      li.appendChild(toolbar);
+
+      toolbar.querySelector('.btn-play-task').addEventListener('click', ()=>{
+        const desc = task.desc || (li.querySelector('.task-desc')?.textContent || '').trim() || '(sem título)';
+        saveActive({ taskId: task.id, title: desc, startedAt: Date.now(), elapsedMs: 0, paused: false });
+        renderTracker(); // cria e mostra a barra
+        $('#workTrackerBar')?.scrollIntoView({behavior:'smooth', block:'center'});
+      });
+    });
+  }
+
+  // Limpa se concluir por fora
+  function autoStopWhenConcluded(){
+    const active=loadActive(); if(!active) return;
+    if(window.state && Array.isArray(window.state.tasks)){
+      const hit = window.state.tasks.find(t=> String(t.id)===String(active.taskId));
+      const done = hit && (hit.done===true || hit.completed===true || hit.status==='done');
+      if(done){ saveActive(null); renderTracker(); }
+    }
+  }
+
+  // Hook no renderLists
+  if(!window.__renderListsOrig_WorkTracker_v4){
+    window.__renderListsOrig_WorkTracker_v4 = window.renderLists;
+    window.renderLists = function(){
+      window.__renderListsOrig_WorkTracker_v4();
+      try{ enhancePlayButtons(); autoStopWhenConcluded(); renderTracker(); }catch(e){}
+    };
+  }
+
+  // Boot
+  try{ enhancePlayButtons(); renderTracker(); }catch(e){}
+
+  // --------- CSS ---------
+  const style=document.createElement('style');
+  style.textContent = `
+    /* Barra do tracker */
+    .worktracker-card{
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:14px;
+      transition: background .25s ease, color .2s ease, border-color .2s ease;
+    }
+    .worktracker-card.running{
+      background: linear-gradient(180deg, rgba(16,140,49,.92), rgba(8,112,38,.92));
+      color:#fff;
+      border-color: rgba(16,140,49,.6);
+    }
+    .worktracker-card.paused{ background: transparent; color: inherit; }
+
+    .wt-row{ display:flex; align-items:center; gap:.75rem; margin-bottom:.35rem; }
+    #wtTitle{ flex:1 1 auto; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    #wtTime{ font-variant-numeric: tabular-nums; font-weight:600; min-width: 88px; text-align:right; }
+    .wt-progress{ height:10px; border-radius:999px; overflow:hidden; background: rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); }
+
+    /* Play no topo direito do item */
+    #todoList > li.list-group-item.wt-relative{ position: relative; }
+    .wt-toolbar{ position:absolute; top:8px; right:8px; z-index:2; display:flex; gap:.4rem; }
+    .wt-toolbar .btn{ padding:.15rem .4rem; line-height:1; }
+    .btn-play-task i{ pointer-events:none; }
+
+    /* Botão Concluir: sombra e animação mantendo padrão Bootstrap */
+    #workTrackerBar #wtConclude.btn{
+      transition: transform .15s ease, box-shadow .2s ease, filter .2s ease;
+      box-shadow: 0 2px 6px rgba(0,0,0,.15);
+      will-change: transform, box-shadow, filter;
+    }
+    #workTrackerBar #wtConclude.btn:hover:not(:disabled){
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(0,0,0,.25);
+      filter: brightness(1.03);
+    }
+    #workTrackerBar #wtConclude.btn:active:not(:disabled){
+      transform: translateY(0) scale(.985);
+      box-shadow: 0 3px 10px rgba(0,0,0,.2);
+    }
+    #workTrackerBar #wtConclude.btn:disabled{ opacity:.65; box-shadow:none; cursor:not-allowed; }
+  `;
+  document.head.appendChild(style);
+
+  console.info('[WorkTracker v4] ativo ✅ (barra remove quando parado)');
+})();
+</script>
+
+
+<script>
+    // === PATCH: Notificação "Atualize o Board" (30min) — amarelo translúcido + blur ===
+    (function boardReminder(){
+      const LS_KEY = 'rpgBoardNotify_lastDismiss';
+      const INTERVAL_MS = 30 * 60 * 1000;   // 30 minutos
+      const CHECK_EVERY_MS = 30 * 1000;     // checa a cada 30s
+    
+      function ensureToast(){
+        let el = document.getElementById('boardReminderToast');
+        if(el) return el;
+    
+        el = document.createElement('div');
+        el.id = 'boardReminderToast';
+        el.className = 'board-toast hidden';
+        el.innerHTML = `
+          <div class="board-toast-body" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="msg">
+              <span class="icon" aria-hidden="true">🔔</span>
+              <span class="text">Atualize o Board</span>
+            </div>
+            <div class="actions">
+              <button type="button" class="btn-close" aria-label="Fechar" title="Fechar"></button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(el);
+    
+        el.querySelector('.btn-close').addEventListener('click', ()=>{
+          try{ localStorage.setItem(LS_KEY, String(Date.now())); }catch(e){}
+          hideToast();
+        });
+    
+        return el;
+      }
+    
+      function showToast(){
+        const el = ensureToast();
+        el.classList.remove('hidden');
+        el.classList.add('visible');
+      }
+      function hideToast(){
+        const el = document.getElementById('boardReminderToast');
+        if(!el) return;
+        el.classList.remove('visible');
+        el.classList.add('hidden');
+      }
+    
+      function shouldShow(){
+        let last = 0;
+        try { last = parseInt(localStorage.getItem(LS_KEY)||'0', 10) || 0; } catch(e){ last = 0; }
+        return (Date.now() - last) >= INTERVAL_MS;
+      }
+    
+      function tick(){
+        const el = document.getElementById('boardReminderToast');
+        const isVisible = el && el.classList.contains('visible');
+        if(isVisible) return;
+        if(shouldShow()) showToast();
+      }
+    
+      // ----- CSS com amarelo translúcido + blur e contraste alto -----
+      (function injectCSS(){
+        if(document.getElementById('boardReminderToastCSS')) return;
+        const css = document.createElement('style');
+        css.id = 'boardReminderToastCSS';
+        css.textContent = `
+          .board-toast{
+            position: fixed;
+            right: 16px; bottom: 16px;
+            z-index: 9999;
+            max-width: 340px;
+            transform: translateY(12px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .18s ease, transform .18s ease, filter .18s ease;
+            filter: drop-shadow(0 8px 20px rgba(0,0,0,.25));
+          }
+          .board-toast.visible{ opacity: 1; transform: translateY(0); pointer-events: auto; }
+          .board-toast.hidden{ opacity: 0; transform: translateY(12px); pointer-events: none; }
+    
+          .board-toast-body{
+            display: flex; align-items: center; gap: 12px;
+            /* fundo amarelo translúcido + blur */
+            background: rgba(255, 213, 0, .78);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            /* contraste do contorno */
+            border: 1px solid rgba(0,0,0,.18);
+            border-radius: 14px;
+            padding: 10px 12px;
+            /* texto escuro para contraste */
+            color: #111;
+            text-shadow: 0 1px 0 rgba(255,255,255,.35); /* sutil, ajuda leitura sobre translúcido */
+          }
+    
+          .board-toast-body .msg{
+            display:flex; align-items:center; gap:10px; flex:1 1 auto;
+            font-weight: 700;
+            letter-spacing:.2px;
+          }
+          .board-toast-body .icon{ font-size: 1.1rem; }
+          .board-toast-body .text{ white-space: nowrap; }
+    
+          .board-toast-body .actions{ display:flex; align-items:center; }
+          .board-toast-body .btn-close{
+            width: 30px; height: 30px; border-radius: 50%;
+            border: 1px solid rgba(0,0,0,.2);
+            background: rgba(255,255,255,.85);
+            color: #111;
+            display: inline-flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            transition: background .15s ease, transform .12s ease, box-shadow .15s ease;
+            box-shadow: 0 2px 6px rgba(0,0,0,.15);
+          }
+          .board-toast-body .btn-close::before{
+            content: '✕'; font-size: .95rem; line-height: 1;
+          }
+          .board-toast-body .btn-close:hover{
+            background: #fff;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 14px rgba(0,0,0,.22);
+          }
+          .board-toast-body .btn-close:active{ transform: translateY(0); }
+    
+          /* Acessibilidade: foco visível */
+          .board-toast-body .btn-close:focus-visible{
+            outline: 3px solid rgba(17,24,39,.45);
+            outline-offset: 2px;
+          }
+    
+          @media (max-width: 480px){
+            .board-toast{ right: 10px; left: 10px; max-width: unset; }
+            .board-toast-body{ padding: 10px; }
+          }
+    
+          /* Respeita quem prefere menos movimento */
+          @media (prefers-reduced-motion: reduce){
+            .board-toast{ transition: opacity .18s ease; transform: none !important; }
+          }
+        `;
+        document.head.appendChild(css);
+      })();
+    
+      // boot
+      ensureToast();
+      if(shouldShow()) showToast();
+      setInterval(tick, CHECK_EVERY_MS);
+      document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) tick(); });
+    })();
+    </script>
+
+
+</html>
