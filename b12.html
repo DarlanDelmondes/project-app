@@ -2994,4 +2994,233 @@
 */
 </style>
 
+<script>
+    // === ENERGY BASELINE PATCH — robusto e auto-adaptável ===
+    (function waitReady(tries=0){
+      const ready = document.body;
+      if(!ready){
+        if(tries<80) return setTimeout(()=>waitReady(tries+1), 120);
+        return;
+      }
+    
+      const LS_KEY_MAIN = 'rpgEnergyChecklist_v5';      // chave provável
+      const BASELINE_TAG = 'energyBaselineDate';
+    
+      // ---------- Utils ----------
+      const pad = n => String(n).padStart(2,'0');
+      const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
+      const $  = s=>document.querySelector(s);
+      const $$ = s=>Array.from(document.querySelectorAll(s));
+    
+      function readState(){
+        try { return JSON.parse(localStorage.getItem(LS_KEY_MAIN) || '{}'); }
+        catch { return {}; }
+      }
+      function writeState(s){ localStorage.setItem(LS_KEY_MAIN, JSON.stringify(s||{})); }
+    
+      function log(...args){ try{ console.info('[EnergyBaseline]', ...args);}catch{} }
+    
+      // ---------- Descobrir máximo de energia ----------
+      function getMaxEnergy(){
+        const s = readState();
+        const cand = [
+          s?.maxEnergy, s?.energyMax, s?.totalEnergyMax,
+          s?.settings?.maxEnergy, s?.settings?.energyMax, s?.settings?.totalEnergyMax
+        ].find(v=>typeof v==='number' && v>0);
+        if(cand) return cand;
+    
+        // tentar ler de uma progress bar
+        const bar = $('.progress-bar[aria-valuemax]') || $('.energy-bar[aria-valuemax]');
+        if(bar){
+          const vmax = parseInt(bar.getAttribute('aria-valuemax')||'0',10);
+          if(vmax>0) return vmax;
+        }
+        return 100;
+      }
+    
+      // ---------- Aplicar energia no estado + UI ----------
+      function applyEnergyToState(val){
+        const s = readState();
+        const maxE = getMaxEnergy();
+        const v = clamp(Math.round(val), 0, maxE);
+    
+        // tenta várias chaves comuns
+        if(typeof s.currentEnergy === 'number' || s.currentEnergy == null) s.currentEnergy = v;
+        if(typeof s.energy === 'number') s.energy = v;
+        if(s.settings && (typeof s.settings.currentEnergy === 'number' || s.settings.currentEnergy == null)) s.settings.currentEnergy = v;
+    
+        writeState(s);
+    
+        // se existir funções do app, tenta
+        if(typeof window.saveState === 'function'){ try{ window.saveState(); }catch{} }
+        if(typeof window.renderFolders === 'function'){ try{ window.renderFolders(); }catch{} }
+        if(typeof window.renderLists === 'function'){
+          try{ (window.__renderListsOrig || window.renderLists)(); }catch{}
+        }
+    
+        // tenta atualizar displays diretos
+        const disp = $('#energyDisplay') || $('.energy-display');
+        if(disp) disp.textContent = v;
+    
+        // qualquer progress bar
+        const bars = $$('.progress-bar');
+        bars.forEach(b=>{
+          const vmax = parseInt(b.getAttribute('aria-valuemax') || getMaxEnergy(),10) || maxE;
+          b.setAttribute('aria-valuenow', String(v));
+          const pct = vmax>0 ? (v/vmax*100) : 0;
+          b.style.width = `${pct}%`;
+          if(!b.title) b.title = `${v}/${vmax}`;
+          // se a barra mostra texto dentro
+          if(b.textContent && b.textContent.trim().length<=5){
+            b.textContent = `${Math.round(pct)}%`;
+          }
+        });
+    
+        return v;
+      }
+    
+      // ---------- Cálculo do baseline pelo relógio ----------
+      function todayAt(h,m){
+        const now = new Date();
+        return new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0, 0);
+      }
+      function computeBaseline(now=new Date()){
+        const maxE = getMaxEnergy();
+        const t0800 = todayAt(8, 0);
+        const t0930 = todayAt(9,30);
+        const t1800 = todayAt(18,0);
+
+        // Antes de 08:00 → cheio
+        if(now < t0800) return maxE;
+
+        // 08:00–09:30 → cheio (mantém no teto)
+        if(now >= t0800 && now < t0930) return maxE;
+
+        // 09:30–18:00 → queda linear de 100% para 10%
+        if(now >= t0930 && now < t1800){
+            const totalMin = 510; // 8h30
+            const elapsed  = Math.floor((now - t0930) / 60000); // minutos passados
+            const frac     = Math.min(Math.max(elapsed / totalMin, 0), 1); // 0..1
+            const percent  = 1 - 0.9 * frac; // 100% → 10%
+            return Math.round(maxE * percent);
+        }
+
+        // Após 18:00 → fixa em 10%
+        return Math.round(maxE * 0.10);
+        }
+    
+      // ---------- Aplicar 1x por dia (com opção forçar) ----------
+      function applyBaselineOncePerDay(force=false){
+        const s = readState();
+        const now = new Date();
+        const tag = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+    
+        if(force || s[BASELINE_TAG] !== tag){
+          const base = computeBaseline(now);
+          const v = applyEnergyToState(base);
+          s[BASELINE_TAG] = tag;
+          writeState(s);
+          log('Baseline aplicado:', v, 'de', getMaxEnergy(), 'às', now.toLocaleTimeString());
+          showToast(`Energia ajustada pelo relógio: ${v}/${getMaxEnergy()}`);
+          return true;
+        }
+        log('Baseline já aplicado hoje; não sobrescrevi.');
+        return false;
+      }
+    
+      // ---------- UI: botão e toast ----------
+      function ensureRecalcButton(){
+        // tenta achar algum container de energia
+        let host = $('#energyDisplay')?.parentElement
+                || document.querySelector('[class*="energy"], [id*="energy"]')
+                || document.querySelector('.card-body, .container');
+    
+        if(!host || $('#btnRecalcEnergy')) return;
+    
+        const btn = document.createElement('button');
+        btn.id = 'btnRecalcEnergy';
+        btn.type = 'button';
+        btn.className = 'btn btn-sm btn-outline-light ms-2';
+        btn.textContent = 'Recalcular pelo relógio';
+        btn.title = 'Recalcula agora conforme 08:00–09:30 (sobe) / 09:30–18:00 (desce)';
+        host.appendChild(btn);
+        btn.addEventListener('click', ()=> applyBaselineOncePerDay(true));
+      }
+    
+      function showToast(msg){
+        // Se tiver Bootstrap 5 (Toast), usa:
+        if(window.bootstrap && typeof bootstrap.Toast === 'function'){
+          let wrap = $('#eb_toastwrap');
+          if(!wrap){
+            wrap = document.createElement('div');
+            wrap.id = 'eb_toastwrap';
+            wrap.style.position = 'fixed';
+            wrap.style.right = '12px';
+            wrap.style.bottom = '12px';
+            wrap.style.zIndex = '1080';
+            document.body.appendChild(wrap);
+          }
+          const toastEl = document.createElement('div');
+          toastEl.className = 'toast align-items-center text-bg-dark border-0';
+          toastEl.setAttribute('role','alert');
+          toastEl.setAttribute('aria-live','assertive');
+          toastEl.setAttribute('aria-atomic','true');
+          toastEl.innerHTML = `
+            <div class="d-flex">
+              <div class="toast-body">${msg}</div>
+              <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>`;
+          wrap.appendChild(toastEl);
+          const t = new bootstrap.Toast(toastEl, { delay: 2500 });
+          t.show();
+          setTimeout(()=> toastEl.remove(), 3000);
+          return;
+        }
+        // fallback simples
+        let badge = $('#eb_badge');
+        if(!badge){
+          badge = document.createElement('div');
+          badge.id = 'eb_badge';
+          badge.style.position = 'fixed';
+          badge.style.right = '12px';
+          badge.style.bottom = '12px';
+          badge.style.background = 'rgba(0,0,0,.7)';
+          badge.style.color = '#fff';
+          badge.style.padding = '8px 12px';
+          badge.style.borderRadius = '10px';
+          badge.style.fontSize = '.9rem';
+          badge.style.zIndex = '1080';
+          document.body.appendChild(badge);
+        }
+        badge.textContent = msg;
+        badge.style.opacity = '1';
+        setTimeout(()=>{ badge.style.transition='opacity .5s'; badge.style.opacity='0'; }, 1800);
+      }
+    
+      // ---------- Executa agora ----------
+      try{
+        ensureRecalcButton();
+        applyBaselineOncePerDay(true); // força na primeira carga pra você ver efeito já
+      }catch(e){
+        console.warn('[EnergyBaseline] erro ao aplicar', e);
+      }
+    
+      // Reinstala após renderLists (caso UI seja redesenhada)
+      if(typeof window.renderLists === 'function' && !window.__energyBaselineWrap){
+        window.__energyBaselineWrap = true;
+        const orig = window.renderLists;
+        window.renderLists = function(){
+          orig();
+          try{
+            ensureRecalcButton();
+            // não força aqui para não sobrescrever uso durante o dia
+          }catch{}
+        };
+      }
+    
+    })();
+    </script>
+
+
+
 </html>
