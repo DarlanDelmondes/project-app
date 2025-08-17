@@ -3413,6 +3413,116 @@
   })();
   </script>
 
+<style>
+  /* bolinha amarela à esquerda do item da pasta */
+  #folderList li,
+  #folders li,
+  .folder-list li { position: relative; }
 
+  .no-done-today::after{
+    content:'';
+    position:absolute;
+    left:-10px;                  /* ajuste fino se necessário */
+    top:50%;
+    transform:translateY(-50%);
+    width:8px;height:8px;border-radius:50%;
+    background:#ffd54f;          /* amarelo */
+    box-shadow:0 0 8px rgba(255,213,79,.8);
+  }
+</style>
+<script>
+  (function folderYellowDotPatch(tries=0){
+    if(!document.body){ if(tries<80) return setTimeout(()=>folderYellowDotPatch(tries+1),120); return; }
+  
+    const LS_KEY='rpgEnergyChecklist_v5';
+    const $ = s => document.querySelector(s);
+  
+    // lê o state do app (usa window.state() se existir)
+    function getState(){
+      try{ return (typeof window.state==='function') ? window.state() : JSON.parse(localStorage.getItem(LS_KEY)||'{}'); }
+      catch{ return {}; }
+    }
+  
+    function isToday(ts){
+      if(!Number.isFinite(ts)) return false;
+      const d=new Date(ts), n=new Date();
+      return d.getFullYear()===n.getFullYear() && d.getMonth()===n.getMonth() && d.getDate()===n.getDate();
+    }
+  
+    // aplica/atualiza os pontinhos após render da sidebar
+    function applyDots(){
+      const s=getState();
+      const list = document.getElementById('folderList')    // estrutura mais comum do seu app
+               || document.getElementById('folders')        // fallback
+               || document.querySelector('.folder-list');   // outro fallback
+      if(!list) return;
+  
+      const items = Array.from(list.children); // li's das pastas
+      if(items.length===0) return;
+  
+      // conta "done hoje" por pasta
+      const doneTodayByFolder = new Map();
+      (s.done||[]).forEach(t=>{
+        if(isToday(Number(t.completedAt))) {
+          const fid = t.folderId || 'root';
+          doneTodayByFolder.set(fid, (doneTodayByFolder.get(fid)||0) + 1);
+        }
+      });
+  
+      // mapeia a lista visual: tipicamente 0 = "Todas", e depois s.folders[i-1]
+      const folders = Array.isArray(s.folders)? s.folders : [];
+      items.forEach((li, idx)=>{
+        // limpa estado anterior
+        li.classList.remove('no-done-today');
+  
+        // identifica folderId do item visual
+        let fid = null;
+        if(idx===0){
+          // "Todas": mostra bolinha se NÃO houve nenhum done hoje no geral
+          const anyDoneToday = (s.done||[]).some(d=>isToday(Number(d.completedAt)));
+          if(!anyDoneToday) li.classList.add('no-done-today');
+          return; // já tratou "Todas"
+        }else{
+          const f = folders[idx-1];
+          fid = f?.id || f?.folderId || null;
+        }
+  
+        if(!fid) return; // sem id, não marca
+  
+        const hasTasksInFolder = (s.tasks||[]).some(t=>(t.folderId||'root')===fid) || (s.done||[]).some(t=>(t.folderId||'root')===fid);
+        const doneCountToday = doneTodayByFolder.get(fid)||0;
+  
+        // regra: se a pasta tem (ou já teve) tasks mas NENHUMA concluída hoje → bolinha
+        if(hasTasksInFolder && doneCountToday===0){
+          li.classList.add('no-done-today');
+        }
+      });
+    }
+  
+    // envelopa renderFolders para sempre reaplicar
+    if(typeof window.renderFolders==='function' && !window.__wrapFoldersYellow){
+      window.__wrapFoldersYellow = true;
+      const orig = window.renderFolders;
+      window.renderFolders = function(){
+        const r = orig.apply(this, arguments);
+        try{ applyDots(); }catch(e){}
+        return r;
+      };
+    }
+  
+    // também reaplica depois de ações comuns
+    ['renderLists','saveState','completeTask','addTask','deleteTask','undoTask','deleteDone']
+      .forEach(fn=>{
+        if(typeof window[fn]==='function' && !window['__wrapYellow_'+fn]){
+          window['__wrapYellow_'+fn]=true;
+          const orig=window[fn];
+          window[fn]=function(){ const r=orig.apply(this,arguments); try{ applyDots(); }catch(e){} return r; };
+        }
+      });
+  
+    // primeira aplicação
+    applyDots();
+  })();
+  </script>
 
 </html>
