@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Testosterona Tracker — Diário de Pontos</title>
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg-grad: radial-gradient(1200px 600px at 10% -10%, rgba(99,102,241,.22), transparent 60%),
+                  radial-gradient(1000px 500px at 110% 10%, rgba(16,185,129,.18), transparent 60%),
+                  linear-gradient(180deg, #0b0f1a 0%, #0a0d16 100%);
+    }
+    body { background: var(--bg-grad); color:#e8eef7; min-height:100vh; }
+    .app-title { letter-spacing:.3px; }
+    .glass { background: rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); border-radius:16px; }
+    .glass-soft { background: rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:14px; }
+    .badge-soft { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); color:#e8eef7; }
+    .form-control, .form-select { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.18); color:#e8eef7; }
+    .form-control::placeholder { color:#a9b5c7; }
+    .form-control:focus, .form-select:focus { box-shadow: 0 0 0 .25rem rgba(99,102,241,.25); }
+    .btn-prom { background: linear-gradient(180deg,#22c55e,#16a34a); color:#06110a; border:none; }
+    .btn-prom:hover { filter: brightness(1.05); }
+    .btn-det { background: linear-gradient(180deg,#ef4444,#b91c1c); color:#fff; border:none; }
+    .btn-det:hover { filter: brightness(1.05); }
+    .stat { font-weight:700; font-size:1.2rem; }
+    .table thead th { color:#a9b5c7; font-weight:600; }
+    .table tbody tr { border-color: rgba(255,255,255,.08); }
+    .table { color:#e8eef7; }
+    .table .text-muted { color:#a9b5c7 !important; }
+    .chip { display:inline-flex; align-items:center; gap:.5rem; padding:.35rem .6rem; border-radius:999px; }
+    .chip i { font-size: 1rem; }
+    .pointer { cursor: pointer; }
+    .small-muted { color:#9fb0c6; font-size:.9rem }
+    .sticky-tools { position:sticky; top:0; z-index:5; padding-top:.5rem; }
+    
+    /* scroll */
+    ::-webkit-scrollbar{ width: 10px; height:10px; }
+    ::-webkit-scrollbar-thumb{ background: rgba(255,255,255,.15); border-radius:10px; }
+    ::-webkit-scrollbar-track{ background: transparent; }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg" style="background:rgba(3,7,18,.35); backdrop-filter: blur(6px); border-bottom:1px solid rgba(255,255,255,.12)">
+    <div class="container-fluid">
+      <span class="navbar-brand text-light app-title fw-bold">
+        <i class="bi bi-activity me-2"></i>Testosterona Tracker
+      </span>
+      <div class="d-flex align-items-center gap-2">
+        <button id="btnExport" class="btn btn-outline-light btn-sm"><i class="bi bi-download me-1"></i>Exportar dia</button>
+        <label class="btn btn-outline-light btn-sm mb-0" for="importFile"><i class="bi bi-upload me-1"></i>Importar</label>
+        <input id="importFile" type="file" accept="application/json" class="d-none" />
+      </div>
+    </div>
+  </nav>
+
+  <main class="container py-4">
+    <div class="row g-4">
+      <!-- Left: Controls -->
+      <div class="col-lg-5">
+        <div class="sticky-tools">
+          <div class="glass p-3 mb-3">
+            <div class="row g-3 align-items-end">
+              <div class="col-6">
+                <label class="form-label small">Data</label>
+                <input type="date" id="dayPicker" class="form-control">
+              </div>
+              <div class="col-6">
+                <label class="form-label small">Nível inicial (pontos)</label>
+                <div class="input-group">
+                  <input type="number" id="startLevel" class="form-control" step="1" />
+                  <button id="btnSaveStart" class="btn btn-outline-light"><i class="bi bi-save"></i></button>
+                </div>
+              </div>
+            </div>
+            <div class="row g-3 mt-1">
+              <div class="col-12 d-flex gap-3 align-items-center">
+                <span class="small-muted">Total atual:</span>
+                <span id="statCurrent" class="stat"></span>
+                <span class="ms-auto small-muted">Pico do dia: <span id="statPeak" class="fw-semibold"></span></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="glass p-3 mb-3">
+            <div class="d-flex align-items-center mb-2">
+              <h6 class="mb-0">Promotores</h6>
+              <div class="ms-auto d-flex gap-2">
+                <button id="btnCfgProm" class="btn btn-sm btn-outline-light"><i class="bi bi-sliders"></i></button>
+              </div>
+            </div>
+            <div id="promoters" class="d-flex flex-wrap gap-2"></div>
+            <div id="cfgPromoters" class="mt-3 d-none">
+              <div class="small-muted mb-2">Edite os pontos dos promotores (em pontos). Adicione novos se quiser.</div>
+              <div id="promList" class="vstack gap-2"></div>
+              <div class="d-flex gap-2 mt-2">
+                <input id="newPromName" class="form-control" placeholder="Novo promotor" />
+                <input id="newPromPts" class="form-control" type="number" placeholder="Pontos" />
+                <button id="addProm" class="btn btn-prom">Adicionar</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="glass p-3 mb-3">
+            <div class="d-flex align-items-center mb-2">
+              <h6 class="mb-0">Detratores</h6>
+              <div class="ms-auto d-flex gap-2">
+                <button id="btnCfgDet" class="btn btn-sm btn-outline-light"><i class="bi bi-sliders"></i></button>
+              </div>
+            </div>
+            <div id="detractors" class="d-flex flex-wrap gap-2"></div>
+            <div id="cfgDetractors" class="mt-3 d-none">
+              <div class="small-muted mb-2">Edite os pontos dos detratores (em pontos). Use valores negativos.</div>
+              <div id="detList" class="vstack gap-2"></div>
+              <div class="d-flex gap-2 mt-2">
+                <input id="newDetName" class="form-control" placeholder="Novo detrator" />
+                <input id="newDetPts" class="form-control" type="number" placeholder="Pontos (negativo)" />
+                <button id="addDet" class="btn btn-det">Adicionar</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="glass p-3">
+            <h6 class="mb-2">Lançamento manual</h6>
+            <div class="row g-2">
+              <div class="col-6">
+                <input id="manualName" class="form-control" placeholder="Descrição" />
+              </div>
+              <div class="col-4">
+                <input id="manualPts" class="form-control" type="number" placeholder="± pontos" />
+              </div>
+              <div class="col-2 d-grid">
+                <button id="addManual" class="btn btn-outline-light"><i class="bi bi-plus-lg"></i></button>
+              </div>
+            </div>
+            <div class="d-flex gap-2 mt-3">
+              <button id="btnUndo" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-counterclockwise me-1"></i>Desfazer último</button>
+              <button id="btnResetDay" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash3 me-1"></i>Resetar dia</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Chart + Log -->
+      <div class="col-lg-7">
+        <div class="glass p-3 mb-3">
+          <div class="d-flex align-items-center mb-2">
+            <h6 class="mb-0">Gráfico — Testosterona ao longo do dia (pontos)</h6>
+          </div>
+          <canvas id="chart" height="140"></canvas>
+        </div>
+
+        <div class="glass p-3">
+          <div class="d-flex align-items-center mb-2">
+            <h6 class="mb-0">Log de ações</h6>
+            <span class="ms-auto small-muted">Todas as entradas/saídas do dia</span>
+          </div>
+          <div class="table-responsive">
+            <table class="table align-middle">
+              <thead>
+                <tr>
+                  <th style="width:110px">Hora</th>
+                  <th style="width:110px">Tipo</th>
+                  <th>Ação</th>
+                  <th class="text-end" style="width:120px">Δ (pontos)</th>
+                  <th class="text-end" style="width:120px">Total</th>
+                  <th style="width:90px"></th>
+                </tr>
+              </thead>
+              <tbody id="logBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <template id="tmplSettingRow">
+    <div class="input-group">
+      <span class="input-group-text bg-transparent text-light" style="min-width:42%"></span>
+      <input type="number" class="form-control" />
+      <button class="btn btn-outline-light"><i class="bi bi-x"></i></button>
+    </div>
+  </template>
+
+  <script>
+    // ===== Utilities =====
+    const pad = (n) => String(n).padStart(2,'0');
+    const todayStr = () => {
+      const d = new Date();
+      const y = d.getFullYear();
+      const m = pad(d.getMonth()+1);
+      const dd = pad(d.getDate());
+      return `${y}-${m}-${dd}`;
+    };
+
+    const keyFor = (dateStr) => `tboost_v1:${dateStr}`;
+
+    const defaultConfig = () => ({
+      startLevel: 10,
+      config: {
+        promoters: {
+          "Microvitória matinal": 2,
+          "Delegar com clareza": 3,
+          "Confronto produtivo": 4,
+          "Visão estratégica": 5,
+          "Power pose (2min)": 1,
+          "Deep Work 25min": 2
+        },
+        detractors: {
+          "Procrastinação": -3,
+          "Aceitar tarefa indevida": -4,
+          "Explicação excessiva": -5,
+          "Reunião sem controle": -2,
+          "Scroll infinito": -2
+        }
+      },
+      entries: [] // { ts, type, label, delta }
+    });
+
+    // ===== State =====
+    let state = { dateStr: todayStr(), data: null, chart: null };
+
+    // ===== Persistence =====
+    function loadDay(dateStr){
+      const raw = localStorage.getItem(keyFor(dateStr));
+      if(!raw){
+        const cfg = defaultConfig();
+        localStorage.setItem(keyFor(dateStr), JSON.stringify(cfg));
+        return structuredClone(cfg);
+      }
+      try{ return JSON.parse(raw); } catch(e){
+        console.error('Erro ao ler storage', e);
+        const cfg = defaultConfig();
+        return cfg;
+      }
+    }
+
+    function saveDay(){
+      localStorage.setItem(keyFor(state.dateStr), JSON.stringify(state.data));
+    }
+
+    // ===== UI Bindings =====
+    const dayPicker = document.getElementById('dayPicker');
+    const startLevel = document.getElementById('startLevel');
+    const btnSaveStart = document.getElementById('btnSaveStart');
+
+    const promWrap = document.getElementById('promoters');
+    const detWrap = document.getElementById('detractors');
+
+    const cfgProm = document.getElementById('cfgPromoters');
+    const cfgDet = document.getElementById('cfgDetractors');
+    const btnCfgProm = document.getElementById('btnCfgProm');
+    const btnCfgDet = document.getElementById('btnCfgDet');
+
+    const promList = document.getElementById('promList');
+    const detList = document.getElementById('detList');
+
+    const newPromName = document.getElementById('newPromName');
+    const newPromPts = document.getElementById('newPromPts');
+    const addProm = document.getElementById('addProm');
+
+    const newDetName = document.getElementById('newDetName');
+    const newDetPts = document.getElementById('newDetPts');
+    const addDet = document.getElementById('addDet');
+
+    const manualName = document.getElementById('manualName');
+    const manualPts = document.getElementById('manualPts');
+    const addManual = document.getElementById('addManual');
+
+    const btnResetDay = document.getElementById('btnResetDay');
+    const btnUndo = document.getElementById('btnUndo');
+    const btnExport = document.getElementById('btnExport');
+    const importFile = document.getElementById('importFile');
+
+    const statCurrent = document.getElementById('statCurrent');
+    const statPeak = document.getElementById('statPeak');
+
+    const logBody = document.getElementById('logBody');
+
+    // ===== Chart =====
+    const ctx = document.getElementById('chart');
+    function ensureChart(){
+      if(state.chart){ return state.chart; }
+      const c = new Chart(ctx, {
+        type: 'line',
+        data: { labels: [], datasets: [{ label: 'Pontos', data: [], tension:.35, fill:true, pointRadius:3 }] },
+        options: {
+          animation: { duration: 250 },
+          scales: {
+            x: { ticks: { color:'#c7d2e5' }, grid:{ color:'rgba(255,255,255,.08)'} },
+            y: { ticks: { color:'#c7d2e5' }, grid:{ color:'rgba(255,255,255,.08)'} }
+          },
+          plugins: {
+            legend: { display:false },
+            tooltip: { callbacks: { label:(ctx)=> ` ${ctx.parsed.y} pontos` } }
+          }
+        }
+      });
+      // gradient fill after init
+      const grad = c.ctx.createLinearGradient(0,0,0,200);
+      grad.addColorStop(0,'rgba(99,102,241,.45)');
+      grad.addColorStop(1,'rgba(99,102,241,0)');
+      c.data.datasets[0].backgroundColor = grad;
+      c.data.datasets[0].borderColor = 'rgba(99,102,241,.9)';
+      return state.chart = c;
+    }
+
+    function recomputeSeries(){
+      const entries = [...state.data.entries].sort((a,b)=>a.ts-b.ts);
+      let total = Number(state.data.startLevel)||0;
+      const labels = ["00:00"]; // baseline at day start
+      const values = [total];
+      let peak = total;
+      for(const e of entries){
+        total += Number(e.delta)||0;
+        if(total>peak) peak = total;
+        const d = new Date(e.ts);
+        labels.push(`${pad(d.getHours())}:${pad(d.getMinutes())}`);
+        values.push(total);
+      }
+      return { labels, values, current: total, peak };
+    }
+
+    function refreshChartAndStats(){
+      const c = ensureChart();
+      const s = recomputeSeries();
+      c.data.labels = s.labels;
+      c.data.datasets[0].data = s.values;
+      c.update();
+      statCurrent.textContent = `${s.current} pts`;
+      statPeak.textContent = `${s.peak} pts`;
+    }
+
+    // ===== Rendering =====
+    function renderButtons(){
+      promWrap.innerHTML = '';
+      detWrap.innerHTML = '';
+
+      const makeBtn = (label, pts, type) => {
+        const btn = document.createElement('button');
+        btn.className = `btn ${type==='prom'?'btn-prom':'btn-det'} btn-sm chip`;
+        btn.innerHTML = `<i class="bi ${type==='prom'?'bi-arrow-up-right':'bi-arrow-down-left'}"></i><span>${label}</span><span class="badge bg-dark border border-light">${pts>0?'+':''}${pts}</span>`;
+        btn.addEventListener('click',()=> addEntry(type==='prom'?'promoter':'detractor', label, Number(pts)) );
+        return btn;
+      };
+
+      for(const [label, pts] of Object.entries(state.data.config.promoters)){
+        promWrap.appendChild(makeBtn(label, pts, 'prom'));
+      }
+      for(const [label, pts] of Object.entries(state.data.config.detractors)){
+        detWrap.appendChild(makeBtn(label, pts, 'det'));
+      }
+    }
+
+    function renderSettings(){
+      // promoters
+      promList.innerHTML = '';
+      for(const [label, pts] of Object.entries(state.data.config.promoters)){
+        const row = document.getElementById('tmplSettingRow').content.cloneNode(true);
+        row.querySelector('.input-group-text').textContent = label;
+        const input = row.querySelector('input');
+        input.value = pts;
+        input.addEventListener('change', () => {
+          state.data.config.promoters[label] = Number(input.value);
+          saveDay(); renderButtons(); refreshChartAndStats();
+        });
+        row.querySelector('button').addEventListener('click', ()=>{
+          delete state.data.config.promoters[label];
+          saveDay(); renderSettings(); renderButtons();
+        });
+        promList.appendChild(row);
+      }
+
+      // detractors
+      detList.innerHTML = '';
+      for(const [label, pts] of Object.entries(state.data.config.detractors)){
+        const row = document.getElementById('tmplSettingRow').content.cloneNode(true);
+        row.querySelector('.input-group-text').textContent = label;
+        const input = row.querySelector('input');
+        input.value = pts;
+        input.addEventListener('change', () => {
+          state.data.config.detractors[label] = Number(input.value);
+          saveDay(); renderButtons(); refreshChartAndStats();
+        });
+        row.querySelector('button').addEventListener('click', ()=>{
+          delete state.data.config.detractors[label];
+          saveDay(); renderSettings(); renderButtons();
+        });
+        detList.appendChild(row);
+      }
+    }
+
+    function renderLog(){
+      const entries = [...state.data.entries].sort((a,b)=>a.ts-b.ts);
+      let running = Number(state.data.startLevel)||0;
+      logBody.innerHTML = '';
+      for(let i=0;i<entries.length;i++){
+        const e = entries[i];
+        running += Number(e.delta)||0;
+        const tr = document.createElement('tr');
+        const d = new Date(e.ts);
+        tr.innerHTML = `
+          <td class="text-muted">${pad(d.getHours())}:${pad(d.getMinutes())}</td>
+          <td><span class="badge ${e.type==='promoter'?'bg-success':'bg-danger'}">${e.type==='promoter'?'Promotor':'Detrator'}</span></td>
+          <td>${e.label}</td>
+          <td class="text-end ${e.delta>=0?'text-success':'text-danger'} fw-semibold">${e.delta>0?'+':''}${e.delta}</td>
+          <td class="text-end fw-semibold">${running}</td>
+          <td class="text-end">
+            <button class="btn btn-sm btn-outline-light me-1" title="Editar" data-idx="${e.ts}"><i class="bi bi-pencil"></i></button>
+            <button class="btn btn-sm btn-outline-danger" title="Excluir" data-del="${e.ts}"><i class="bi bi-x"></i></button>
+          </td>`;
+        logBody.appendChild(tr);
+      }
+
+      // edit/delete handlers
+      logBody.querySelectorAll('button[data-del]').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const ts = Number(btn.getAttribute('data-del'));
+          state.data.entries = state.data.entries.filter(x=>x.ts!==ts);
+          saveDay(); renderLog(); refreshChartAndStats();
+        });
+      });
+
+      logBody.querySelectorAll('button[data-idx]').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const ts = Number(btn.getAttribute('data-idx'));
+          const entry = state.data.entries.find(x=>x.ts===ts);
+          if(!entry) return;
+          const newLabel = prompt('Editar descrição:', entry.label);
+          if(newLabel===null) return;
+          const newDeltaStr = prompt('Editar pontos (use número, ex.: -3, 2):', entry.delta);
+          if(newDeltaStr===null) return;
+          const newDelta = Number(newDeltaStr);
+          if(Number.isNaN(newDelta)) return alert('Valor inválido.');
+          entry.label = newLabel.trim()||entry.label;
+          entry.delta = newDelta;
+          saveDay(); renderLog(); refreshChartAndStats();
+        });
+      });
+    }
+
+    // ===== Actions =====
+    function addEntry(type, label, delta){
+      state.data.entries.push({ ts: Date.now(), type, label, delta:Number(delta) });
+      saveDay(); renderLog(); refreshChartAndStats();
+    }
+
+    function loadUI(){
+      dayPicker.value = state.dateStr;
+      startLevel.value = state.data.startLevel;
+      renderButtons();
+      renderSettings();
+      renderLog();
+      refreshChartAndStats();
+    }
+
+    // ===== Event wiring =====
+    dayPicker.addEventListener('change', ()=>{
+      // save current first
+      saveDay();
+      state.dateStr = dayPicker.value || todayStr();
+      state.data = loadDay(state.dateStr);
+      loadUI();
+    });
+
+    btnSaveStart.addEventListener('click', ()=>{
+      state.data.startLevel = Number(startLevel.value)||0;
+      saveDay(); refreshChartAndStats(); renderLog();
+    });
+
+    btnCfgProm.addEventListener('click', ()=>{ cfgProm.classList.toggle('d-none'); });
+    btnCfgDet.addEventListener('click', ()=>{ cfgDet.classList.toggle('d-none'); });
+
+    addProm.addEventListener('click', ()=>{
+      const name = newPromName.value.trim();
+      const pts = Number(newPromPts.value);
+      if(!name) return alert('Nome do promotor.');
+      if(Number.isNaN(pts)) return alert('Informe pontos (número).');
+      state.data.config.promoters[name] = pts;
+      newPromName.value = ''; newPromPts.value = '';
+      saveDay(); renderSettings(); renderButtons();
+    });
+
+    addDet.addEventListener('click', ()=>{
+      const name = newDetName.value.trim();
+      const pts = Number(newDetPts.value);
+      if(!name) return alert('Nome do detrator.');
+      if(Number.isNaN(pts)) return alert('Informe pontos (número).');
+      state.data.config.detractors[name] = pts;
+      newDetName.value = ''; newDetPts.value = '';
+      saveDay(); renderSettings(); renderButtons();
+    });
+
+    addManual.addEventListener('click', ()=>{
+      const name = manualName.value.trim()||'Ajuste manual';
+      const pts = Number(manualPts.value);
+      if(Number.isNaN(pts)) return alert('Informe pontos (número).');
+      addEntry(pts>=0?'promoter':'detractor', name, pts);
+      manualName.value=''; manualPts.value='';
+    });
+
+    btnUndo.addEventListener('click', ()=>{
+      state.data.entries.pop();
+      saveDay(); renderLog(); refreshChartAndStats();
+    });
+
+    btnResetDay.addEventListener('click', ()=>{
+      if(!confirm('Tem certeza que deseja limpar todos os lançamentos do dia?')) return;
+      state.data.entries = [];
+      saveDay(); renderLog(); refreshChartAndStats();
+    });
+
+    btnExport.addEventListener('click', ()=>{
+      const blob = new Blob([JSON.stringify(state.data,null,2)], {type:'application/json'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `testosterona-${state.dateStr}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+
+    importFile.addEventListener('change', (ev)=>{
+      const file = ev.target.files?.[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try{
+          const j = JSON.parse(String(reader.result));
+          if(!j || typeof j !== 'object') throw new Error('JSON inválido');
+          state.data = j;
+          saveDay();
+          loadUI();
+        }catch(err){ alert('Falha ao importar: '+err.message); }
+      };
+      reader.readAsText(file);
+      ev.target.value = '';
+    });
+
+    // ===== Init =====
+    (function init(){
+      state.dateStr = todayStr();
+      dayPicker.value = state.dateStr;
+      state.data = loadDay(state.dateStr);
+      loadUI();
+    })();
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+
+
+</html>
