@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Swimlane Board — LocalStorage</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Drag visuals */
+    .dragging { opacity: 0.5; }
+    .drop-target { outline: 2px dashed rgba(0,0,0,0.25); outline-offset: -6px; }
+
+    /* Age-based highlight ring colors applied to .card-age */
+    .age-1h { box-shadow: 0 0 0 3px rgba(34,197,94,0.8) inset; }    /* verde forte */
+    .age-4h { box-shadow: 0 0 0 3px rgba(59,130,246,0.8) inset; }   /* azul */
+    .age-24h { box-shadow: 0 0 0 3px rgba(234,179,8,0.9) inset; }  /* âmbar */
+    .age-7d { box-shadow: 0 0 0 3px rgba(244,63,94,0.85) inset; }  /* rosa/vermelho */
+    .age-old { box-shadow: 0 0 0 2px rgba(107,114,128,0.45) inset; }/* cinza leve */
+
+    /* Filter emphasis */
+    .dimmed { opacity: 0.25; filter: grayscale(0.7); }
+    .glow { animation: glow 1.3s ease-in-out infinite alternate; }
+    @keyframes glow { from { box-shadow: 0 0 0 3px rgba(255,255,255,0) inset, 0 0 0 rgba(0,0,0,0);} to { box-shadow: 0 0 0 3px rgba(99,102,241,0.55) inset, 0 8px 24px rgba(99,102,241,0.25);} }
+
+    /* Simple scrollbar tweak */
+    .thin-scroll::-webkit-scrollbar{height:8px;width:8px} .thin-scroll::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:9999px}
+  </style>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-800">
+  <header class="sticky top-0 z-40 border-b bg-white/90 backdrop-blur">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center gap-3">
+      <h1 class="text-xl font-bold tracking-tight">Swimlane Board</h1>
+      <div class="ml-auto flex flex-wrap items-center gap-2">
+        <!-- Filter buttons -->
+        <div class="flex items-center gap-2" role="group" aria-label="Filtros por atividade recente">
+          <button data-filter="1h" class="filter-btn px-3 py-1.5 rounded-full border text-sm hover:bg-emerald-50 border-emerald-300 text-emerald-700">≤ 1h</button>
+          <button data-filter="4h" class="filter-btn px-3 py-1.5 rounded-full border text-sm hover:bg-blue-50 border-blue-300 text-blue-700">≤ 4h</button>
+          <button data-filter="24h" class="filter-btn px-3 py-1.5 rounded-full border text-sm hover:bg-amber-50 border-amber-300 text-amber-700">≤ 24h</button>
+          <button data-filter="7d" class="filter-btn px-3 py-1.5 rounded-full border text-sm hover:bg-rose-50 border-rose-300 text-rose-700">≤ 1 semana</button>
+          <button id="clearFilter" class="px-3 py-1.5 rounded-full border text-sm hover:bg-slate-50 border-slate-300 text-slate-700">Limpar filtro</button>
+        </div>
+        <span class="hidden md:inline text-slate-400">|</span>
+        <!-- Actions -->
+        <button id="newProject" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm hover:bg-indigo-700">Novo projeto</button>
+        <button id="exportBtn" class="px-3 py-1.5 rounded-lg border text-sm">Exportar</button>
+        <label class="px-3 py-1.5 rounded-lg border text-sm cursor-pointer">
+          Importar <input id="importFile" type="file" accept="application/json" class="hidden" />
+        </label>
+      </div>
+    </div>
+    <div class="max-w-7xl mx-auto px-4 pb-3">
+      <div class="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+        <span class="flex items-center gap-2"><span class="inline-block w-3 h-3 rounded-full bg-emerald-400"></span>Mov./edições na última 1h</span>
+        <span class="flex items-center gap-2"><span class="inline-block w-3 h-3 rounded-full bg-blue-400"></span>até 4h</span>
+        <span class="flex items-center gap-2"><span class="inline-block w-3 h-3 rounded-full bg-amber-400"></span>até 24h</span>
+        <span class="flex items-center gap-2"><span class="inline-block w-3 h-3 rounded-full bg-rose-400"></span>até 7d</span>
+        <span class="flex items-center gap-2"><span class="inline-block w-3 h-3 rounded-full bg-slate-400"></span>mais antigos</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-6 space-y-8" id="boardRoot">
+    <!-- Projects (swimlanes) render here -->
+  </main>
+
+  <!-- Card Editor Modal -->
+  <dialog id="cardModal" class="backdrop:bg-black/40 rounded-xl p-0 w-full max-w-2xl">
+    <form method="dialog" class="bg-white rounded-xl overflow-hidden">
+      <div class="px-5 py-4 border-b flex items-center gap-3">
+        <h3 id="modalTitle" class="font-semibold text-lg">Editar card</h3>
+        <button value="cancel" class="ml-auto px-2 py-1 text-slate-500 hover:text-slate-800">Fechar</button>
+      </div>
+      <div class="p-5 space-y-4">
+        <label class="block text-sm font-medium">Título
+          <input id="cardTitleInput" class="mt-1 w-full rounded-lg border px-3 py-2" />
+        </label>
+        <label class="block text-sm font-medium">Descrição
+          <textarea id="cardDescInput" class="mt-1 w-full rounded-lg border px-3 py-2 min-h-[120px]"></textarea>
+        </label>
+        <details class="rounded-lg border p-3 open:bg-slate-50">
+          <summary class="cursor-pointer font-medium">Histórico (oculto)</summary>
+          <ul id="historyList" class="mt-2 space-y-2 text-sm text-slate-600 max-h-48 overflow-auto thin-scroll"></ul>
+        </details>
+      </div>
+      <div class="px-5 py-3 border-t flex items-center gap-3 justify-between">
+        <button id="deleteCardBtn" type="button" class="px-3 py-2 rounded-lg border border-rose-300 text-rose-700 hover:bg-rose-50">Excluir</button>
+        <div class="flex items-center gap-2">
+          <button value="cancel" class="px-3 py-2 rounded-lg border">Cancelar</button>
+          <button id="saveCardBtn" value="default" class="px-3 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">Salvar</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <template id="projectTpl">
+    <section class="swimlane bg-white rounded-2xl border shadow-sm">
+      <header class="px-4 py-3 border-b flex items-center gap-3">
+        <h2 class="lane-title text-lg font-semibold"></h2>
+        <button class="rename-lane text-xs px-2 py-1 rounded border">Renomear</button>
+        <button class="delete-lane text-xs px-2 py-1 rounded border border-rose-300 text-rose-700 ml-1">Excluir</button>
+        <div class="ml-auto flex items-center gap-2">
+          <button class="add-column px-3 py-1.5 rounded-lg bg-slate-900 text-white text-sm">+ Coluna</button>
+        </div>
+      </header>
+      <div class="columns flex gap-4 overflow-auto thin-scroll p-4"></div>
+    </section>
+  </template>
+
+  <template id="columnTpl">
+    <div class="column w-72 shrink-0 bg-slate-50 rounded-xl border p-3 flex flex-col" draggable="false">
+      <div class="flex items-center gap-2 mb-2">
+        <h3 class="col-title font-semibold"></h3>
+        <button class="rename-col text-xs px-2 py-0.5 rounded border">Renomear</button>
+        <button class="delete-col text-xs px-2 py-0.5 rounded border border-rose-300 text-rose-700">Excluir</button>
+      </div>
+      <div class="cards space-y-2 min-h-[40px] flex-1" data-dropzone></div>
+      <button class="add-card mt-3 px-3 py-2 rounded-lg bg-white border hover:bg-slate-100">+ Card</button>
+    </div>
+  </template>
+
+  <template id="cardTpl">
+    <article class="card card-age rounded-lg border bg-white p-3 shadow-sm cursor-grab active:cursor-grabbing" draggable="true">
+      <div class="flex items-center gap-2">
+        <h4 class="card-title font-medium flex-1 truncate"></h4>
+        <button class="edit-card text-xs px-2 py-0.5 rounded border">Editar</button>
+      </div>
+      <p class="card-desc text-sm text-slate-600 mt-1 line-clamp-4"></p>
+      <div class="mt-2 text-[11px] text-slate-500 flex items-center justify-between">
+        <span class="last-activity">—</span>
+        <span class="card-id hidden"></span>
+      </div>
+    </article>
+  </template>
+
+  <script>
+  // --- Data Layer -----------------------------------------------------------
+  const STORAGE_KEY = 'swimlane.board.v1';
+  let state = loadState();
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return { projects: [] };
+  }
+  function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+  const uid = () => Math.random().toString(36).slice(2, 9);
+  const nowISO = () => new Date().toISOString();
+
+  // --- Helpers: time windows & labels --------------------------------------
+  const ms = { h: 3600000, d: 86400000 };
+  const FILTER_WINDOWS = { '1h': ms.h, '4h': 4*ms.h, '24h': 24*ms.h, '7d': 7*ms.d };
+
+  function shortTimeAgo(iso) {
+    const dt = new Date(iso);
+    const diff = Date.now() - dt.getTime();
+    const mins = Math.floor(diff/60000);
+    if (mins < 1) return 'agora';
+    if (mins < 60) return mins + ' min';
+    const hrs = Math.floor(mins/60);
+    if (hrs < 24) return hrs + ' h';
+    const days = Math.floor(hrs/24);
+    return days + ' d';
+  }
+
+  function ageClass(iso) {
+    const diff = Date.now() - new Date(iso).getTime();
+    if (diff <= FILTER_WINDOWS['1h']) return 'age-1h';
+    if (diff <= FILTER_WINDOWS['4h']) return 'age-4h';
+    if (diff <= FILTER_WINDOWS['24h']) return 'age-24h';
+    if (diff <= FILTER_WINDOWS['7d']) return 'age-7d';
+    return 'age-old';
+  }
+
+  // --- Rendering ------------------------------------------------------------
+  const boardRoot = document.getElementById('boardRoot');
+  const projectTpl = document.getElementById('projectTpl');
+  const columnTpl = document.getElementById('columnTpl');
+  const cardTpl = document.getElementById('cardTpl');
+
+  function render() {
+    boardRoot.innerHTML = '';
+    state.projects.forEach(project => {
+      const sec = projectTpl.content.firstElementChild.cloneNode(true);
+      const titleEl = sec.querySelector('.lane-title');
+      titleEl.textContent = project.title;
+
+      // Lane actions
+      sec.querySelector('.rename-lane').onclick = () => {
+        const v = prompt('Novo título do projeto:', project.title);
+        if (v && v.trim()) { project.title = v.trim(); saveState(); render(); }
+      };
+      sec.querySelector('.delete-lane').onclick = () => {
+        if (confirm('Excluir projeto e todos os seus dados?')) {
+          state.projects = state.projects.filter(p => p.id !== project.id);
+          saveState(); render();
+        }
+      };
+      sec.querySelector('.add-column').onclick = () => addColumn(project.id);
+
+      const colsWrap = sec.querySelector('.columns');
+      project.columns.forEach(col => {
+        const colEl = columnTpl.content.firstElementChild.cloneNode(true);
+        colEl.querySelector('.col-title').textContent = col.title;
+        // Column actions
+        colEl.querySelector('.rename-col').onclick = () => {
+          const v = prompt('Novo título da coluna:', col.title);
+          if (v && v.trim()) { col.title = v.trim(); saveState(); render(); }
+        };
+        colEl.querySelector('.delete-col').onclick = () => {
+          if (confirm('Excluir coluna e seus cards?')) {
+            project.columns = project.columns.filter(c => c.id !== col.id);
+            saveState(); render();
+          }
+        };
+        colEl.querySelector('.add-card').onclick = () => addCard(project.id, col.id);
+
+        const cardsWrap = colEl.querySelector('.cards');
+        enableDropzone(cardsWrap, project.id, col.id);
+
+        col.cards.forEach(card => {
+          const cardEl = createCardElement(card, project.id, col.id);
+          cardsWrap.appendChild(cardEl);
+        });
+
+        colsWrap.appendChild(colEl);
+      });
+      boardRoot.appendChild(sec);
+    });
+    applyActiveFilter();
+  }
+
+  function createCardElement(card, projectId, colId) {
+    const el = cardTpl.content.firstElementChild.cloneNode(true);
+    el.dataset.cardId = card.id;
+    el.dataset.projectId = projectId;
+    el.dataset.colId = colId;
+
+    const titleEl = el.querySelector('.card-title');
+    const descEl = el.querySelector('.card-desc');
+    const lastEl = el.querySelector('.last-activity');
+
+    titleEl.textContent = card.title || '(sem título)';
+    descEl.textContent = card.description || '';
+    lastEl.textContent = 'atualizado ' + shortTimeAgo(card.lastActivity);
+
+    // age class
+    el.classList.add(ageClass(card.lastActivity));
+
+    // Drag events
+    el.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('text/plain', card.id);
+      e.dataTransfer.effectAllowed = 'move';
+      el.classList.add('dragging');
+    });
+    el.addEventListener('dragend', () => el.classList.remove('dragging'));
+
+    // Edit button opens modal
+    el.querySelector('.edit-card').onclick = () => openCardModal(projectId, colId, card.id);
+
+    return el;
+  }
+
+  function enableDropzone(zoneEl, projectId, colId) {
+    zoneEl.addEventListener('dragover', (e) => { e.preventDefault(); zoneEl.classList.add('drop-target'); });
+    zoneEl.addEventListener('dragleave', () => zoneEl.classList.remove('drop-target'));
+    zoneEl.addEventListener('drop', (e) => {
+      e.preventDefault();
+      zoneEl.classList.remove('drop-target');
+      const cardId = e.dataTransfer.getData('text/plain');
+      moveCard(cardId, projectId, colId);
+    });
+  }
+
+  // --- Mutations ------------------------------------------------------------
+  function addProject(title = '') {
+    const p = { id: uid(), title: title || 'Novo projeto', createdAt: nowISO(), columns: [] };
+    state.projects.push(p); saveState(); render();
+  }
+  function addColumn(projectId, title = '') {
+    const proj = state.projects.find(p => p.id === projectId);
+    if (!proj) return;
+    proj.columns.push({ id: uid(), title: title || 'Nova coluna', createdAt: nowISO(), cards: [] });
+    saveState(); render();
+  }
+  function addCard(projectId, colId) {
+    const { project, column } = getProjectAndColumn(projectId, colId);
+    if (!column) return;
+    const n = { id: uid(), title: 'Novo card', description: '', createdAt: nowISO(), lastActivity: nowISO(), history: [] };
+    column.cards.push(n); saveState(); render();
+  }
+  function getProjectAndColumn(projectId, colId) {
+    const project = state.projects.find(p => p.id === projectId);
+    const column = project?.columns.find(c => c.id === colId);
+    return { project, column };
+  }
+  function findCard(cardId) {
+    for (const project of state.projects) {
+      for (const column of project.columns) {
+        const idx = column.cards.findIndex(c => c.id === cardId);
+        if (idx !== -1) return { project, column, card: column.cards[idx], cardIndex: idx };
+      }
+    }
+    return null;
+  }
+  function moveCard(cardId, targetProjectId, targetColId) {
+    const hit = findCard(cardId);
+    if (!hit) return;
+    const { project: fromProj, column: fromCol, card } = hit;
+    const toProj = state.projects.find(p => p.id === targetProjectId);
+    const toCol = toProj?.columns.find(c => c.id === targetColId);
+    if (!toCol) return;
+
+    // Remove from old
+    fromCol.cards = fromCol.cards.filter(c => c.id !== cardId);
+    // Log move
+    card.history.unshift({ ts: nowISO(), type: 'move', from: `${fromProj.title} › ${fromCol.title}`, to: `${toProj.title} › ${toCol.title}` });
+    card.lastActivity = nowISO();
+    // Add to new
+    toCol.cards.push(card);
+    saveState(); render();
+  }
+
+  // --- Modal: edit card -----------------------------------------------------
+  const modal = document.getElementById('cardModal');
+  const titleInput = document.getElementById('cardTitleInput');
+  const descInput = document.getElementById('cardDescInput');
+  const historyList = document.getElementById('historyList');
+  const deleteCardBtn = document.getElementById('deleteCardBtn');
+  const saveCardBtn = document.getElementById('saveCardBtn');
+
+  let modalCtx = null; // { cardId, projectId, colId }
+
+  function openCardModal(projectId, colId, cardId) {
+    const hit = findCard(cardId);
+    if (!hit) return;
+    modalCtx = { cardId, projectId, colId };
+
+    titleInput.value = hit.card.title;
+    descInput.value = hit.card.description;
+    renderHistory(hit.card);
+
+    modal.showModal();
+  }
+
+  function renderHistory(card) {
+    historyList.innerHTML = '';
+    if (!card.history?.length) {
+      const li = document.createElement('li');
+      li.textContent = 'Sem histórico.';
+      historyList.appendChild(li);
+      return;
+    }
+    card.history.forEach(h => {
+      const li = document.createElement('li');
+      if (h.type === 'edit') {
+        li.innerHTML = `<div><span class="font-medium">${fmtDate(h.ts)}</span> — edição de descrição</div>` +
+          (h.prev && h.prev !== '' ? `<div class="text-slate-500 whitespace-pre-wrap">Anterior: ${escapeHTML(h.prev)}</div>` : '') +
+          (h.next && h.next !== '' ? `<div class="text-slate-500 whitespace-pre-wrap">Atual: ${escapeHTML(h.next)}</div>` : '');
+      } else if (h.type === 'move') {
+        li.innerHTML = `<div><span class="font-medium">${fmtDate(h.ts)}</span> — movido</div><div class="text-slate-500">${h.from} → ${h.to}</div>`;
+      }
+      historyList.appendChild(li);
+    });
+  }
+
+  function fmtDate(iso) {
+    const d = new Date(iso);
+    return d.toLocaleString();
+  }
+
+  function escapeHTML(str) {
+    return (str||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+  }
+
+  saveCardBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (!modalCtx) return;
+    const hit = findCard(modalCtx.cardId);
+    if (!hit) return;
+
+    const newTitle = titleInput.value.trim();
+    const newDesc = descInput.value;
+
+    if (hit.card.description !== newDesc) {
+      hit.card.history = hit.card.history || [];
+      hit.card.history.unshift({ ts: nowISO(), type: 'edit', prev: hit.card.description, next: newDesc });
+      hit.card.lastActivity = nowISO();
+    }
+    hit.card.title = newTitle || hit.card.title;
+    hit.card.description = newDesc;
+
+    saveState();
+    modal.close();
+    render();
+  });
+
+  deleteCardBtn.addEventListener('click', () => {
+    if (!modalCtx) return;
+    if (!confirm('Remover este card?')) return;
+    const hit = findCard(modalCtx.cardId);
+    if (!hit) return;
+    hit.column.cards = hit.column.cards.filter(c => c.id !== hit.card.id);
+    saveState();
+    modal.close();
+    render();
+  });
+
+  // --- Filters --------------------------------------------------------------
+  let activeFilter = null; // '1h' | '4h' | '24h' | '7d' | null
+
+  function applyActiveFilter() {
+    const cards = document.querySelectorAll('.card');
+    cards.forEach(cardEl => {
+      cardEl.classList.remove('dimmed', 'glow');
+      const id = cardEl.dataset.cardId;
+      const hit = findCard(id);
+      if (!hit) return;
+      // Update age class dynamically
+      cardEl.classList.remove('age-1h','age-4h','age-24h','age-7d','age-old');
+      cardEl.classList.add(ageClass(hit.card.lastActivity));
+      cardEl.querySelector('.last-activity').textContent = 'atualizado ' + shortTimeAgo(hit.card.lastActivity);
+
+      if (!activeFilter) return; // nothing else to do
+      const win = FILTER_WINDOWS[activeFilter];
+      const recent = Date.now() - new Date(hit.card.lastActivity).getTime() <= win;
+      if (recent) {
+        cardEl.classList.add('glow');
+      } else {
+        cardEl.classList.add('dimmed');
+      }
+    });
+
+    // Visual state on filter buttons
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.classList.remove('ring-2','ring-indigo-400');
+      if (btn.dataset.filter === activeFilter) btn.classList.add('ring-2','ring-indigo-400');
+    });
+  }
+
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => { activeFilter = btn.dataset.filter; applyActiveFilter(); });
+  });
+  document.getElementById('clearFilter').addEventListener('click', () => { activeFilter = null; applyActiveFilter(); });
+
+  // --- Export / Import ------------------------------------------------------
+  document.getElementById('exportBtn').addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = Object.assign(document.createElement('a'), { href: url, download: 'swimlane-board.json' });
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  });
+  document.getElementById('importFile').addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        if (!data || !Array.isArray(data.projects)) throw new Error('Arquivo inválido');
+        state = data; saveState(); render();
+      } catch (err) {
+        alert('Falha ao importar: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  });
+
+  // --- New Project ----------------------------------------------------------
+  document.getElementById('newProject').addEventListener('click', () => {
+    const title = prompt('Título do novo projeto:','Meu projeto');
+    addProject(title || 'Meu projeto');
+  });
+
+  // --- First-time helper: seed example if empty ----------------------------
+  if (!state.projects.length) {
+    const pId = uid();
+    state.projects.push({ id: pId, title: 'Exemplo: Plataforma X', createdAt: nowISO(), columns: [] });
+    const colTodo = { id: uid(), title: 'A Fazer', createdAt: nowISO(), cards: [] };
+    const colDoing = { id: uid(), title: 'Fazendo', createdAt: nowISO(), cards: [] };
+    const colDone = { id: uid(), title: 'Feito', createdAt: nowISO(), cards: [] };
+    const card1 = { id: uid(), title: 'Setup repositório', description: 'Criar repo monorepo + CI base', createdAt: nowISO(), lastActivity: nowISO(), history: [] };
+    const card2 = { id: uid(), title: 'Pipeline QA', description: 'Testes + cobertura mínimo 80%', createdAt: nowISO(), lastActivity: nowISO(), history: [] };
+    const card3 = { id: uid(), title: 'Métricas', description: 'Apm + logs estruturados', createdAt: nowISO(), lastActivity: nowISO(), history: [] };
+    colTodo.cards.push(card1); colDoing.cards.push(card2); colDone.cards.push(card3);
+    state.projects[0].columns.push(colTodo, colDoing, colDone);
+    saveState();
+  }
+
+  // Initial render
+  render();
+  </script>
+</body>
+</html>
