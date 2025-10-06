@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Energia — Itens & Recompensas</title>
+  <!-- Favicon: emoji cérebro -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' font-size='56'%3E%F0%9F%A7%A0%3C/text%3E%3C/svg%3E">
+  <link rel="shortcut icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' font-size='56'%3E%F0%9F%A7%A0%3C/text%3E%3C/svg%3E">
+
+  <!-- Tailwind with dark mode by class -->
+  <script>window.tailwind = window.tailwind || {}; tailwind.config = { darkMode: 'class' };</script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root { --safe-bottom: env(safe-area-inset-bottom); --safe-top: env(safe-area-inset-top); }
+    html, body { height: 100%; }
+    #app { min-height: 100vh; }
+    @supports (height: 100dvh) { #app { min-height: 100dvh; } }
+
+    .scroll-fade { position: initial; }
+    .card { min-width: 116px; max-width: 140px; }
+    .tap { -webkit-tap-highlight-color: transparent; }
+    .emoji { font-size: 40px; line-height: 1; }
+    .subtle { opacity: .72; }
+    .dark .subtle { opacity: .85; }
+
+    .snackbar-enter { transform: translateY(12px); opacity: 0; }
+    .snackbar-enter-active { transform: translateY(0); opacity: 1; transition: all .18s ease-out; }
+    .snackbar-exit { transform: translateY(0); opacity: 1; }
+    .snackbar-exit-active { transform: translateY(12px); opacity: 0; transition: all .18s ease-in; }
+
+    @keyframes nudge { 0%{transform:translateX(0)}25%{transform:translateX(-6px)}50%{transform:translateX(6px)}75%{transform:translateX(-3px)}100%{transform:translateX(0)} }
+    .nudge { animation: nudge .28s ease; }
+
+    .focus-ring { outline: 2px solid transparent; outline-offset: 2px; }
+    .focus-ring:focus-visible { outline-color: rgb(56 189 248); }
+    .pb-safe { padding-bottom: calc(16px + var(--safe-bottom)); }
+    .pt-safe { padding-top: var(--safe-top); }
+  </style>
+</head>
+<body class="h-full bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-50 selection:bg-sky-200/60 selection:text-slate-900">
+  <div id="app" class="mx-auto max-w-screen-sm h-full flex flex-col">
+
+    <!-- Header / status -->
+    <header class="pt-safe sticky top-0 z-10 bg-gradient-to-b from-slate-50/90 to-slate-50/70 dark:from-slate-950/90 dark:to-slate-950/70 backdrop-blur supports-[backdrop-filter]:backdrop-blur border-b border-slate-200/60 dark:border-slate-800">
+      <div class="px-4 pt-3 pb-2 flex items-center justify-between gap-2">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-sky-500/10 flex items-center justify-center text-xl">⚡️</div>
+          <div>
+            <h1 class="font-semibold leading-tight">Energia</h1>
+            <p class="text-xs subtle">Toque para acumular, saque para usar</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="helpBtn" class="tap focus-ring rounded-lg px-2 py-1 text-sm subtle hover:bg-slate-200/60 dark:hover:bg-slate-800" aria-label="Ajuda">?</button>
+          <button id="themeBtn" class="tap focus-ring rounded-lg px-2 py-1 text-sm subtle hover:bg-slate-200/60 dark:hover:bg-slate-800" aria-label="Alternar tema">🌓</button>
+        </div>
+      </div>
+      <div class="px-4 pb-3">
+        <div class="w-full rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 px-4 py-3 flex items-center justify-between">
+          <div>
+            <div class="text-xs subtle">Energia total</div>
+            <div class="text-3xl font-bold tracking-tight" id="totalEnergy">0</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="undoBtn" class="tap focus-ring rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40" disabled>Desfazer</button>
+            <button id="resetBtn" class="tap focus-ring rounded-xl bg-rose-600 text-white px-3 py-2 text-sm hover:bg-rose-700">Zerar</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Conteúdo -->
+    <main class="flex-1 overflow-y-auto">
+      <!-- Ganhos -->
+      <section class="px-4 mt-4">
+        <div class="flex items-baseline justify-between mb-2">
+          <h2 class="font-semibold">Itens que dão energia</h2>
+          <button id="addGainBtn" class="tap focus-ring text-sm rounded-lg px-3 py-1.5 bg-sky-600 text-white hover:bg-sky-700">+ Adicionar</button>
+        </div>
+        <div class="scroll-fade">
+          <div id="gainRow" class="grid grid-rows-2 auto-cols-max grid-flow-col gap-x-3 gap-y-3 overflow-x-auto pb-2 snap-x snap-mandatory">
+            <!-- cards gerados -->
+          </div>
+        </div>
+        <p id="gainEmpty" class="text-sm subtle mt-2 hidden">Sem itens ainda. Toque em <strong>+ Adicionar</strong> para criar seu primeiro ganho ⚡️</p>
+      </section>
+
+      <!-- Recompensas -->
+      <section class="px-4 mt-6">
+        <div class="flex items-baseline justify-between mb-2">
+          <h2 class="font-semibold">Recompensas (saques)</h2>
+          <button id="addRewardBtn" class="tap focus-ring text-sm rounded-lg px-3 py-1.5 bg-emerald-600 text-white hover:bg-emerald-700">+ Adicionar</button>
+        </div>
+        <div class="scroll-fade">
+          <div id="rewardRow" class="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory">
+            <!-- cards gerados -->
+          </div>
+        </div>
+        <p id="rewardEmpty" class="text-sm subtle mt-2 hidden">Crie recompensas para trocar energia por algo que você curte 🎯</p>
+      </section>
+
+      <!-- Extrato -->
+      <section class="px-4 mt-6 mb-4">
+        <div class="flex items-baseline justify-between mb-2">
+          <h2 class="font-semibold">Extrato</h2>
+          <div class="text-xs subtle">Toque em "Desfazer" para reverter uma linha</div>
+        </div>
+        <div id="ledgerList" class="space-y-2">
+          <!-- linhas do extrato -->
+        </div>
+        <p id="ledgerEmpty" class="text-sm subtle mt-2 hidden">Ainda sem movimentações.</p>
+      </section>
+    </main>
+
+    <footer class="px-4 pt-2 pb-safe text-xs subtle">
+      <div class="border-t border-slate-200 dark:border-slate-800 pt-3 pb-2">Dica: pressione e segure um cartão para editar ou apagar.</div>
+    </footer>
+  </div>
+
+  <!-- Modal -->
+  <dialog id="cardModal" class="backdrop:bg-black/50 rounded-2xl p-0 w-[92vw] max-w-sm">
+    <form id="cardForm" class="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-50 rounded-2xl overflow-hidden">
+      <div class="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+        <h3 id="modalTitle" class="font-semibold">Novo cartão</h3>
+        <button type="button" id="closeModal" class="tap focus-ring rounded-lg px-2 py-1 subtle hover:bg-slate-100 dark:hover:bg-slate-800">✕</button>
+      </div>
+      <div class="p-4 space-y-3">
+        <div id="idRow" class="hidden">
+          <label class="text-sm subtle">ID do card</label>
+          <div class="mt-1 flex items-center gap-2">
+            <input id="idView" readonly class="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-900/40 px-3 py-2 font-mono text-sm text-slate-900 dark:text-slate-50 select-all" />
+            <button type="button" id="copyIdBtn" class="tap focus-ring rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800">Copiar</button>
+          </div>
+        </div>
+        <div>
+          <label class="text-sm subtle">Emoji</label>
+          <input id="emojiInput" required maxlength="4" placeholder="ex: ☕️" class="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white/80 dark:bg-slate-950/60 px-3 py-2 text-slate-900 dark:text-slate-50 placeholder-slate-400 dark:placeholder-slate-400" />
+        </div>
+        <div>
+          <label class="text-sm subtle">Título</label>
+          <input id="titleInput" required placeholder="ex: Café coado" class="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white/80 dark:bg-slate-950/60 px-3 py-2 text-slate-900 dark:text-slate-50 placeholder-slate-400 dark:placeholder-slate-400" />
+        </div>
+        <div>
+          <label class="text-sm subtle">Valor</label>
+          <input id="valueInput" required type="number" min="1" step="1" placeholder="ex: 10" class="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white/80 dark:bg-slate-950/60 px-3 py-2 text-slate-900 dark:text-slate-50 placeholder-slate-400 dark:placeholder-slate-400" />
+          <p class="text-xs subtle mt-1">Para <span id="kindHint">ganho</span> de energia. Use números inteiros.</p>
+        </div>
+        <div class="mt-3">
+          <label class="text-sm subtle">Fixar</label>
+          <div class="mt-1 flex items-center gap-2">
+            <input id="pinnedInput" type="checkbox" class="h-4 w-4 rounded border-slate-300 dark:border-slate-700">
+            <span class="text-sm">Afixar este card (fica no início da faixa)</span>
+          </div>
+        </div>
+      </div>
+      <div class="px-4 py-3 bg-slate-50/70 dark:bg-slate-900/60 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2">
+        <button type="button" id="deleteBtn" class="hidden tap focus-ring rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800">Apagar</button>
+        <button type="submit" class="tap focus-ring rounded-xl bg-sky-600 text-white px-3 py-2 text-sm hover:bg-sky-700">Salvar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Confirm Modal -->
+  <dialog id="confirmModal" class="backdrop:bg-black/50 rounded-2xl p-0 w-[92vw] max-w-sm">
+    <div class="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-50 rounded-2xl overflow-hidden">
+      <div class="px-4 py-3 border-b border-slate-200 dark:border-slate-800">
+        <h3 class="font-semibold" id="confirmHint">Confirmar ação</h3>
+      </div>
+      <div class="p-4">
+        <div class="flex items-center gap-3">
+          <div class="text-4xl" id="confirmEmoji">🔹</div>
+          <div>
+            <div class="text-sm subtle" id="confirmTitle">(título)</div>
+            <div class="text-xl font-bold" id="confirmValue">+0</div>
+          </div>
+        </div>
+      </div>
+      <div class="px-4 py-3 bg-slate-50/70 dark:bg-slate-900/60 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2">
+        <button type="button" id="confirmNoBtn" class="tap focus-ring rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800">Cancelar</button>
+        <button type="button" id="confirmYesBtn" class="tap focus-ring rounded-xl bg-sky-600 text-white px-3 py-2 text-sm hover:bg-sky-700">Confirmar</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Snackbar -->
+  <div id="snackbarWrap" class="fixed left-0 right-0 bottom-0 px-4 pb-safe pointer-events-none"></div>
+
+  <script>
+  (function(){
+    function $(sel){ return document.querySelector(sel); }
+    function $all(sel){ return Array.prototype.slice.call(document.querySelectorAll(sel)); }
+
+    /*** Estado e persistência ***/
+    var KEY = 'energia_app_v1';
+    // shape: { total:number, items:{gain:[], reward:[]}, history:[{hid, type, value, itemId, ts, revoked}], theme:'light'|'dark' }
+    var state = load() || seed();
+    migrate();
+
+    function seed(){
+      return {
+        total: 0,
+        items: {
+          gain: [
+            { id: uid(), emoji:'☕️', title:'Café coado', value: 5, last: 0, pinned:false },
+            { id: uid(), emoji:'🏃‍♂️', title:'Treino', value: 15, last: 0, pinned:false },
+            { id: uid(), emoji:'📵', title:'30 min off redes', value: 10, last: 0, pinned:false }
+          ],
+          reward: [
+            { id: uid(), emoji:'🎬', title:'Episódio da série', value: 12, last: 0, pinned:false },
+            { id: uid(), emoji:'🍰', title:'Sobremesa', value: 8, last: 0, pinned:false }
+          ]
+        },
+        history: [],
+        theme: (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+      };
+    }
+
+    function save(){
+      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){}
+    }
+
+    function load(){
+      try { return JSON.parse(localStorage.getItem(KEY)); } catch(e){ return null; }
+    }
+
+    function migrate(){
+      var i, k, it;
+      for(i=0;i<state.history.length;i++){
+        var h = state.history[i];
+        if(!h.hid) h.hid = uid();
+        if(h.revoked == null) h.revoked = false;
+        if(h.item && !h.itemId) h.itemId = h.item.id;
+      }
+      var kinds = ['gain','reward'];
+      for(k=0;k<kinds.length;k++){
+        var arr = state.items[kinds[k]];
+        for(i=0;i<arr.length;i++){
+          it = arr[i];
+          if(it.last == null) it.last = 0;
+          if(it.pinned == null) it.pinned = false;
+        }
+      }
+      applyRecalc();
+      if(!state.theme){
+        state.theme = (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      }
+    }
+
+    /*** Utils ***/
+    function uid(){ return Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-3); }
+    function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
+
+    function sinceShort(ts){
+      if(!ts || ts<=0) return 'novo';
+      var ms = Date.now() - ts;
+      var m = Math.floor(ms/60000);
+      if(m < 1) return 'agora';
+      if(m < 60) return m + 'm';
+      var h = Math.floor(m/60);
+      if(h < 24) return h + 'h';
+      var d = Math.floor(h/24);
+      if(d < 7) return d + 'd';
+      var w = Math.floor(d/7);
+      return w + 'w';
+    }
+    function sinceTitle(ts){
+      if(!ts || ts<=0) return 'Nunca usado';
+      var ms = Date.now() - ts;
+      var m = Math.floor(ms/60000);
+      if(m < 1) return 'agora';
+      if(m < 60) return 'há ' + m + ' minuto' + (m>1 ? 's' : '');
+      var h = Math.floor(m/60);
+      if(h < 24) return 'há ' + h + ' hora' + (h>1 ? 's' : '');
+      var d = Math.floor(h/24);
+      if(d < 7) return 'há ' + d + ' dia' + (d>1 ? 's' : '');
+      var w = Math.floor(d/7);
+      return 'há ' + w + ' semana' + (w>1 ? 's' : '');
+    }
+
+    function getDeepLinkId(){
+      try {
+        var u = new URL(location.href);
+        var viaQuery = u.searchParams.get('id') || u.searchParams.get('card');
+        if(viaQuery) return viaQuery;
+        var viaHash = new URLSearchParams(u.hash.replace('#','')).get('id');
+        return viaHash || null;
+      } catch(e){ return null; }
+    }
+    function flashCard(id){
+      var el = document.querySelector('[data-id="'+id+'"]');
+      if(!el) return;
+      el.scrollIntoView({behavior:'smooth', inline:'center', block:'nearest'});
+      if(el.animate){
+        el.animate([
+          { boxShadow: '0 0 0 0 rgba(14,165,233,0)' },
+          { boxShadow: '0 0 0 6px rgba(14,165,233,.35)' },
+          { boxShadow: '0 0 0 0 rgba(14,165,233,0)' }
+        ], { duration: 680, easing: 'ease-out' });
+      }
+    }
+
+    function byPinnedThenStaleness(a,b){
+      var ap = !!(a && a.pinned === true);
+      var bp = !!(b && b.pinned === true);
+      if(ap !== bp) return ap ? -1 : 1; // fixados primeiro
+      var al = (a && typeof a.last === 'number') ? a.last : 0;
+      var bl = (b && typeof b.last === 'number') ? b.last : 0;
+      return al - bl; // mais antigo primeiro
+    }
+
+    /*** Renderização ***/
+    var totalEl = $('#totalEnergy');
+    var gainRow = $('#gainRow');
+    var rewardRow = $('#rewardRow');
+    var gainEmpty = $('#gainEmpty');
+    var rewardEmpty = $('#rewardEmpty');
+    var ledgerList = $('#ledgerList');
+    var ledgerEmpty = $('#ledgerEmpty');
+
+    function render(){
+      document.documentElement.classList.toggle('dark', state.theme==='dark');
+      animateCount(totalEl, parseInt(totalEl.textContent||'0',10), state.total);
+      renderRow('gain', gainRow, gainEmpty);
+      renderRow('reward', rewardRow, rewardEmpty);
+      renderLedger();
+      $('#undoBtn').disabled = state.history.filter(function(h){return !h.revoked;}).length === 0;
+    }
+
+    function renderRow(kind, rowEl, emptyEl){
+      rowEl.innerHTML = '';
+      var items = state.items[kind].slice().sort(byPinnedThenStaleness);
+      emptyEl.classList.toggle('hidden', items.length>0);
+      items.forEach(function(item){
+        var disabled = (kind==='reward' && state.total < item.value);
+        var card = document.createElement('button');
+        card.className = 'tap card snap-start flex-shrink-0 rounded-2xl border '+(disabled? 'border-slate-200 dark:border-slate-800 opacity-60' : 'border-slate-200 dark:border-slate-800')+' bg-white/80 dark:bg-slate-900/70 px-3 py-3 text-left focus-ring hover:bg-slate-50 dark:hover:bg-slate-800';
+        card.setAttribute('aria-label', (kind==='gain'?'Ganho':'Recompensa')+': '+item.title+' ('+item.value+')');
+        card.setAttribute('data-id', item.id);
+        card.addEventListener('click', function(){ openConfirm(kind, item); });
+        card.addEventListener('contextmenu', function(e){ e.preventDefault(); openEdit(kind, item); });
+        var pressTimer=null;
+        card.addEventListener('touchstart', function(){ pressTimer=setTimeout(function(){openEdit(kind,item);},500); });
+        card.addEventListener('touchend', function(){ clearTimeout(pressTimer); });
+        card.innerHTML = '<div class="flex flex-col items-center">'
+          + '<div class="emoji">'+(item.emoji||'🔹')+'</div>'
+          + '<div class="mt-2 text-sm font-medium text-center leading-tight">'+escapeHtml(item.title)+'</div>'
+          + '<div class="text-[11px] subtle mt-1">'+(kind==='gain'?'+':'−')+' '+item.value+'</div>'
+          + '<div class="text-[10px] subtle mt-1" title="'+sinceTitle(item.last)+'">⏱ '+sinceShort(item.last)+'</div>'
+          + '</div>';
+        rowEl.appendChild(card);
+      });
+    }
+
+    function renderLedger(){
+      ledgerList.innerHTML = '';
+      var rows = state.history.slice().sort(function(a,b){ return b.ts-a.ts; });
+      ledgerEmpty.classList.toggle('hidden', rows.length>0);
+      rows.forEach(function(h){
+        var it = findItemById(h.itemId) || {emoji:'❔', title:'(Removido)'};
+        var sign = h.type==='add' ? '+' : '−';
+        var color = h.type==='add' ? 'text-emerald-600' : 'text-rose-600';
+        var badge = h.revoked ? '<span class="ml-2 text-xs px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 subtle">desfeito</span>' : '';
+        var btn = h.revoked
+          ? '<button data-act="redo" data-hid="'+h.hid+'" class="tap focus-ring text-xs rounded-lg px-2 py-1 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800">Refazer</button>'
+          : '<button data-act="undo" data-hid="'+h.hid+'" class="tap focus-ring text-xs rounded-lg px-2 py-1 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800">Desfazer</button>';
+        var row = document.createElement('div');
+        row.className = 'rounded-xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 px-3 py-2 flex items-center justify-between gap-3';
+        row.innerHTML = ''
+          + '<div class="flex items-center gap-3 min-w-0">'
+          + '  <div class="w-8 h-8 rounded-lg bg-slate-200/60 dark:bg-slate-800/60 flex items-center justify-center">'+it.emoji+'</div>'
+          + '  <div class="min-w-0">'
+          + '    <div class="text-sm font-medium truncate">'+escapeHtml(it.title)+' '+badge+'</div>'
+          + '    <div class="text-xs subtle">'+sign+' '+h.value+' • '+sinceTitle(h.ts)+'</div>'
+          + '  </div>'
+          + '</div>'
+          + '<div class="flex items-center gap-2">'
+          + '  <div class="'+color+' text-sm font-semibold tabular-nums">'+sign+' '+h.value+'</div>'
+          + '  '+btn
+          + '</div>';
+        ledgerList.appendChild(row);
+      });
+    }
+
+    function escapeHtml(str){
+      var map = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#039;'};
+      return String(str).replace(/[&<>"\']/g, function(m){ return map[m]; });
+    }
+
+    function animateCount(el, from, to){
+      if(from===to){ el.textContent = String(to); return; }
+      var delta = to - from;
+      var dur = clamp(Math.abs(delta)*12, 240, 600);
+      var start = performance.now();
+      function step(now){
+        var t = clamp((now-start)/dur, 0, 1);
+        var eased = t<.5 ? 2*t*t : -1+(4-2*t)*t;
+        el.textContent = String(Math.round(from + delta*eased));
+        if(t<1) requestAnimationFrame(step); else el.textContent = String(to);
+      }
+      requestAnimationFrame(step);
+    }
+
+    /*** Historico / Recalculo ***/
+    function findItemById(id){
+      var i, it;
+      var g = state.items.gain; for(i=0;i<g.length;i++){ if(g[i].id===id) return g[i]; }
+      var r = state.items.reward; for(i=0;i<r.length;i++){ if(r[i].id===id) return r[i]; }
+      return null;
+    }
+
+    function computeSnapshot(modIndex, modInclude){
+      var total = 0; var lastMap = {};
+      for(var i=0;i<state.history.length;i++){
+        var h = state.history[i];
+        var include = (modIndex===i) ? (modInclude===true) : !h.revoked;
+        if(!include) continue;
+        if(h.type==='add') total += h.value; else total -= h.value;
+        if(!lastMap[h.itemId] || h.ts>lastMap[h.itemId]) lastMap[h.itemId] = h.ts;
+      }
+      return { total: total, lastMap: lastMap };
+    }
+
+    function applyRecalc(){
+      var snap = computeSnapshot();
+      state.total = Math.max(0, snap.total);
+      var kinds = ['gain','reward'];
+      for(var k=0;k<kinds.length;k++){
+        var arr = state.items[kinds[k]];
+        for(var i=0;i<arr.length;i++){
+          var it = arr[i];
+          it.last = snap.lastMap[it.id] || 0;
+        }
+      }
+    }
+
+    function canToggleHistory(idx, toRevoked){
+      var predicted = toRevoked ? computeSnapshot(idx, false).total : computeSnapshot(idx, true).total;
+      return predicted >= 0;
+    }
+
+    /*** Interações ***/
+    function onCardTap(kind, item){
+      if(kind==='gain'){
+        state.history.push({ hid: uid(), type:'add', value:item.value, itemId:item.id, ts:Date.now(), revoked:false });
+        applyRecalc();
+        pulseTotal();
+        snack(item.emoji+' +'+item.value+' energia adicionada', undoLast);
+        save(); render();
+      } else {
+        if(state.total < item.value){ totalEl.classList.add('nudge'); setTimeout(function(){ totalEl.classList.remove('nudge'); }, 320); snack('Energia insuficiente para esta recompensa'); return; }
+        state.history.push({ hid: uid(), type:'sub', value:item.value, itemId:item.id, ts:Date.now(), revoked:false });
+        applyRecalc();
+        pulseTotal();
+        snack(item.emoji+' −'+item.value+' energia sacada', undoLast);
+        save(); render();
+      }
+    }
+
+    function pulseTotal(){
+      if(!totalEl.animate) return;
+      totalEl.animate([
+        { transform:'scale(1)', filter:'none' },
+        { transform:'scale(1.06)', filter:'drop-shadow(0 0 0.25rem rgba(14,165,233,.45))' },
+        { transform:'scale(1)', filter:'none' }
+      ], { duration:260, easing:'ease-out' });
+    }
+
+    function undoLast(){
+      var idx=-1; for(var i=state.history.length-1;i>=0;i--){ if(!state.history[i].revoked){ idx=i; break; } }
+      if(idx<0) return;
+      if(!canToggleHistory(idx, true)) { snack('Não é possível desfazer: saldo ficaria negativo'); return; }
+      state.history[idx].revoked = true; applyRecalc(); save(); render();
+    }
+
+    function undoOrRedoByHid(hid, action){
+      var idx = -1; for(var i=0;i<state.history.length;i++){ if(state.history[i].hid===hid){ idx=i; break; } }
+      if(idx<0) return;
+      var toRevoked = (action==='undo');
+      if(!canToggleHistory(idx, toRevoked)) { snack('Operação inválida: saldo ficaria negativo'); return; }
+      state.history[idx].revoked = toRevoked; applyRecalc(); save(); render();
+    }
+    
+    // Snackbar
+    var sbTO=null; var sbMounted=false;
+    function snack(msg, action, label){
+      var wrap = $('#snackbarWrap');
+      wrap.innerHTML = '';
+      var el = document.createElement('div');
+      el.className = 'pointer-events-auto mb-[calc(10px+var(--safe-bottom))]';
+      el.innerHTML = ''
+        + '<div class="snackbar-enter text-sm mx-auto max-w-screen-sm">'
+        + '  <div class="mx-0 rounded-2xl bg-slate-900 text-slate-50 dark:bg-slate-50 dark:text-slate-900 px-4 py-3 flex items-center justify-between gap-3 shadow-lg">'
+        + '    <span>'+msg+'</span>'
+        +      (action? '<button id="snackAct" class="tap underline underline-offset-2">'+(label||'Desfazer')+'</button>' : '')
+        + '  </div>'
+        + '</div>';
+      wrap.appendChild(el);
+      var card = el.firstElementChild;
+      setTimeout(function(){ card.classList.add('snackbar-enter-active'); }, 0);
+      clearTimeout(sbTO); sbTO = setTimeout(function(){ closeSnack(); }, 2800);
+      if(action){ var b=$('#snackAct'); if(b) b.onclick=function(){ action(); closeSnack(); }; }
+      function closeSnack(){ if(sbMounted) return; sbMounted=true; card.classList.remove('snackbar-enter','snackbar-enter-active'); card.classList.add('snackbar-exit'); setTimeout(function(){ card.classList.add('snackbar-exit-active'); }, 0); setTimeout(function(){ wrap.innerHTML=''; sbMounted=false; }, 200); }
+    }
+
+    // URL sem parâmetros para recarregar limpo
+    function cleanUrl(){
+      try { return location.origin + location.pathname; }
+      catch(e){ var loc = window.location; return (loc.protocol + '//' + loc.host + loc.pathname); }
+    }
+
+    /*** Modal ***/
+    var dlg = $('#cardModal');
+    var form = $('#cardForm');
+    var deleteBtn = $('#deleteBtn');
+    var idRow = $('#idRow');
+    var idView = $('#idView');
+    var copyIdBtn = $('#copyIdBtn');
+    var confirmDlg = $('#confirmModal');
+    var confirmYesBtn = $('#confirmYesBtn');
+    var confirmNoBtn = $('#confirmNoBtn');
+    var confirmEmoji = $('#confirmEmoji');
+    var confirmTitle = $('#confirmTitle');
+    var confirmValue = $('#confirmValue');
+    var confirmHint = $('#confirmHint');
+    var pending = null;
+    var pinnedInput = $('#pinnedInput');
+    var editing = null; // {kind, item}
+
+    function openCreate(kind){
+      editing = { kind: kind, item: null };
+      $('#modalTitle').textContent = 'Novo ' + (kind==='gain'?'ganho':'saque');
+      $('#kindHint').textContent = (kind==='gain' ? 'ganho' : 'saque');
+      $('#emojiInput').value = '';
+      $('#titleInput').value = '';
+      $('#valueInput').value = '';
+      if(pinnedInput) pinnedInput.checked = false;
+      deleteBtn.classList.add('hidden');
+      idRow.classList.add('hidden'); idView.value = '';
+      if(!dlg.open) dlg.showModal();
+    }
+
+    function openEdit(kind, item){
+      editing = { kind: kind, item: item };
+      $('#modalTitle').textContent = 'Editar ' + (kind==='gain'?'ganho':'saque');
+      $('#kindHint').textContent = (kind==='gain' ? 'ganho' : 'saque');
+      $('#emojiInput').value = item.emoji;
+      $('#titleInput').value = item.title;
+      $('#valueInput').value = item.value;
+      if(pinnedInput) pinnedInput.checked = !!item.pinned;
+      deleteBtn.classList.remove('hidden');
+      idRow.classList.remove('hidden'); idView.value = item.id;
+      if(!dlg.open) dlg.showModal();
+    }
+
+    $('#closeModal').addEventListener('click', function(){ dlg.close(); });
+
+    form.addEventListener('submit', function(e){
+      e.preventDefault();
+      var emoji = ($('#emojiInput').value||'').trim() || '🔹';
+      var title = ($('#titleInput').value||'').trim();
+      var value = parseInt($('#valueInput').value, 10);
+      if(!title || !isFinite(value) || value <= 0){ snack('Preencha título e um valor inteiro > 0'); return; }
+      if(editing && editing.item){
+        editing.item.emoji = emoji; editing.item.title = title; editing.item.value = value;
+        if(pinnedInput) editing.item.pinned = !!pinnedInput.checked;
+        save(); render(); dlg.close(); snack('Cartão atualizado');
+      } else {
+        var newItem = { id: uid(), emoji: emoji, title: title, value: value, last: Date.now(), pinned: (pinnedInput ? !!pinnedInput.checked : false) };
+        state.items[editing.kind].push(newItem); save(); render(); dlg.close(); snack('Cartão criado');
+      }
+    });
+
+    deleteBtn.addEventListener('click', function(){
+      if(!(editing && editing.item)) return;
+      if(confirm('Remover este cartão?')){
+        var arr = state.items[editing.kind];
+        var idx = -1; for(var i=0;i<arr.length;i++){ if(arr[i].id===editing.item.id){ idx=i; break; } }
+        if(idx>-1) arr.splice(idx,1);
+        // marca histórico relacionado como desfeito
+        for(var j=0;j<state.history.length;j++){ if(state.history[j].itemId===editing.item.id) state.history[j].revoked=true; }
+        applyRecalc(); save(); render(); dlg.close(); snack('Cartão removido');
+      }
+    });
+
+    if(copyIdBtn) copyIdBtn.addEventListener('click', function(){
+      var text = idView.value || '';
+      var w = navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(text) : Promise.reject();
+      (w.then? w.then(function(){ snack('ID copiado'); }) : Promise.resolve()).catch(function(){ try{ idView.select(); document.execCommand('copy'); snack('ID copiado'); } catch(e){} });
+    });
+
+    // Confirmação de registro
+    function openConfirm(kind, item){
+      if(kind==='reward' && state.total < item.value){
+        totalEl.classList.add('nudge'); setTimeout(function(){ totalEl.classList.remove('nudge'); }, 320);
+        snack('Energia insuficiente para esta recompensa');
+        return;
+      }
+      pending = { kind: kind, item: item };
+      confirmEmoji.textContent = item.emoji || '🔹';
+      confirmTitle.textContent = item.title;
+      confirmValue.textContent = (kind==='gain'?'+':'−')+' '+item.value;
+      confirmHint.textContent = kind==='gain' ? 'Confirmar adição' : 'Confirmar saque';
+      if(!confirmDlg.open) confirmDlg.showModal();
+    }
+    confirmYesBtn.addEventListener('click', function(){
+      if (pending) { onCardTap(pending.kind, pending.item); }
+      confirmDlg.close(); pending = null;
+      snack('Atualizado!', function(){ window.location.replace(cleanUrl()); }, 'Recarregar');
+    });
+    confirmNoBtn.addEventListener('click', function(){
+      confirmDlg.close(); pending = null;
+    });
+
+    /*** Controles de topo ***/
+    $('#addGainBtn').addEventListener('click', function(){ openCreate('gain'); });
+    $('#addRewardBtn').addEventListener('click', function(){ openCreate('reward'); });
+    $('#undoBtn').addEventListener('click', undoLast);
+    $('#resetBtn').addEventListener('click', function(){ if(confirm('Tem certeza que deseja zerar sua energia acumulada?')){ state.total = 0; state.history = []; applyRecalc(); save(); render(); snack('Energia zerada'); } });
+    $('#themeBtn').addEventListener('click', function(){ state.theme = state.theme==='dark' ? 'light' : 'dark'; document.documentElement.classList.toggle('dark', state.theme==='dark'); save(); render(); });
+    $('#helpBtn').addEventListener('click', function(){ snack('Toque em um ganho para somar. Toque em uma recompensa para sacar. Pressione e segure para editar.'); });
+
+    // Ações do extrato (delegação)
+    ledgerList.addEventListener('click', function(e){
+      var t = e.target; while(t && t!==ledgerList && !t.getAttribute('data-act')){ t = t.parentNode; }
+      if(!t || t===ledgerList) return;
+      var hid = t.getAttribute('data-hid'); var act = t.getAttribute('data-act');
+      undoOrRedoByHid(hid, act);
+    });
+
+    // Scroll horizontal suave via roda (desktop)
+    [gainRow, rewardRow].forEach(function(row){
+      row.addEventListener('wheel', function(e){ if(Math.abs(e.deltaX) < Math.abs(e.deltaY)){ row.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive:false });
+    });
+
+    // Boot
+    render();
+    ;(function(dl){
+      try{
+        if(!dl) return;
+        var kind=null, it=null, i;
+        for(i=0;i<state.items.gain.length;i++){ if(state.items.gain[i].id===dl){ kind='gain'; it=state.items.gain[i]; break; } }
+        if(!kind){ for(i=0;i<state.items.reward.length;i++){ if(state.items.reward[i].id===dl){ kind='reward'; it=state.items.reward[i]; break; } } }
+        if(kind && it){ openConfirm(kind, it); window.setTimeout(function(){ flashCard(dl); }, 120); }
+        else { snack('ID não encontrado'); }
+      }catch(e){}
+    })(getDeepLinkId());
+
+    // Atualiza tempo relativo a cada 60s
+    setInterval(function(){ render(); }, 60000);
+
+    // Testes rápidos
+    try {
+      var arr2 = [ {pinned:false,last:5}, {pinned:true,last:99}, {pinned:false,last:1} ].sort(byPinnedThenStaleness);
+      console.assert(arr2[0].pinned===true, 'pinned deve vir primeiro');
+      var now = Date.now();
+      console.assert(sinceShort(now-30*1000) === 'agora', 'sinceShort <1m falhou');
+      console.assert(sinceShort(now-65*1000) === '1m', 'sinceShort 1m falhou');
+      console.assert(sinceShort(now-2*60*60*1000) === '2h', 'sinceShort 2h falhou');
+    } catch(e){}
+
+  })();
+  </script>
+</body>
+</html>
