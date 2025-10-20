@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>MongoDB KML Map – São Paulo Points</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Leaflet core -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+
+  <!-- MarkerCluster for nicer point rendering -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
+  />
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"
+  />
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+  <!-- Omnivore to read KML into Leaflet (converts to GeoJSON) -->
+  <script src="https://unpkg.com/leaflet-omnivore@0.3.4/leaflet-omnivore.min.js"></script>
+
+  <!-- Simple, clean styling -->
+  <style>
+    :root {
+      --bg: #0f172a;         /* slate-900 */
+      --panel: #111827cc;    /* gray-900 with alpha */
+      --text: #e5e7eb;       /* gray-200 */
+      --accent: #38bdf8;     /* sky-400 */
+      --accent-2: #34d399;   /* emerald-400 */
+      --border: #374151;     /* gray-700 */
+    }
+    html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text); font: 14px/1.4 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial; }
+    #app { height: 100%; display: grid; grid-template-rows: auto 1fr; }
+    header {
+      display: flex; gap: 12px; align-items: center; padding: 10px 14px;
+      border-bottom: 1px solid var(--border); background: #0b1224;
+    }
+    header h1 { font-size: 16px; margin: 0; font-weight: 600; color: var(--text); }
+    header .badge { color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 2px 8px; font-size: 12px; }
+    #map { width: 100%; height: 100%; }
+
+    .control {
+      position: absolute; top: 14px; right: 14px; z-index: 1000;
+      background: var(--panel); border: 1px solid var(--border);
+      backdrop-filter: blur(6px);
+      border-radius: 16px; padding: 12px; width: min(380px, 92vw);
+      box-shadow: 0 10px 24px #0008;
+    }
+    .control h2 { margin: 0 0 8px 0; font-size: 14px; font-weight: 700; letter-spacing: .2px; }
+    .row { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 6px; }
+    .row-full { display: grid; gap: 8px; margin-top: 6px; }
+    input[type="text"] {
+      width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border);
+      background: #0b1020; color: var(--text);
+    }
+    button {
+      padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border);
+      color: #0b1020; background: var(--accent);
+      cursor: pointer; font-weight: 600;
+    }
+    button.secondary { background: var(--accent-2); }
+    button.ghost { background: transparent; color: var(--text); border-color: var(--border); }
+    .hint { font-size: 12px; opacity: .8; margin-top: 6px; }
+    .legend {
+      margin-top: 8px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+      font-size: 12px; opacity: .9;
+    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent-2); display: inline-block; }
+    .status { margin-top: 6px; font-size: 12px; min-height: 18px; }
+    .toggle { display: flex; gap: 6px; flex-wrap: wrap; }
+    .toggle button { padding: 6px 10px; border-radius: 10px; border: 1px solid var(--border); font-size: 12px; background: #0b1020; color: var(--text); }
+    .toggle button.active { background: #172554; border-color: var(--accent); color: #dbeafe; }
+    .credit { position: absolute; bottom: 10px; right: 14px; z-index: 800; font-size: 12px; opacity: .7; background: #0b1020aa; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--border); }
+    .leaflet-container { background: #0b1020; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>MongoDB → KML Map</h1>
+      <span class="badge">São Paulo</span>
+    </header>
+    <div id="map"></div>
+
+    <div class="control">
+      <h2>Data source</h2>
+      <div class="row">
+        <input id="kmlUrl" type="text" value="http://40.76.123.222:8080/points.kml" />
+        <button id="loadKmlBtn">Load KML</button>
+      </div>
+      <div class="row">
+        <input id="jsonUrl" type="text" value="http://40.76.123.222:8080/points" />
+        <button id="loadJsonBtn" class="secondary">Load JSON</button>
+      </div>
+      <div class="hint">Tip: KML will render placemarks & lines; JSON expects <code>[{ name, lat, lng }]</code>.</div>
+
+      <div class="legend">
+        <span class="dot"></span> Points from MongoDB
+      </div>
+
+      <div style="margin-top:10px;">
+        <h2>Basemap</h2>
+        <div class="toggle">
+          <button id="lightBtn" class="active">Light</button>
+          <button id="darkBtn">Dark</button>
+          <button id="satBtn">Satellite</button>
+          <button id="fitBtn" class="ghost">Fit to data</button>
+          <button id="clearBtn" class="ghost">Clear</button>
+        </div>
+      </div>
+
+      <div class="status" id="status"></div>
+    </div>
+
+    <div class="credit">Leaflet • MarkerCluster • Omnivore</div>
+  </div>
+
+  <script>
+    // --- Map init ---
+    const map = L.map('map', { zoomControl: true, minZoom: 2 }).setView([-23.56, -46.65], 12);
+
+    // Basemaps
+    const light = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap, &copy; CARTO'
+    }).addTo(map);
+
+    const dark = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap, &copy; CARTO'
+    });
+
+    const satellite = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+      subdomains: ['mt0','mt1','mt2','mt3'],
+      attribution: '&copy; Google'
+    });
+
+    let currentBase = light;
+    function setBase(layer) {
+      if (currentBase) map.removeLayer(currentBase);
+      currentBase = layer; currentBase.addTo(map);
+    }
+
+    // Layers
+    const cluster = L.markerClusterGroup({ chunkedLoading: true });
+    let kmlLayer = null;
+
+    // Icons
+    const poiIcon = L.divIcon({
+      className: 'poi',
+      html: `<div style="width:14px;height:14px;border-radius:50%;background:#34d399;border:2px solid #065f46;box-shadow:0 0 0 2px #0b102040"></div>`,
+      iconSize: [14,14],
+      iconAnchor: [7,7]
+    });
+
+    // Helpers
+    const status = document.getElementById('status');
+    function setStatus(msg, isErr=false) {
+      status.textContent = msg || '';
+      status.style.color = isErr ? '#fca5a5' : '#a7f3d0';
+    }
+    function clearData() {
+      if (kmlLayer) { map.removeLayer(kmlLayer); kmlLayer = null; }
+      cluster.clearLayers();
+      setStatus('Layers cleared.');
+    }
+    function fitToLayer(layerGroup) {
+      try {
+        const b = layerGroup.getBounds ? layerGroup.getBounds() : cluster.getBounds();
+        if (b && b.isValid()) map.fitBounds(b.pad(0.2));
+      } catch {}
+    }
+
+   // --- snippet de "cara de preenchimento" ---
+function applyPolygonStyle(layerGroup) {
+  layerGroup.eachLayer(l => {
+    // detecta se é Polygon/LineString e aplica estilo
+    if (l.feature && l.feature.geometry && l.feature.geometry.type === "Polygon") {
+      l.setStyle({
+        color: "#065f46",       // borda
+        weight: 2,
+        fillColor: "#34d399",   // preenchimento verde-esmeralda
+        fillOpacity: 0.5
+      });
+    }
+    if (l.feature && l.feature.geometry && l.feature.geometry.type === "LineString") {
+      l.setStyle({
+        color: "#38bdf8",       // azul claro para linhas
+        weight: 3
+      });
+    }
+  });
+}
+
+
+
+// --- util: convex hull (Monotone chain) ---
+function convexHullLatLng(points) {
+  if (points.length <= 3) return points.slice();
+
+  // Converte para [lng, lat] temporariamente p/ ordenação por x=lng, y=lat
+  const pts = points.map(p => ({ x: p.lng, y: p.lat, o: p }));
+  pts.sort((a, b) => a.x === b.x ? a.y - b.y : a.x - b.x);
+
+  const cross = (o, a, b) => (a.x - o.x)*(b.y - o.y) - (a.y - o.y)*(b.x - o.x);
+
+  const lower = [];
+  for (const p of pts) {
+    while (lower.length >= 2 && cross(lower[lower.length-2], lower[lower.length-1], p) <= 0) lower.pop();
+    lower.push(p);
+  }
+  const upper = [];
+  for (let i = pts.length - 1; i >= 0; i--) {
+    const p = pts[i];
+    while (upper.length >= 2 && cross(upper[upper.length-2], upper[upper.length-1], p) <= 0) upper.pop();
+    upper.push(p);
+  }
+  upper.pop(); lower.pop();
+  const hull = lower.concat(upper);
+
+  // Volta para [lat, lng] no fim
+  return hull.map(p => [p.y, p.x]);
+}
+
+async function loadJson(url) {
+  clearData();
+  setStatus('Loading JSON…');
+  try {
+    const r = await fetch(url, { cache: 'no-store' });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+
+    // 1) Marcadores
+    data.forEach(p => {
+      const m = L.marker([p.lat, p.lng], { icon: poiIcon })
+        .bindPopup(`<strong>${p.name || 'Point'}</strong>`);
+      cluster.addLayer(m);
+    });
+    map.addLayer(cluster);
+
+    // 2) Perímetro (convex hull dos pontos)
+    let polyCoords = convexHullLatLng(data); // retorna [[lat,lng],...]
+    if (polyCoords.length >= 3) {
+      const perimeter = L.polygon(polyCoords, {
+        color: '#065f46',       // borda
+        weight: 2,
+        dashArray: '4 6',       // borda tracejada
+        fillColor: '#34d399',   // preenchimento
+        fillOpacity: 0.25       // transparência
+      }).addTo(map);
+      fitToLayer(perimeter);
+      setStatus(`Loaded ${data.length} points + perimeter.`);
+    } else {
+      // Se houver poucos pontos, só ajusta o mapa aos marcadores
+      fitToLayer(cluster);
+      setStatus(`Loaded ${data.length} points (not enough to build a polygon).`);
+    }
+  } catch (err) {
+    console.error(err);
+    setStatus('Failed to load JSON. Check CORS / URL.', true);
+  }
+}
+
+
+    // UI bindings
+    document.getElementById('loadKmlBtn').addEventListener('click', () => {
+      loadKml(document.getElementById('kmlUrl').value.trim());
+    });
+    document.getElementById('loadJsonBtn').addEventListener('click', () => {
+      loadJson(document.getElementById('jsonUrl').value.trim());
+    });
+
+    document.getElementById('lightBtn').addEventListener('click', (e) => { setBase(light); activate(e); });
+    document.getElementById('darkBtn').addEventListener('click', (e) => { setBase(dark); activate(e); });
+    document.getElementById('satBtn').addEventListener('click', (e) => { setBase(satellite); activate(e); });
+    document.getElementById('fitBtn').addEventListener('click', () => {
+      if (kmlLayer) fitToLayer(kmlLayer); else fitToLayer(cluster);
+    });
+    document.getElementById('clearBtn').addEventListener('click', clearData);
+
+    function activate(evt) {
+      document.querySelectorAll('.toggle button').forEach(b => b.classList.remove('active'));
+      evt.currentTarget.classList.add('active');
+    }
+
+    
+    // Auto-load default KML on start
+    loadKml(document.getElementById('kmlUrl').value);
+  </script>
+</body>
+</html>
