@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Swimlane Board — LocalStorage</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            surface: {
+              DEFAULT: '#0b1215',
+              light: '#0b1215',
+            },
+          },
+          boxShadow: {
+            glow: '0 10px 30px rgba(0,0,0,0.25)'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Arraste */
+    .dragging { opacity: 0.5; }
+    .drop-target { outline: 2px dashed rgba(0,0,0,0.25); outline-offset: -6px; }
+
+    /* Destaque por idade (aplicado em .card-age) */
+    .age-1h { box-shadow: 0 0 0 3px rgba(34,197,94,0.85) inset; }
+    .age-4h { box-shadow: 0 0 0 3px rgba(132,204,22,0.85) inset; }
+    .age-24h { box-shadow: 0 0 0 3px rgba(234,179,8,0.9) inset; }
+    .age-1w { box-shadow: 0 0 0 3px rgba(59,130,246,0.9) inset; }
+    .age-stale { box-shadow: 0 0 0 2px rgba(148,163,184,0.6) inset; }
+
+    /* Título dos cards SEM reticências e com quebra */
+    .card-title-wrap { overflow-wrap: anywhere; white-space: normal; }
+
+    /* Scroll bonito */
+    .thin-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+    .thin-scroll::-webkit-scrollbar-thumb { background: rgba(100,116,139,0.5); border-radius: 9999px; }
+    .thin-scroll::-webkit-scrollbar-track { background: transparent; }
+  </style>
+</head>
+<body class="h-full bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
+  <div id="app" class="min-h-screen flex flex-col">
+    <!-- Topbar -->
+    <header class="sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:bg-white/70 bg-white/60 dark:supports-[backdrop-filter]:bg-slate-900/60 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-3">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 shadow-glow"></div>
+          <h1 class="text-lg sm:text-xl font-semibold tracking-tight">Swimlane Board</h1>
+        </div>
+        <div class="ml-auto flex items-center gap-2">
+          <!-- Filtros por tempo -->
+          <div class="hidden sm:flex items-center gap-2">
+            <button data-age="1h" class="age-btn px-2.5 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800">1h</button>
+            <button data-age="4h" class="age-btn px-2.5 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800">4h</button>
+            <button data-age="24h" class="age-btn px-2.5 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800">24h</button>
+            <button data-age="1w" class="age-btn px-2.5 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800">1 semana</button>
+            <button data-age="all" class="age-btn px-2.5 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800">Tudo</button>
+          </div>
+          <!-- Toggle dark -->
+          <button id="btnDark" class="px-2.5 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800" title="Alternar tema">🌙</button>
+          <!-- Ações -->
+          <div class="relative">
+            <button id="btnActions" class="px-2.5 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800">Ações ▾</button>
+            <div id="menuActions" class="hidden absolute right-0 mt-2 w-56 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 shadow-xl overflow-hidden">
+              <button class="menu-item w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700" data-action="newProject">+ Novo projeto</button>
+              <button class="menu-item w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700" data-action="export">Exportar JSON</button>
+              <label class="block px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer">
+                Importar JSON
+                <input id="importInput" type="file" accept="application/json" class="hidden" />
+              </label>
+              <button class="menu-item w-full text-left px-3 py-2 hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400" data-action="reset">Limpar tudo</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Painel de visão geral (projetos) -->
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-3">
+        <div id="projectsSummary" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+      </div>
+    </header>
+
+    <!-- Conteúdo principal: swimlanes -->
+    <main class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div id="lanes" class="space-y-6"></div>
+    </main>
+  </div>
+
+  <!-- Modal genérico -->
+  <div id="modal" class="fixed inset-0 z-[100] hidden items-center justify-center">
+    <div class="absolute inset-0 bg-slate-900/60" data-close></div>
+    <div style="background:black; color:white" class="relative w-full max-w-xl bg-white dark:bg-slate-850 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h3 id="modalTitle" class="text-lg font-semibold"></h3>
+        <button class="px-2 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800" data-close>✕</button>
+      </div>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <template id="tpl-project-card">
+    <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-800/60 p-4 flex items-start gap-3">
+      <div class="w-2 h-2 rounded-full mt-1.5 status-dot"></div>
+      <div class="flex-1">
+        <div class="flex items-center justify-between gap-2">
+          <div>
+            <h4 class="font-semibold leading-tight project-title"></h4>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Última atividade: <span class="last-activity">—</span></p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="px-2 py-1 text-xs rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700" data-act="jump">Abrir</button>
+            <button class="px-2 py-1 text-xs rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700" data-act="digest">Ver resumo</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-lane">
+    <section class="border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-800/60 shadow-glow">
+      <header class="flex items-center gap-3 px-4 py-3 border-b border-slate-200 dark:border-slate-800">
+        <button class="collapse-btn shrink-0 w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-900/40 hover:bg-slate-200 dark:hover:bg-slate-800 grid place-items-center" title="Expandir/retrair">▾</button>
+        <h2 class="lane-title text-base sm:text-lg font-semibold flex-1"></h2>
+        <div class="flex items-center gap-2">
+          <button class="px-2.5 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800" data-act="addColumn">+ Coluna</button>
+          <button class="px-2.5 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800" data-act="renameProject">Renomear</button>
+          <button class="px-2.5 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-red-600" data-act="delProject">Excluir</button>
+        </div>
+      </header>
+      <div class="lane-body p-4 space-y-4">
+        <div class="columns grid auto-cols-[18rem] grid-flow-col gap-4 overflow-x-auto thin-scroll"></div>
+        <details class="digest rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 p-3">
+          <summary class="cursor-pointer select-none text-sm font-medium">Resumo das atividades do projeto</summary>
+          <div class="text-sm mt-2 space-y-1 digest-body"></div>
+        </details>
+      </div>
+    </section>
+  </template>
+
+  <template id="tpl-column">
+    <div class="column rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 p-3 min-w-[18rem]">
+      <div class="flex items-center justify-between gap-2 mb-2">
+        <h3 class="col-title font-semibold"></h3>
+        <div class="flex items-center gap-1">
+          <button class="px-2 py-1 text-xs rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800" data-act="renameColumn">Renomear</button>
+          <button class="px-2 py-1 text-xs rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-red-600" data-act="delColumn">Excluir</button>
+        </div>
+      </div>
+      <div class="cards space-y-2 min-h-[40px]"></div>
+      <button class="mt-2 w-full px-2.5 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800" data-act="addCard">+ Card</button>
+    </div>
+  </template>
+
+  <template id="tpl-card">
+    <article class="card card-age rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 p-3" draggable="true">
+      <div class="flex items-start gap-2">
+        <div class="flex-1">
+          <h4 class="card-title-wrap font-semibold leading-snug"></h4>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Atualizado: <span class="updated-at">—</span></p>
+        </div>
+      </div>
+      <p class="mt-2 text-sm card-desc" style="overflow: hidden;font-size: 10px; color: #766f86;"></p>
+      <details class="mt-2 hidden log-details">
+        <summary class="cursor-pointer select-none text-sm font-medium">Histórico de edições</summary>
+        <ul class="text-xs mt-2 space-y-1 log-body"></ul>
+      </details>
+      <div class="flex items-center gap-1" style="margin-top: 8px;">
+        <button class="px-2 py-1 text-xs rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800" data-act="edit">Editar</button>
+        <button class="px-2 py-1 text-xs rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800" data-act="log">Log</button>
+        <button class="px-2 py-1 text-xs rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-red-600" data-act="del">Excluir</button>
+      </div>
+    </article>
+  </template>
+
+  <script>
+  // ==========================
+  // Utilitários
+  // ==========================
+  const $ = (sel, el=document) => el.querySelector(sel);
+  const $$ = (sel, el=document) => Array.from(el.querySelectorAll(sel));
+  const now = () => new Date().toISOString();
+  const fmt = (iso) => new Date(iso).toLocaleString();
+  const uid = () => Math.random().toString(36).slice(2,9);
+
+  const AGE_MS = {
+    '1h': 60 * 60 * 1000,
+    '4h': 4 * 60 * 60 * 1000,
+    '24h': 24 * 60 * 60 * 1000,
+    '1w': 7 * 24 * 60 * 60 * 1000,
+  };
+
+  const STORAGE_KEY = 'swimlane-board-v2';
+
+  const state = {
+    dark: false,
+    ageFilter: 'all', // '1h' | '4h' | '24h' | '1w' | 'all'
+    projects: []
+  };
+
+  function save() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  function load() {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    try {
+      const data = JSON.parse(raw);
+      if (data && typeof data === 'object') {
+        Object.assign(state, data);
+      }
+    } catch(e) { console.error('Erro ao carregar', e); }
+  }
+
+  function setDark(d) {
+    state.dark = d;
+    document.documentElement.classList.toggle('dark', d);
+    save();
+  }
+
+  function lastCardActivity(card) {
+    return card.lastActivity || card.updatedAt || card.createdAt || now();
+  }
+
+  function lastProjectActivity(project) {
+    let last = 0;
+    project.columns.forEach(col => {
+      col.cards.forEach(card => {
+        const t = new Date(lastCardActivity(card)).getTime();
+        last = Math.max(last, t);
+      })
+    });
+    return last ? new Date(last).toISOString() : project.updatedAt || project.createdAt || now();
+  }
+
+  function ageClassFrom(tsIso) {
+    const ts = new Date(tsIso).getTime();
+    const diff = Date.now() - ts;
+    if (diff <= AGE_MS['1h']) return 'age-1h';
+    if (diff <= AGE_MS['4h']) return 'age-4h';
+    if (diff <= AGE_MS['24h']) return 'age-24h';
+    if (diff <= AGE_MS['1w']) return 'age-1w';
+    return 'age-stale';
+  }
+
+  function passFilter(tsIso) {
+    if (state.ageFilter === 'all') return true;
+    const diff = Date.now() - new Date(tsIso).getTime();
+    return diff <= AGE_MS[state.ageFilter];
+  }
+
+  function projectDigest(project) {
+    const items = [];
+    project.columns.forEach(col => {
+      col.cards.forEach(card => {
+        (card.history||[]).forEach(h => items.push({
+          when: h.ts,
+          text: `${h.action} — ${h.text || ''}`.trim(),
+          card: card.title
+        }))
+      })
+    });
+    return items.sort((a,b) => new Date(b.when) - new Date(a.when));
+  }
+
+  // ==========================
+  // Renderização
+  // ==========================
+  function render() {
+    // Topbar state
+    document.documentElement.classList.toggle('dark', !!state.dark);
+    $$('.age-btn').forEach(btn => {
+      btn.classList.toggle('ring-2', btn.dataset.age === state.ageFilter);
+      btn.classList.toggle('ring-indigo-500', btn.dataset.age === state.ageFilter);
+    });
+
+    renderProjectsSummary();
+    renderLanes();
+  }
+
+  function renderProjectsSummary() {
+    const wrap = $('#projectsSummary');
+    wrap.innerHTML = '';
+    state.projects.forEach((p, idx) => {
+      const tpl = document.importNode($('#tpl-project-card').content, true);
+      const el = tpl.firstElementChild;
+      $('.project-title', el).textContent = p.title;
+      const last = lastProjectActivity(p);
+      $('.last-activity', el).textContent = fmt(last);
+      const cls = ageClassFrom(last);
+      const dot = $('.status-dot', el);
+      const color = {
+        'age-1h': 'bg-emerald-500',
+        'age-4h': 'bg-lime-500',
+        'age-24h': 'bg-amber-500',
+        'age-1w': 'bg-blue-500',
+        'age-stale': 'bg-slate-400',
+      }[cls];
+      dot.classList.add(color);
+      if (!passFilter(last)) el.classList.add('opacity-40'); else el.classList.remove('opacity-40');
+
+      $('[data-act="jump"]', el).addEventListener('click', () => {
+        const laneEl = $(`#lane-${p.id}`);
+        if (laneEl) laneEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+      $('[data-act="digest"]', el).addEventListener('click', () => {
+        openDigestModal(p);
+      });
+
+      wrap.appendChild(el);
+    });
+  }
+
+  function renderLanes() {
+    const lanes = $('#lanes');
+    lanes.innerHTML = '';
+    state.projects.forEach((p, pIndex) => {
+      const tpl = document.importNode($('#tpl-lane').content, true);
+      const el = tpl.firstElementChild;
+      el.id = `lane-${p.id}`;
+      $('.lane-title', el).textContent = p.title;
+
+      const body = $('.lane-body', el);
+      if (p.collapsed) body.classList.add('hidden'); else body.classList.remove('hidden');
+
+      const digestBody = $('.digest-body', el);
+      digestBody.innerHTML = '';
+      projectDigest(p).slice(0, 20).forEach(item => {
+        const li = document.createElement('div');
+        li.textContent = `${fmt(item.when)} — [${item.card}] ${item.text}`;
+        digestBody.appendChild(li);
+      });
+
+      // Eventos header
+      $('.collapse-btn', el).addEventListener('click', () => {
+        p.collapsed = !p.collapsed; save(); render();
+      });
+      $('[data-act="addColumn"]', el).addEventListener('click', () => addColumn(p.id));
+      $('[data-act="renameProject"]', el).addEventListener('click', () => renameProject(p.id));
+      $('[data-act="delProject"]', el).addEventListener('click', () => delProject(p.id));
+
+      // Colunas
+      const colsWrap = $('.columns', el);
+      p.columns.forEach((c, cIndex) => {
+        const cTpl = document.importNode($('#tpl-column').content, true);
+        const cEl = cTpl.firstElementChild;
+        $('.col-title', cEl).textContent = c.title;
+
+        // Ações coluna
+        $('[data-act="renameColumn"]', cEl).addEventListener('click', () => renameColumn(p.id, c.id));
+        $('[data-act="delColumn"]', cEl).addEventListener('click', () => delColumn(p.id, c.id));
+        $('[data-act="addCard"]', cEl).addEventListener('click', () => addCard(p.id, c.id));
+
+        // Área de drop
+        const cardsWrap = $('.cards', cEl);
+        cardsWrap.addEventListener('dragover', e => { e.preventDefault(); cardsWrap.classList.add('drop-target'); });
+        cardsWrap.addEventListener('dragleave', () => cardsWrap.classList.remove('drop-target'));
+        cardsWrap.addEventListener('drop', e => {
+          e.preventDefault();
+          cardsWrap.classList.remove('drop-target');
+          const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+          moveCard(data.projectId, data.columnId, data.cardId, p.id, c.id);
+        });
+
+        // Cards
+        c.cards.forEach(card => {
+          const cardTpl = document.importNode($('#tpl-card').content, true);
+          const cardEl = cardTpl.firstElementChild;
+          cardEl.dataset.pid = p.id; cardEl.dataset.cid = c.id; cardEl.dataset.id = card.id;
+
+          $('.card-title-wrap', cardEl).textContent = card.title;
+          $('.card-desc', cardEl).textContent = card.description || '';
+          $('.updated-at', cardEl).textContent = fmt(lastCardActivity(card));
+
+          const cls = ageClassFrom(lastCardActivity(card));
+          cardEl.classList.remove('age-1h','age-4h','age-24h','age-1w','age-stale');
+          cardEl.classList.add(cls);
+          if (!passFilter(lastCardActivity(card))) cardEl.classList.add('opacity-40');
+
+          // Log
+          const logDetails = $('.log-details', cardEl);
+          const logBody = $('.log-body', cardEl);
+          logBody.innerHTML = '';
+          (card.history || []).slice().reverse().forEach(h => {
+            const li = document.createElement('li');
+            li.textContent = `${fmt(h.ts)} — ${h.action}${h.text?': '+h.text:''}`;
+            logBody.appendChild(li);
+          });
+
+          $('[data-act="log"]', cardEl).addEventListener('click', () => {
+            logDetails.classList.toggle('hidden');
+          });
+
+          // Editar (form sempre)
+          $('[data-act="edit"]', cardEl).addEventListener('click', () => openEditCardForm(p.id, c.id, card.id));
+
+          // Excluir
+          $('[data-act="del"]', cardEl).addEventListener('click', () => delCard(p.id, c.id, card.id));
+
+          // Drag
+          cardEl.addEventListener('dragstart', e => {
+            cardEl.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', JSON.stringify({ projectId: p.id, columnId: c.id, cardId: card.id }));
+          });
+          cardEl.addEventListener('dragend', () => cardEl.classList.remove('dragging'));
+
+          cardsWrap.appendChild(cardEl);
+        });
+
+        colsWrap.appendChild(cEl);
+      });
+
+      lanes.appendChild(el);
+    });
+  }
+
+  // ==========================
+  // CRUD Projetos/Colunas/Cards
+  // ==========================
+  function addProject(title='Novo projeto') {
+    state.projects.push({ id: uid(), title, createdAt: now(), updatedAt: now(), collapsed: false, columns: [
+      { id: uid(), title: 'A Fazer', cards: [] },
+      { id: uid(), title: 'Em Progresso', cards: [] },
+      { id: uid(), title: 'Concluído', cards: [] },
+    ]});
+    save(); render();
+  }
+
+  function renameProject(pid) {
+    const p = state.projects.find(p=>p.id===pid); if (!p) return;
+    openModal('Renomear projeto', formHtml([
+      {label:'Título', name:'title', type:'text', value:p.title}
+    ]), (fd)=>{
+      p.title = fd.title; p.updatedAt = now(); save(); render();
+    });
+  }
+
+  function delProject(pid) {
+    if (!confirm('Excluir este projeto?')) return;
+    const i = state.projects.findIndex(p=>p.id===pid); if (i<0) return;
+    state.projects.splice(i,1); save(); render();
+  }
+
+  function addColumn(pid, title='Nova coluna') {
+    const p = state.projects.find(p=>p.id===pid); if (!p) return;
+    p.columns.push({ id: uid(), title, cards: [] });
+    p.updatedAt = now(); save(); render();
+  }
+
+  function renameColumn(pid, cid) {
+    const p = state.projects.find(p=>p.id===pid); if (!p) return;
+    const c = p.columns.find(c=>c.id===cid); if (!c) return;
+    openModal('Renomear coluna', formHtml([
+      {label:'Título', name:'title', type:'text', value:c.title}
+    ]), (fd)=>{ c.title = fd.title; p.updatedAt = now(); save(); render(); });
+  }
+
+  function delColumn(pid, cid) {
+    const p = state.projects.find(p=>p.id===pid); if (!p) return;
+    if (!confirm('Excluir esta coluna?')) return;
+    const i = p.columns.findIndex(c=>c.id===cid); if (i<0) return;
+    p.columns.splice(i,1); p.updatedAt = now(); save(); render();
+  }
+
+  function addCard(pid, cid) {
+    const p = state.projects.find(p=>p.id===pid); if (!p) return;
+    const c = p.columns.find(c=>c.id===cid); if (!c) return;
+    openModal('Novo card', formHtml([
+      {label:'Título', name:'title', type:'text', value:''},
+      {label:'Descrição', name:'description', type:'textarea', value:''}
+    ]), (fd)=>{
+      const card = {
+        id: uid(),
+        title: fd.title || 'Sem título',
+        description: fd.description || '',
+        createdAt: now(),
+        updatedAt: now(),
+        lastActivity: now(),
+        history: [{ ts: now(), action: 'criou', text: fd.title }]
+      };
+      c.cards.push(card);
+      p.updatedAt = now(); save(); render();
+    });
+  }
+
+  function openEditCardForm(pid, cid, id) {
+    const p = state.projects.find(p=>p.id===pid); if (!p) return;
+    const c = p.columns.find(c=>c.id===cid); if (!c) return;
+    const card = c.cards.find(k=>k.id===id); if (!card) return;
+
+    openModal('Editar card', formHtml([
+      {label:'Título', name:'title', type:'text', value:card.title},
+      {label:'Descrição', name:'description', type:'textarea', value:card.description}
+    ]), (fd)=>{
+      // Log de alterações
+      if (fd.title !== card.title) card.history.push({ ts: now(), action: 'renomeou', text: `${card.title} → ${fd.title}` });
+      if (fd.description !== card.description) card.history.push({ ts: now(), action: 'editou descrição' });
+
+      card.title = fd.title;
+      card.description = fd.description;
+      card.updatedAt = now();
+      card.lastActivity = now();
+      p.updatedAt = now();
+      save(); render();
+    });
+  }
+
+  function delCard(pid, cid, id) {
+    const p = state.projects.find(p=>p.id===pid); if (!p) return;
+    const c = p.columns.find(c=>c.id===cid); if (!c) return;
+    if (!confirm('Excluir este card?')) return;
+    const i = c.cards.findIndex(k=>k.id===id); if (i<0) return;
+    c.cards.splice(i,1); p.updatedAt = now(); save(); render();
+  }
+
+  function moveCard(fromPid, fromCid, cardId, toPid, toCid) {
+    const fp = state.projects.find(p=>p.id===fromPid); if (!fp) return;
+    const fc = fp.columns.find(c=>c.id===fromCid); if (!fc) return;
+    const idx = fc.cards.findIndex(k=>k.id===cardId); if (idx<0) return;
+    const card = fc.cards.splice(idx,1)[0];
+
+    const tp = state.projects.find(p=>p.id===toPid); if (!tp) return;
+    const tc = tp.columns.find(c=>c.id===toCid); if (!tc) return;
+
+    tc.cards.push(card);
+
+    // Log de movimentação
+    card.history.push({ ts: now(), action: 'moveu', text: `${fp.title}/${fc.title} → ${tp.title}/${tc.title}` });
+    card.lastActivity = now();
+
+    fp.updatedAt = now();
+    tp.updatedAt = now();
+    save(); render();
+  }
+
+  // ==========================
+  // Modal & Form (sempre formulário)
+  // ==========================
+  function formHtml(fields) {
+    const id = uid();
+    const inputs = fields.map(f => {
+      if (f.type === 'textarea') {
+        return `
+          <label class="block text-sm font-medium mb-1">${f.label}</label>
+          <textarea style='background:black; color:white;' name="${f.name}" rows="5" class="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 focus:ring-2 focus:ring-indigo-500">${(f.value||'').replace(/</g,'&lt;')}</textarea>
+        `;
+      }
+      return `
+        <label class="block text-sm font-medium mb-1">${f.label}</label>
+        <input style='background:black; color:white;'  name="${f.name}" type="${f.type}" value="${(f.value||'').replace(/"/g,'&quot;')}" class="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 focus:ring-2 focus:ring-indigo-500" />
+      `;
+    }).join('<div class=\"h-3\"></div>');
+
+    return `
+      <form id="form-${id}" class="space-y-3">
+        ${inputs}
+        <div class="pt-2 flex items-center justify-end gap-2">
+          <button type="button" data-close class="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700">Cancelar</button>
+          <button type="submit" class="px-3 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500">Salvar</button>
+        </div>
+      </form>
+    `;
+  }
+
+  function openModal(title, bodyHtml, onSubmit) {
+    $('#modalTitle').textContent = title;
+    $('#modalBody').innerHTML = bodyHtml;
+    const modal = $('#modal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+
+    $('[data-close]', modal).addEventListener('click', closeModal);
+    modal.querySelectorAll('[data-close]').forEach(btn=>btn.addEventListener('click', closeModal));
+    modal.querySelectorAll('form').forEach(form => {
+      form.addEventListener('submit', e => {
+        e.preventDefault();
+        const fd = Object.fromEntries(new FormData(form).entries());
+        onSubmit && onSubmit(fd);
+        closeModal();
+      });
+    });
+  }
+  function closeModal() {
+    const modal = $('#modal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+
+  function openDigestModal(project) {
+    const items = projectDigest(project);
+    const html = items.length ? items.map(it => `<div class="text-sm">${fmt(it.when)} — <b>[${it.card}]</b> ${it.text}</div>`).join('') : '<p class="text-sm text-slate-500">Sem atividades ainda.</p>';
+    openModal(`Resumo — ${project.title}`, `<div class="space-y-1 max-h-[60vh] overflow-auto thin-scroll">${html}</div>`);
+  }
+
+  // ==========================
+  // Topbar actions & filtros
+  // ==========================
+  function bindTopbar() {
+    $('#btnDark').addEventListener('click', ()=> setDark(!state.dark));
+
+    $('#btnActions').addEventListener('click', ()=> {
+      $('#menuActions').classList.toggle('hidden');
+    });
+    document.addEventListener('click', (e)=>{
+      const m = $('#menuActions');
+      if (!m) return;
+      if (!m.contains(e.target) && e.target !== $('#btnActions')) m.classList.add('hidden');
+    });
+
+    $$('#menuActions .menu-item').forEach(it => {
+      it.addEventListener('click', ()=>{
+        const act = it.dataset.action;
+        if (act === 'newProject') addProject();
+        if (act === 'export') exportJSON();
+        if (act === 'reset') resetAll();
+        $('#menuActions').classList.add('hidden');
+      })
+    });
+
+    $('#importInput').addEventListener('change', async (e)=>{
+      const file = e.target.files[0]; if (!file) return;
+      const text = await file.text();
+      try {
+        const data = JSON.parse(text);
+        if (data && data.projects) { Object.assign(state, data); save(); render(); }
+        else alert('Arquivo inválido');
+      } catch(err){ alert('JSON inválido'); }
+      e.target.value = '';
+    });
+
+    $$('.age-btn').forEach(btn => {
+      btn.addEventListener('click', ()=>{ state.ageFilter = btn.dataset.age; save(); render(); });
+    });
+  }
+
+  function exportJSON() {
+    const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'swimlane-board.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function resetAll() {
+    if (!confirm('Tem certeza que deseja apagar tudo?')) return;
+    localStorage.removeItem(STORAGE_KEY);
+    location.reload();
+  }
+
+  // ==========================
+  // Inicialização
+  // ==========================
+  function ensureSample() {
+    if (state.projects.length) return;
+    const p1 = { id: uid(), title: 'Lançar App Mobile', createdAt: now(), updatedAt: now(), collapsed: false, columns: [
+      { id: uid(), title: 'Backlog', cards: [
+        { id: uid(), title: 'Pesquisa com usuários', description: 'Rodar 10 entrevistas', createdAt: now(), updatedAt: now(), lastActivity: now(), history:[{ts:now(), action:'criou', text:'Pesquisa com usuários'}] }
+      ]},
+      { id: uid(), title: 'Em Progresso', cards: [
+        { id: uid(), title: 'Fluxo de login', description: 'Tela + API + validações', createdAt: now(), updatedAt: now(), lastActivity: now(), history:[{ts:now(), action:'criou', text:'Fluxo de login'}] }
+      ]},
+      { id: uid(), title: 'Concluído', cards: [] },
+    ]};
+    const p2 = { id: uid(), title: 'Integração Pagamentos', createdAt: now(), updatedAt: now(), collapsed: false, columns: [
+      { id: uid(), title: 'Planejamento', cards: [] },
+      { id: uid(), title: 'Execução', cards: [] },
+      { id: uid(), title: 'QA', cards: [] },
+    ]};
+    state.projects.push(p1,p2);
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    load();
+    ensureSample();
+    setDark(!!state.dark);
+    bindTopbar();
+    render();
+  });
+  </script>
+
+<style>
+  .max-w-7xl{
+    max-width:100%;
+  }
+
+</style>
+
+</body>
+</html>
