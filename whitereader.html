@@ -1,0 +1,426 @@
+<html>
+
+    <head>
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, user-scalable=no">
+        <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+        <script src="https://code.jquery.com/color/jquery.color-2.1.2.js"></script>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Comic+Neue&display=swap" rel="stylesheet">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Lobster&family=Lumanosimo&family=Ysabeau+Office:wght@300&display=swap" rel="stylesheet">
+        <title>Reader</title>
+
+        <style>
+
+            a{
+                color: white;
+                padding-right: 10px;;
+            }
+
+            .panel{
+                color: white;
+                font-family: 'Ysabeau Office';
+                padding: 50px;
+                font-size: 30px;
+                width: 90%;
+            }
+
+            .panel>div{
+                width: 100%;
+            }
+
+            body{
+                margin-right: 20px;
+                background: white;
+            }
+
+            .word{
+                color: white;
+            }
+            
+            
+            h1 {
+                color: #444;
+				margin-top: 20px;
+                font-size: 24px;
+                line-height: 70px;
+                padding-right: 20px;
+                cursor: pointer;
+                font-family: 'Comic Neue', cursive;
+            }
+
+            button.custom{
+                background-color: #3c3c3c;
+                color: white;
+                border: 0;
+                cursor: pointer;
+                padding: 20px;
+            }
+
+            a.custom{
+                padding: 20px;
+                border: 0px solid rgb(76, 76, 76);
+            }
+
+            div.barButtons{
+                position: fixed;
+                bottom: 60px;
+                left: 0;
+                width: 100%;
+                text-align: center;
+            }
+			
+			span.littleWord{
+				padding: 10px;
+				background: orange;
+				border-radius: 10px;
+				margin: 10px;
+                line-height: 70px;
+				text-shadow: 2px 1px 6px #444;
+			}
+
+        </style>
+
+        <script>
+
+			var fontSize = 64;
+			$("h1").css("line-height", Math.floor(fontSize) + "px");
+
+			function increaseFont(){
+				fontSize += 6;
+				$("h1").css("font-size",fontSize + "px");
+				$("h1").css("line-height", Math.floor(fontSize + 30) + "px");
+			}
+
+			function decreaseFont(){
+				fontSize -= 6;
+				$("h1").css("font-size",fontSize + "px");
+				$("h1").css("line-height", Math.floor(fontSize + 30) + "px");
+			}
+
+            function puxar(){
+                $.ajax({
+                    url: "getContent.php?id_artigo=" + get('id_artigo'),
+                    type: 'GET',
+                    success: function (data) {
+                        $("#input").val(data);
+                        ingest();
+                    },
+                    error: function(){
+                        //alert("Cannot get data");
+                    }
+                });
+            }
+
+            function lido(){
+                $.ajax({
+                    url: "done.php?id_artigo=" + get("id_artigo"),
+                    success: function (data) {
+                        alert("Registrado como lido!");
+                        parent.document.getElementById("folders").src = "parents.php";
+						//location.reload()		
+                    },
+                    error: function(){
+                        //alert("Cannot get data");
+                    }
+                });
+            }
+
+            function link(){
+                console.log("Link acionado");
+                $.ajax({
+                    url: "getLink.php?id_artigo=" + get("id_artigo"),
+                    success: function (data) {
+                        console.log(data);
+                        if (data.toLowerCase().indexOf("http") === -1){
+                            //window.open("getReader.html?id_artigo=" + get("id_artigo"));
+                            
+                        }
+                        else {
+                            $("#linkinho").attr("href",data);
+                            $("#linkinho").attr("target","_blank");
+                            //window.open(data,"_blank");
+                        }
+                            
+						//location.reload()		
+                    },
+                    error: function(){
+                        //alert("Cannot get data");
+                    }
+                });
+            }
+
+            var varDelay = 10;
+            var control = 1; 
+            var lineHeight = 100;
+            var texto = "Inicio";
+            var myArray = texto.split(" ");
+            var countTired = 0;
+
+            function selectFont(){
+
+                /*
+                fontes = [
+                    'Times New Roman',
+                    'Ysabeau Office',
+                    'Times New Roman',
+                    'Comic Neue'
+                ]
+                */
+
+                fontes = [
+                    'Verdana',
+                ]
+                fontSelected = fontes[ Math.floor( Math.random() * fontes.length ) ];
+
+                $("h1").css("font-family",fontSelected);
+				$("h1").css("font-weight","100");
+                $("#font").html(fontSelected);
+
+                //fontSelected = fontes[ Math.floor( Math.random() * fontes.length ) ];
+                //$(".panel").css("font-family",fontSelected);
+
+            }
+
+            $(document).ready(function(){       
+                paste();
+                //puxar();
+                mostraPanel(false);
+                selectFont();
+                link();
+            });
+
+            function mostraPanel(on){
+                arrumaPanel();
+                if (!on){
+                    $(".panel").css("opacity","0");
+                    $(".panel").css("z-index","-1");
+                    $("h1").delay(300).animate({opacity: 1}, 2000);
+                } else {
+					setTimeout( function(){
+						$(".panel").css("opacity","1");
+						$(".panel").css("z-index","1");
+						
+					}, 5000);
+					console.log("entrou aqui");
+                    $("h1").delay(1500).animate({opacity: 0}, 1000);
+                    $(".panel>div").html( $("#remember").val());
+                    selectFont();
+                }
+                    
+            }
+            
+            function appendWord(a){
+                setTimeout (function(){ $("h1>span:nth-last-child(2)").animate({'background-color':'#00e7eb','color':'black'},500)
+                    .animate({'background-color':'transparent','color':'black'},200).animate({'color':'black','background-color':'transparent'},1000), 100 });
+
+                a = a.replace("undefined", "");
+                a = a.replace("undefined", "");
+                a = a.replace("undefined", "");
+                $("h1").html( $("h1").html() + " " + "<span class='word'>" + a + "</span>");
+                $("h1>span:last-child").delay(varDelay + 100  + countTired*10).animate({'color':'#eee'},900);
+
+                $(".word").click(function(){
+                    if ($(this).attr("passou") != "true"){
+                        $(this).attr("passou","true");
+                        if (control > myArray.length) finaliza();
+                        else
+                            appendWord(
+                                "<span class='wordAtomic'>" + myArray[control] + "</span>" + " " + 
+                                "<span class='wordAtomic'>" + myArray[control + 1] + "</span>" + " " + 
+                                "<span class='wordAtomic'>" + myArray[control + 2] + "</span>" 
+                            );
+                        control += 3;
+                        updateLineHeight();
+                        validaCountTired(myArray[control - 6]);
+						validaCountTired(myArray[control + 1 - 6]);
+						validaCountTired(myArray[control + 2 - 6]);
+                    }
+                    
+                });
+
+                $(".wordAtomic").dblclick(function(){
+
+                    textoRemember = $("#remember").val();
+                    textoRemember = textoRemember.replaceAll("<br>", "");
+                    textoRemember = textoRemember.replaceAll("<br />", "");
+                    textoRemember = textoRemember.replaceAll(/\n/g, "");
+                    textoRemember = textoRemember.replaceAll(".", " ");
+                    textoRemember = textoRemember.replaceAll(".", "");
+                    textoRemember = textoRemember.replaceAll("”", "");
+                    textoRemember = textoRemember.replaceAll("“", "");
+
+                    $("#remember").val( textoRemember + "<span class='littleWord'>" +   $(this).html() +  "</span>");
+
+                    $("h1").focus();
+                    $(this).animate({"background-color":"yellow","color":"black"},200);
+                    countTired += 1;
+                });
+            }
+
+            function arrumaPanel(){
+                textoRemember = $("#remember").val();
+                textoRemember = textoRemember.replaceAll("<br>", "");
+                textoRemember = textoRemember.replaceAll("<br />", "");
+                textoRemember = textoRemember.replaceAll(/\n/g, "");
+                textoRemember = textoRemember.replaceAll(".", " ");
+                textoRemember = textoRemember.replaceAll(".", "");
+                textoRemember = textoRemember.replaceAll("”", "");
+                textoRemember = textoRemember.replaceAll("“", "");
+
+                $("#remember").val( textoRemember + " ");
+            }
+
+            function paste(){
+                
+                navigator.clipboard.readText().then(
+                    (clipText) => ( pasteThen(clipText) )
+                );
+            }
+
+            function pasteThen(clipText){
+                $("#input").val(clipText);
+                ingest();
+            }
+
+            function finaliza(){
+                setTimeout( function(){
+                    mostraPanel(true);
+                    setTimeout( function(){ mostraPanel(false); mostraBarra(false); },500 * Math.floor($("#remember").val().length)/3);    
+                }, 2000);
+
+                $("h1").html( $("h1").html() + ". FIM. <span onclick='location.reload()'>Recarregar </span> ");
+                $("h1>span").animate({'color':'black'},1000);
+				$("#lido").show();
+            }
+
+            function ingest(){
+                texto = $("#input").val();
+                texto = texto.replaceAll(/\n/g, " <br>");
+                texto = texto.replaceAll(/\t/g, " ");
+                texto = texto.replaceAll("  ", " ");
+                myArray = texto.split(" ");
+
+                appendWord(myArray[0]); 
+
+            }
+
+            function mostraBarra(on){
+                if (on)
+                    $("#bar").animate({'background-color': '#00f'}, 1000);
+                else 
+                    $("#bar").animate({'background-color': 'transparent'}, 1000);
+            }
+
+            function validaCountTired(word){
+				if (countTired >= 30){
+					//mostraBarra(true);
+					countTired = 0;
+				}
+				if (countTired >= 1000){
+					if (word.includes(".")){
+						//alert(word + ". countTired: " + countTired);
+						mostraPanel(true);
+                        countTired = 0;
+					}
+					//setTimeout( function(){ mostraPanel(false); mostraBarra(false); },300 * Math.floor($("#remember").val().length)/3);
+					//setTimeout( function(){ mostraPanel(false); mostraBarra(false); },5000);
+					$("#lido").show();
+					
+				}
+				else 
+					countTired++;
+				console.log('countTired: ' + countTired);
+            }
+
+            function forwardFast(){
+                control += 10;
+                appendWord(myArray[control] + " " + myArray[control + 1] + " " + myArray[control + 2]);
+            }
+
+            function ajustarDelay(){
+                varDelay = $("#delay").val();
+            }
+
+            function increaseDelay(){
+                varDelay += 50;
+            }
+
+            function decreaseDelay(){
+                varDelay -= 50;
+            }
+
+        </script>
+
+    </head>
+
+
+    <body style="margin: 0;   text-align: justify;">
+		<div id="bar" style="position:fixed; width: 100%; margin: 0; margin-bottom: 10px; height: 15px; background-color: rgb(22, 192, 22);"></div>
+
+		<div style="width: 800px; margin: 0 auto;">
+
+
+			<textarea style="background-color: #444; color: white; border: 0; visibility: hidden; position: absolute;" id="input"></textarea>
+			<textarea style="background-color: #444; color: white; border: 0; visibility: hidden; position: absolute;" id="remember"></textarea>
+			<textarea style="background-color: #444; color: white; border: 0; visibility: hidden; position: absolute;" id="delay"></textarea>
+
+			<div class="barButtons">
+				<button class="custom" onclick="ingest()">Ingest</button>
+				<button class="custom" onclick="paste()">Paste</button>
+				<button class="custom" onclick="sortear()">Sortear</button>
+				<button class="custom" onclick="mostraPanel(true)">Mostra Painel</button>
+				
+				<button class="custom" onclick="increaseFont()">Increase</button>
+				<button class="custom" onclick="decreaseFont()">Decrease</button>
+				<button class="custom" onclick="location.reload()">Refresh</button>
+				<button class="custom" onclick="lido()" id="lido">Lido</button>
+				<a id="linkinho" href=''><button class="custom" >Link</button></a>
+			</div>
+
+			<h1></h1>
+
+			<br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br />
+		</div>
+			<div class="panel" style="top: 20%; position: fixed; width: 100%; height: auto; background-color: #800080; margin: 0 auto;">
+				<div></div>
+				<span id="fecharPanel"><br>[x]</span>
+			</div>
+		
+
+
+    </body>
+
+
+    <script>
+        
+        function selecionaSalmos(){
+            salmos = Math.floor( Math.random()*150 ) + 1;
+            $("#linkSalmos").attr("href","https://www.bibliaonline.com.br/ara/sl/" + salmos);
+        }
+
+		$("#lido").hide();
+		
+        mostraBarra(false);
+        function updateLineHeight(){
+            //console.log("Line-height:" + lineHeight + " e CSS LineHeight: " + $("h1").css("line-height"));
+            //$("h1").css("line-height", Math.floor(lineHeight) + "px");
+            //lineHeight += 0.025;
+        }
+        
+        $("#fecharPanel").click(function(){
+            mostraPanel(false); mostraBarra(false);
+        });
+
+        selecionaSalmos();
+    
+        function get(name){
+            if(name=(new RegExp('[?&]'+encodeURIComponent(name)+'=([^&]*)')).exec(location.search))
+                return decodeURIComponent(name[1]);
+        }
+
+    </script>
+
+</html>
