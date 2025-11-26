@@ -1,0 +1,2159 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Task DDoS Manager</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --blue-900: #0b1120;
+      --blue-800: #111827;
+      --blue-700: #1f2937;
+      --blue-600: #2563eb;
+      --blue-500: #3b82f6;
+      --blue-400: #60a5fa;
+      --blue-300: #bfdbfe;
+      --blue-200: #dbeafe;
+      --blue-100: #eff6ff;
+
+      --gray-900: #020617;
+      --gray-800: #0f172a;
+      --gray-700: #1f2937;
+      --gray-600: #4b5563;
+      --gray-500: #6b7280;
+      --gray-400: #9ca3af;
+      --gray-300: #d1d5db;
+      --gray-200: #e5e7eb;
+      --gray-100: #f3f4f6;
+
+      --bg: #f3f4f6;
+      --bg-card: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #6b7280;
+      --border: #e5e7eb;
+      --accent: #2563eb;
+      --accent-soft: #dbeafe;
+      --danger: #dc2626;
+      --warning: #f97316;
+      --success: #16a34a;
+    }
+
+    body.dark {
+      --bg: #020617;
+      --bg-card: #020617;
+      --text-main: #e5e7eb;
+      --text-muted: #9ca3af;
+      --border: #1f2937;
+      --accent: #60a5fa;
+      --accent-soft: rgba(37, 99, 235, 0.18);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding: 16px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .app-shell {
+      width: 100%;
+      max-width: 1200px;
+      background: radial-gradient(circle at top, rgba(37, 99, 235, 0.18), transparent 55%), var(--bg);
+      border-radius: 20px;
+      padding: 12px 14px 18px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      box-shadow: 0 20px 60px rgba(15, 23, 42, 0.35);
+    }
+
+    /* TOPBAR */
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      padding: 8px 10px;
+      border-radius: 14px;
+      background: var(--blue-900);
+      color: #e5e7eb;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .app-pill {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 4px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .app-title {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .app-subtitle {
+      font-size: 11px;
+      color: #9ca3af;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .backup-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px dashed rgba(148, 163, 184, 0.6);
+    }
+
+    .backup-btn {
+      border: none;
+      background: transparent;
+      font-size: 14px;
+      cursor: pointer;
+      color: #e5e7eb;
+      opacity: 0.8;
+    }
+
+    .backup-btn:hover {
+      opacity: 1;
+    }
+
+    .theme-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: #e5e7eb;
+    }
+
+    .switch {
+      width: 36px;
+      height: 18px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      padding: 2px;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .switch-thumb {
+      width: 14px;
+      height: 14px;
+      border-radius: 999px;
+      background: #e5e7eb;
+      transform: translateX(0);
+      transition: transform 0.16s ease;
+    }
+
+    body.dark .switch-thumb {
+      transform: translateX(16px);
+      background: #0f172a;
+    }
+
+    /* LAYOUT SEÇÕES EM BARRA (VERTICAL) */
+    .layout {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .section-card {
+      background: var(--bg-card);
+      border-radius: 14px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 8px;
+    }
+
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+    }
+
+    .section-subtitle {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* BOTÕES & INPUTS BÁSICOS */
+    button {
+      font-family: inherit;
+    }
+
+    .btn-pill {
+      border-radius: 999px;
+      border: 1px solid var(--accent);
+      background: var(--accent-soft);
+      padding: 4px 10px;
+      font-size: 11px;
+      color: var(--accent);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .btn-pill.secondary {
+      border-color: var(--border);
+      background: transparent;
+      color: var(--text-muted);
+    }
+
+    .btn-icon-circle {
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: transparent;
+      font-size: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .btn-icon-circle.finish {
+      border-color: var(--success);
+    }
+
+    .btn-icon-circle.pause {
+      border-color: var(--warning);
+    }
+
+    .btn-icon-circle.cancel {
+      border-color: var(--danger);
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      font-size: 11px;
+    }
+
+    .field-label {
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      font-size: 10px;
+    }
+
+    .input,
+    .select {
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      font-size: 11px;
+      background: transparent;
+      color: var(--text-main);
+      outline: none;
+    }
+
+    .input::placeholder {
+      color: var(--gray-400);
+    }
+
+    /* SEÇÃO 1 - TAREFA EM ANDAMENTO / PAUSADAS / CANCELADAS / DDOS */
+    .current-task-box {
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 8px 10px;
+      margin-bottom: 8px;
+      background: rgba(37, 99, 235, 0.05);
+    }
+
+    .current-task-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .status-pill {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+    }
+
+    .current-task-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .current-task-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .meta-dot {
+      width: 3px;
+      height: 3px;
+      border-radius: 999px;
+      background: var(--text-muted);
+    }
+
+    .current-task-controls {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 5px;
+      border-radius: 999px;
+      background: var(--gray-200);
+      overflow: hidden;
+      margin-top: 6px;
+    }
+
+    .progress-inner {
+      height: 100%;
+      background: linear-gradient(to right, var(--blue-400), var(--blue-600));
+      width: 0%;
+    }
+
+    .pill-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .pill {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+
+    .pill.warning {
+      border-color: var(--warning);
+      color: var(--warning);
+    }
+
+    .pill.danger {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    .pill.success {
+      border-color: var(--success);
+      color: var(--success);
+    }
+
+    .paused-box,
+    .cancelled-box {
+      border-radius: 12px;
+      border: 1px dashed var(--border);
+      padding: 6px 8px;
+      margin-bottom: 6px;
+    }
+
+    .small-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .small-list {
+      font-size: 11px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .small-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .small-row-left {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .small-row-title {
+      font-weight: 500;
+    }
+
+    .small-row-meta {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    /* DDoS */
+    .ddos-layout {
+      margin-top: 8px;
+      display: grid;
+      grid-template-columns: 2fr 2fr;
+      gap: 8px;
+    }
+
+    @media (max-width: 900px) {
+      .ddos-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .ddos-form-row {
+      display: grid;
+      grid-template-columns: 1.2fr 1.2fr 1fr auto;
+      gap: 6px;
+      margin-bottom: 6px;
+      align-items: flex-end;
+    }
+
+    @media (max-width: 720px) {
+      .ddos-form-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .ddos-list {
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      padding: 6px 8px;
+      font-size: 11px;
+      max-height: 170px;
+      overflow-y: auto;
+    }
+
+    .ddos-item {
+      display: grid;
+      grid-template-columns: 2fr 1fr auto;
+      gap: 6px;
+      padding: 4px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .ddos-item:last-child {
+      border-bottom: none;
+    }
+
+    .ddos-main {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .ddos-person {
+      font-weight: 500;
+    }
+
+    .ddos-subject {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .ddos-meta {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .ddos-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    .badge {
+      padding: 2px 6px;
+      border-radius: 999px;
+      font-size: 10px;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+
+    .badge.hot {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    /* SEÇÃO 2 - BACKLOG / TAREFAS ANINHADAS */
+    .tasks-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      padding: 2px 7px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      font-size: 10px;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    .chip.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .tasks-wrapper {
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      max-height: 380px;
+      overflow-y: auto;
+      font-size: 11px;
+    }
+
+    .tasks-header-row,
+    .task-row {
+      display: grid;
+      grid-template-columns: 20px minmax(0, 2.7fr) minmax(0, 1.2fr) minmax(0, 1.1fr) 90px 80px;
+      gap: 4px;
+      align-items: center;
+      padding: 4px 8px;
+    }
+
+    .tasks-header-row {
+      position: sticky;
+      top: 0;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+    }
+
+    .task-row {
+      border-bottom: 1px solid var(--border);
+      cursor: default;
+    }
+
+    .task-row:nth-child(2n) {
+      background: rgba(15, 23, 42, 0.02);
+    }
+
+    .task-row:hover {
+      background: rgba(37, 99, 235, 0.06);
+    }
+
+    .task-row.highlight {
+      box-shadow: 0 0 0 2px #facc15;
+      background: rgba(250, 204, 21, 0.12);
+    }
+
+    .task-drag {
+      font-size: 12px;
+      color: var(--gray-400);
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .task-main {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .task-title-line {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .task-title {
+      font-weight: 500;
+      font-size: 11px;
+    }
+
+    .task-title.critical {
+      color: var(--danger);
+    }
+
+    .task-title.completed {
+      text-decoration: line-through;
+      color: var(--text-muted);
+    }
+
+    .task-indent-0 { padding-left: 0; }
+    .task-indent-1 { padding-left: 14px; }
+    .task-indent-2 { padding-left: 28px; }
+    .task-indent-3 { padding-left: 42px; }
+
+    .task-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      font-size: 9px;
+      color: var(--text-muted);
+    }
+
+    .tag-pill {
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+    }
+
+    .tag-critical {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    .tag-late {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    .tag-no-deadline {
+      border-color: var(--warning);
+      color: var(--warning);
+    }
+
+    .tag-report {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .report-pill {
+      padding: 3px 7px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      font-size: 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .report-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--success);
+    }
+
+    .task-deadline {
+      font-size: 11px;
+    }
+
+    .task-deadline.late {
+      color: var(--danger);
+    }
+
+    .task-deadline.today {
+      color: var(--warning);
+    }
+
+    .task-deadline.no-deadline {
+      color: var(--warning);
+      font-style: italic;
+    }
+
+    .task-progress-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .task-progress-bar {
+      width: 100%;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--gray-200);
+      overflow: hidden;
+    }
+
+    .task-progress-inner {
+      height: 100%;
+      background: linear-gradient(to right, var(--blue-400), var(--blue-600));
+      width: 0%;
+    }
+
+    .task-progress-text {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-align: right;
+    }
+
+    .task-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 4px;
+    }
+
+    .play-btn {
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      border: 1px solid var(--accent);
+      background: transparent;
+      font-size: 11px;
+      color: var(--accent);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .check-box {
+      width: 14px;
+      height: 14px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+    }
+
+    .edit-dot {
+      width: 3px;
+      height: 3px;
+      border-radius: 999px;
+      background: var(--text-muted);
+    }
+
+    .toggle-icon {
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    /* Form inline */
+    .task-form-inline {
+      display: grid;
+      grid-template-columns: 20px minmax(0, 2.7fr) minmax(0, 1.2fr) minmax(0, 1.1fr) 90px 80px;
+      gap: 4px;
+      padding: 6px 8px;
+      background: rgba(15, 23, 42, 0.03);
+      border-top: 1px dashed var(--border);
+      font-size: 11px;
+    }
+
+    .task-form-inline .input,
+    .task-form-inline .select {
+      border-radius: 8px;
+    }
+
+    .task-form-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 4px;
+    }
+
+    /* SEÇÃO 3 - INSIGHTS */
+    .insights-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    @media (max-width: 900px) {
+      .insights-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    .insight-card {
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      padding: 6px 8px;
+      font-size: 11px;
+    }
+
+    .insight-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 2px;
+    }
+
+    .insight-main {
+      font-size: 20px;
+      font-weight: 600;
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+    }
+
+    .insight-main span {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .insight-footer {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .insight-list {
+      border-radius: 10px;
+      border: 1px dashed var(--border);
+      padding: 6px 8px;
+      font-size: 11px;
+      max-height: 150px;
+      overflow-y: auto;
+      margin-bottom: 6px;
+    }
+
+    .insight-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 4px;
+      padding: 2px 0;
+      border-bottom: 1px dashed var(--border);
+    }
+
+    .insight-row:last-child {
+      border-bottom: none;
+    }
+
+    .task-ref-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      font-size: 10px;
+      color: var(--accent);
+      cursor: pointer;
+      background: transparent;
+    }
+
+    .task-ref-pill:hover {
+      border-color: #facc15;
+      color: #facc15;
+    }
+
+    .muted {
+      color: var(--text-muted);
+      font-size: 10px;
+    }
+
+    /* scrollbars discretos */
+    .tasks-wrapper::-webkit-scrollbar,
+    .ddos-list::-webkit-scrollbar,
+    .insight-list::-webkit-scrollbar {
+      width: 4px;
+    }
+    .tasks-wrapper::-webkit-scrollbar-thumb,
+    .ddos-list::-webkit-scrollbar-thumb,
+    .insight-list::-webkit-scrollbar-thumb {
+      background: var(--gray-400);
+      border-radius: 999px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="app-pill">
+          ⚡ <span>Task DDoS Manager</span>
+        </div>
+        <div>
+          <div class="app-title">Sistema de Tarefas &amp; DDoS</div>
+          <div class="app-subtitle">Aninhamento, DDoS de pessoas e foco em edição inline</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="backup-controls">
+          <span>Backup</span>
+          <button class="backup-btn" id="exportStateBtn" title="Exportar estado">⤓</button>
+          <button class="backup-btn" id="importStateBtn" title="Importar estado">⤒</button>
+          <input type="file" id="importFileInput" accept="application/json" style="display:none" />
+        </div>
+        <div class="theme-toggle">
+          <span>Dia/Noite</span>
+          <div class="switch" id="themeSwitch">
+            <div class="switch-thumb"></div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="layout">
+      <!-- SEÇÃO 1: TAREFA EM ANDAMENTO + DDOS -->
+      <section class="section-card" id="section-now">
+        <div class="section-header">
+          <div class="section-title">Tarefa em andamento</div>
+          <div class="section-subtitle">Play / Pausar / Finalizar / Cancelar &amp; DDoS de pessoas</div>
+        </div>
+
+        <!-- TAREFA EM ANDAMENTO -->
+        <div class="current-task-box" id="currentTaskBox">
+          <div class="current-task-header">
+            <div style="flex:1;">
+              <div id="currentTaskStatusPill" class="status-pill" style="display:none;">Em execução</div>
+              <div id="currentTaskTitle" class="current-task-title">Nenhuma tarefa em execução</div>
+              <div id="currentTaskMeta" class="current-task-meta"></div>
+            </div>
+            <div class="current-task-controls">
+              <div style="display:flex;gap:4px;">
+                <button class="btn-icon-circle finish" id="btnFinishCurrent" title="Finalizar">✔</button>
+                <button class="btn-icon-circle pause" id="btnPauseCurrent" title="Pausar">Ⅱ</button>
+                <button class="btn-icon-circle cancel" id="btnCancelCurrent" title="Cancelar">✕</button>
+              </div>
+              <div id="currentTaskTime">Tempo: 00:00:00</div>
+            </div>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-inner" id="currentTaskProgressInner"></div>
+          </div>
+        </div>
+
+        <!-- PAUSADAS -->
+        <div class="paused-box">
+          <div class="small-header">
+            <span>Tarefas pausadas</span>
+            <span class="muted">Retomar via Play na lista de tarefas</span>
+          </div>
+          <div class="small-list" id="pausedTasksList"></div>
+        </div>
+
+        <!-- CANCELADAS (com reativar) -->
+        <div class="cancelled-box">
+          <div class="small-header">
+            <span>Tarefas canceladas</span>
+            <span class="muted">Reativar devolve ao backlog</span>
+          </div>
+          <div class="small-list" id="cancelledTasksList"></div>
+        </div>
+
+        <!-- DDoS -->
+        <div style="margin-top:8px;" id="ddosSection">
+          <div class="section-header" style="margin-bottom:4px;">
+            <div class="section-title">DDoS de pessoas</div>
+            <div class="section-subtitle">Registrar quem você está chamando até ser atendido</div>
+          </div>
+
+          <div class="ddos-form-row">
+            <div class="field">
+              <label class="field-label">Pessoa</label>
+              <input class="input" id="ddosPersonInput" placeholder="Ex.: Gerente BTG Private" />
+            </div>
+            <div class="field">
+              <label class="field-label">Assunto</label>
+              <input class="input" id="ddosSubjectInput" placeholder="Ex.: Ajuste de limite" />
+            </div>
+            <div class="field">
+              <label class="field-label">Canal / Frequência</label>
+              <select class="select" id="ddosChannelInput">
+                <option value="WhatsApp · 2h">WhatsApp · a cada 2h</option>
+                <option value="Email · diário">Email · diário</option>
+                <option value="Ligação · 30min">Ligação · a cada 30min</option>
+              </select>
+            </div>
+            <button class="btn-pill" id="ddosAddBtn">+ DDoS</button>
+          </div>
+
+          <div class="ddos-layout">
+            <div>
+              <div class="small-header">
+                <span>Ativos (em DDoS)</span>
+                <span class="muted">Concluir ou derivar encerra o DDoS</span>
+              </div>
+              <div class="ddos-list" id="ddosActiveList"></div>
+            </div>
+            <div>
+              <div class="small-header">
+                <span>Histórico &amp; mapa</span>
+                <span class="muted">Derivados e concluídos</span>
+              </div>
+              <div class="ddos-list" id="ddosHistoryList"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 2: BACKLOG & ESTRUTURA DE PROJETO -->
+      <section class="section-card" id="section-tasks">
+        <div class="section-header">
+          <div class="section-title">Backlog &amp; Estrutura de Projeto</div>
+          <div class="section-subtitle">
+            Aninhamento, caminho crítico, Play, barra de progresso e edição inline (double-click)
+          </div>
+        </div>
+
+        <div class="tasks-toolbar">
+          <div style="display:flex;gap:4px;flex-wrap:wrap;">
+            <div class="chip active" data-filter="all">Tudo</div>
+            <div class="chip" data-filter="today">Hoje</div>
+            <div class="chip" data-filter="late">Atrasadas</div>
+            <div class="chip" data-filter="no-deadline">Sem deadline</div>
+            <div class="chip" data-filter="critical">Caminho crítico</div>
+          </div>
+          <button class="btn-pill" id="addRootTaskBtn">+ Tarefa raiz</button>
+        </div>
+
+        <div class="tasks-wrapper" id="tasksWrapper">
+          <div class="tasks-header-row">
+            <div></div>
+            <div>Task / Hierarquia</div>
+            <div>Reportar</div>
+            <div>Deadline</div>
+            <div>Progresso</div>
+            <div>Ações</div>
+          </div>
+          <div id="tasksList"></div>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 3: PAINEL DE INSIGHTS -->
+      <section class="section-card" id="section-insights">
+        <div class="section-header">
+          <div class="section-title">Painel de Insights</div>
+          <div class="section-subtitle">
+            DDoS pendentes, itens sem deadline, atrasados, para hoje e pessoas que você precisa reportar
+          </div>
+        </div>
+
+        <div class="insights-grid">
+          <div class="insight-card">
+            <div class="insight-label">Pessoas devendo DDoS</div>
+            <div class="insight-main">
+              <span id="insightDdosAtivos">0</span>
+              <span>ativos</span>
+            </div>
+            <div class="insight-footer" id="insightDdosFooter"></div>
+          </div>
+          <div class="insight-card">
+            <div class="insight-label">Itens sem deadline</div>
+            <div class="insight-main">
+              <span id="insightSemDeadline">0</span>
+              <span>tasks</span>
+            </div>
+            <div class="insight-footer">Tudo que estiver sem data precisa ser revisto.</div>
+          </div>
+          <div class="insight-card">
+            <div class="insight-label">Itens atrasados</div>
+            <div class="insight-main">
+              <span id="insightAtrasados">0</span>
+              <span>tasks</span>
+            </div>
+            <div class="insight-footer" id="insightAtrasadosFooter"></div>
+          </div>
+          <div class="insight-card">
+            <div class="insight-label">Itens para hoje</div>
+            <div class="insight-main">
+              <span id="insightHoje">0</span>
+              <span>entregas</span>
+            </div>
+            <div class="insight-footer" id="insightHojeFooter"></div>
+          </div>
+        </div>
+
+        <div class="insight-list" id="insightReportList">
+          <!-- pessoas para quem precisa reportar -->
+        </div>
+
+        <div class="insight-list">
+          <div class="muted" style="margin-bottom:4px;text-transform:uppercase;letter-spacing:0.1em;font-size:10px;">
+            Menções rápidas de tarefas (clicáveis, com holofote)
+          </div>
+          <div id="insightTaskMentions" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+          <div class="muted" style="margin-top:4px;">
+            Qualquer menção em texto pode virar um link que destaca a tarefa na lista.
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    // ==================== ESTADO & MODELO ====================
+    const STORAGE_KEY = 'taskDdosAppState_v1';
+
+    function generateId() {
+      return (
+        Date.now().toString(36) +
+        Math.random().toString(36).slice(2, 8)
+      );
+    }
+
+    const todayISO = () => new Date().toISOString().slice(0, 10);
+
+    let appState = {
+      tasks: [],
+      ddos: [],
+      currentTaskId: null,
+      ui: {
+        filter: 'all',
+        collapsed: [],       // ids de pais colapsados
+        editingTaskId: null, // para form de edição
+        subParentId: null    // para form de subtask
+      }
+    };
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          appState = JSON.parse(raw);
+        } else {
+          seedInitialState();
+          saveState();
+        }
+      } catch (e) {
+        console.error('Erro ao carregar estado', e);
+        seedInitialState();
+        saveState();
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+    }
+
+    function seedInitialState() {
+      const t1 = {
+        id: generateId(),
+        title: 'Onboarding Arquitetura Global Fiserv',
+        description: 'Definir roles, SLAs e riscos',
+        parentId: null,
+        reportTo: 'Diretor de Engenharia',
+        critical: true,
+        deadline: '2025-12-10',
+        progress: 60,
+        status: 'backlog',
+        createdAt: todayISO(),
+        updatedAt: todayISO(),
+        completed: false,
+        startedAt: null,
+        totalElapsed: 0
+      };
+      const t1_1 = {
+        id: generateId(),
+        title: 'Mapear stakeholders globais (EMEA / US / Latam)',
+        parentId: t1.id,
+        reportTo: 'Head Global Arquitetura',
+        critical: false,
+        deadline: '',
+        progress: 0,
+        status: 'backlog',
+        createdAt: todayISO(),
+        updatedAt: todayISO(),
+        completed: false,
+        startedAt: null,
+        totalElapsed: 0
+      };
+      const t1_2 = {
+        id: generateId(),
+        title: 'Desenhar matriz de apetite de risco por produto',
+        parentId: t1.id,
+        reportTo: 'Diretoria de Risco',
+        critical: false,
+        deadline: '2025-12-05',
+        progress: 55,
+        status: 'backlog',
+        createdAt: todayISO(),
+        updatedAt: todayISO(),
+        completed: false,
+        startedAt: null,
+        totalElapsed: 0
+      };
+      const t1_3 = {
+        id: generateId(),
+        title: 'Definir cadência de reporte executivo semanal',
+        parentId: t1.id,
+        reportTo: 'Diretor Executivo Latam',
+        critical: false,
+        deadline: '2025-12-01',
+        progress: 100,
+        status: 'done',
+        createdAt: todayISO(),
+        updatedAt: todayISO(),
+        completed: true,
+        startedAt: null,
+        totalElapsed: 0
+      };
+
+      const t2 = {
+        id: generateId(),
+        title: 'Estruturar relação alta renda BTG',
+        description: 'Portabilidade, limites, fundos, private',
+        parentId: null,
+        reportTo: 'Você mesmo',
+        critical: false,
+        deadline: todayISO(),
+        progress: 40,
+        status: 'backlog',
+        createdAt: todayISO(),
+        updatedAt: todayISO(),
+        completed: false,
+        startedAt: null,
+        totalElapsed: 0
+      };
+
+      appState.tasks = [t1, t1_1, t1_2, t1_3, t2];
+
+      appState.ddos = [
+        {
+          id: generateId(),
+          person: 'Gerente BTG Private',
+          subject: 'Ajuste de alavancagem sobre FIIs',
+          channel: 'WhatsApp · 2h',
+          status: 'active',
+          createdAt: todayISO(),
+          attempts: 3,
+          derivations: 0
+        },
+        {
+          id: generateId(),
+          person: 'Parceiro Gateway Sitef',
+          subject: 'SLA para testes de alta volumetria',
+          channel: 'Email · diário',
+          status: 'active',
+          createdAt: todayISO(),
+          attempts: 2,
+          derivations: 2
+        },
+        {
+          id: generateId(),
+          person: 'Gerente Bradesco Empresarial',
+          subject: 'Migração de limite para BTG',
+          channel: 'WhatsApp · 2h',
+          status: 'derived',
+          createdAt: todayISO(),
+          attempts: 3,
+          derivations: 3
+        }
+      ];
+    }
+
+    function findTask(id) {
+      return appState.tasks.find(t => t.id === id);
+    }
+
+    function getChildren(parentId) {
+      return appState.tasks.filter(t => t.parentId === parentId);
+    }
+
+    function isCollapsed(id) {
+      return appState.ui.collapsed.includes(id);
+    }
+
+    function toggleCollapsed(id) {
+      const idx = appState.ui.collapsed.indexOf(id);
+      if (idx >= 0) appState.ui.collapsed.splice(idx, 1);
+      else appState.ui.collapsed.push(id);
+      saveState();
+      renderTasks();
+    }
+
+    // ==================== LÓGICA TAREFA EM ANDAMENTO ====================
+    function pauseCurrentTask() {
+      const id = appState.currentTaskId;
+      if (!id) return;
+      const task = findTask(id);
+      if (!task) {
+        appState.currentTaskId = null;
+        return;
+      }
+      if (task.startedAt) {
+        const now = Date.now();
+        task.totalElapsed = (task.totalElapsed || 0) + (now - task.startedAt);
+        task.startedAt = null;
+      }
+      if (task.status === 'in-progress') task.status = 'paused';
+      appState.currentTaskId = null;
+      task.updatedAt = todayISO();
+      saveState();
+      renderAll();
+    }
+
+    function playTask(id) {
+      const task = findTask(id);
+      if (!task) return;
+      if (appState.currentTaskId && appState.currentTaskId !== id) {
+        pauseCurrentTask();
+      }
+      if (!task.totalElapsed) task.totalElapsed = 0;
+      task.startedAt = Date.now();
+      task.status = 'in-progress';
+      task.completed = false;
+      appState.currentTaskId = id;
+      task.updatedAt = todayISO();
+      saveState();
+      renderAll();
+    }
+
+    function finishCurrentTask() {
+      const id = appState.currentTaskId;
+      if (!id) return;
+      const task = findTask(id);
+      if (!task) {
+        appState.currentTaskId = null;
+        return;
+      }
+      const now = Date.now();
+      if (task.startedAt) {
+        task.totalElapsed = (task.totalElapsed || 0) + (now - task.startedAt);
+        task.startedAt = null;
+      }
+      task.status = 'done';
+      task.completed = true;
+      task.progress = 100;
+      appState.currentTaskId = null;
+      task.updatedAt = todayISO();
+      saveState();
+      recomputeParentsProgressAndDeadlines();
+      renderAll();
+    }
+
+    function cancelCurrentTask() {
+      const id = appState.currentTaskId;
+      if (!id) return;
+      const task = findTask(id);
+      if (!task) {
+        appState.currentTaskId = null;
+        return;
+      }
+      const now = Date.now();
+      if (task.startedAt) {
+        task.totalElapsed = (task.totalElapsed || 0) + (now - task.startedAt);
+        task.startedAt = null;
+      }
+      task.status = 'canceled';
+      task.updatedAt = todayISO();
+      appState.currentTaskId = null;
+      saveState();
+      renderAll();
+    }
+
+    function reactivateTask(id) {
+      const task = findTask(id);
+      if (!task) return;
+      task.status = 'backlog';
+      task.completed = false;
+      task.updatedAt = todayISO();
+      saveState();
+      renderAll();
+    }
+
+    function formatElapsed(ms) {
+      const totalSec = Math.floor(ms / 1000);
+      const h = String(Math.floor(totalSec / 3600)).padStart(2, '0');
+      const m = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
+      const s = String(totalSec % 60).padStart(2, '0');
+      return `${h}:${m}:${s}`;
+    }
+
+    // ==================== LÓGICA DDoS ====================
+    function addDdos() {
+      const person = document.getElementById('ddosPersonInput').value.trim();
+      const subject = document.getElementById('ddosSubjectInput').value.trim();
+      const channel = document.getElementById('ddosChannelInput').value;
+      if (!person || !subject) return;
+      appState.ddos.push({
+        id: generateId(),
+        person,
+        subject,
+        channel,
+        status: 'active',
+        createdAt: todayISO(),
+        attempts: 1,
+        derivations: 0
+      });
+      document.getElementById('ddosPersonInput').value = '';
+      document.getElementById('ddosSubjectInput').value = '';
+      saveState();
+      renderDdos();
+      renderInsights();
+    }
+
+    function concludeDdos(id) {
+      const item = appState.ddos.find(d => d.id === id);
+      if (!item) return;
+      item.status = 'concluded';
+      saveState();
+      renderDdos();
+      renderInsights();
+    }
+
+    function deriveDdos(id) {
+      const item = appState.ddos.find(d => d.id === id);
+      if (!item) return;
+      item.status = 'derived';
+      item.derivations = (item.derivations || 0) + 1;
+      saveState();
+      renderDdos();
+      renderInsights();
+    }
+
+    // ==================== LÓGICA DE TAREFAS: CRUD + PROGRESSO PAI ====================
+    function createTask({ title, parentId = null, reportTo = '', deadline = '', critical = false, progress = 0 }) {
+      const t = {
+        id: generateId(),
+        title: title || 'Nova tarefa',
+        description: '',
+        parentId,
+        reportTo,
+        critical: !!critical,
+        deadline: deadline || '',
+        progress: Number(progress) || 0,
+        status: 'backlog',
+        createdAt: todayISO(),
+        updatedAt: todayISO(),
+        completed: false,
+        startedAt: null,
+        totalElapsed: 0
+      };
+      appState.tasks.push(t);
+      saveState();
+      recomputeParentsProgressAndDeadlines();
+      renderTasks();
+      renderInsights();
+      return t.id;
+    }
+
+    function updateTask(id, updates) {
+      const t = findTask(id);
+      if (!t) return;
+      Object.assign(t, updates);
+      t.updatedAt = todayISO();
+      saveState();
+      recomputeParentsProgressAndDeadlines();
+      renderTasks();
+      renderInsights();
+    }
+
+    function toggleComplete(id) {
+      const t = findTask(id);
+      if (!t) return;
+      t.completed = !t.completed;
+      t.status = t.completed ? 'done' : 'backlog';
+      if (t.completed) t.progress = 100;
+      saveState();
+      recomputeParentsProgressAndDeadlines();
+      renderTasks();
+      renderInsights();
+    }
+
+    function recomputeParentsProgressAndDeadlines() {
+      // faz algumas iterações para propagar dos filhos aos pais
+      const tasks = appState.tasks;
+      for (let i = 0; i < 3; i++) {
+        tasks.forEach(parent => {
+          const children = tasks.filter(t => t.parentId === parent.id);
+          if (children.length === 0) return;
+          // Progresso do pai = média dos filhos
+          const sumProg = children.reduce((acc, c) => acc + (Number(c.progress) || 0), 0);
+          parent.progress = Math.round(sumProg / children.length);
+          // Deadline do pai = máximo deadline dos filhos (que não estão vazios)
+          const childDeadlines = children
+            .map(c => c.deadline)
+            .filter(Boolean)
+            .sort();
+          if (childDeadlines.length > 0) {
+            parent.deadline = childDeadlines[childDeadlines.length - 1];
+          }
+        });
+      }
+    }
+
+    // ==================== RENDER: TAREFA EM ANDAMENTO ====================
+    function renderCurrentTask() {
+      const box = document.getElementById('currentTaskBox');
+      const statusPill = document.getElementById('currentTaskStatusPill');
+      const titleEl = document.getElementById('currentTaskTitle');
+      const metaEl = document.getElementById('currentTaskMeta');
+      const timeEl = document.getElementById('currentTaskTime');
+      const progressInner = document.getElementById('currentTaskProgressInner');
+
+      const id = appState.currentTaskId;
+      if (!id) {
+        statusPill.style.display = 'none';
+        titleEl.textContent = 'Nenhuma tarefa em execução';
+        metaEl.textContent = '';
+        timeEl.textContent = 'Tempo: 00:00:00';
+        progressInner.style.width = '0%';
+        return;
+      }
+      const t = findTask(id);
+      if (!t) {
+        appState.currentTaskId = null;
+        renderCurrentTask();
+        return;
+      }
+      statusPill.style.display = 'inline-block';
+      titleEl.textContent = t.title;
+      const parts = [];
+      parts.push(`Status: ${t.status === 'in-progress' ? 'Em execução' : t.status}`);
+      if (t.reportTo) parts.push(`Reportar: ${t.reportTo}`);
+      if (t.deadline) parts.push(`Deadline: ${formatDateBR(t.deadline)}`);
+      metaEl.textContent = parts.join(' · ');
+
+      const now = Date.now();
+      const elapsed = (t.totalElapsed || 0) + (t.startedAt ? now - t.startedAt : 0);
+      timeEl.textContent = `Tempo: ${formatElapsed(elapsed)}`;
+      progressInner.style.width = `${t.progress || 0}%`;
+    }
+
+    // ==================== RENDER: PAUSADAS & CANCELADAS ====================
+    function renderPausedAndCancelled() {
+      const pausedContainer = document.getElementById('pausedTasksList');
+      const cancelledContainer = document.getElementById('cancelledTasksList');
+
+      const paused = appState.tasks.filter(t => t.status === 'paused');
+      const canceled = appState.tasks.filter(t => t.status === 'canceled');
+
+      pausedContainer.innerHTML = paused.length ? '' : '<span class="muted">Nenhuma tarefa pausada.</span>';
+      paused.forEach(t => {
+        const div = document.createElement('div');
+        div.className = 'small-row';
+        div.innerHTML = `
+          <div class="small-row-left">
+            <span class="small-row-title">${t.title}</span>
+            <span class="small-row-meta">
+              ${t.deadline ? 'Deadline: ' + formatDateBR(t.deadline) : 'Sem deadline'}
+            </span>
+          </div>
+          <button class="btn-pill secondary" data-action="play-from-paused" data-id="${t.id}">Play</button>
+        `;
+        pausedContainer.appendChild(div);
+      });
+
+      cancelledContainer.innerHTML = canceled.length ? '' : '<span class="muted">Nenhuma tarefa cancelada.</span>';
+      canceled.forEach(t => {
+        const div = document.createElement('div');
+        div.className = 'small-row';
+        div.innerHTML = `
+          <div class="small-row-left">
+            <span class="small-row-title">${t.title}</span>
+            <span class="small-row-meta">Cancelada · clique em reativar para voltar ao backlog</span>
+          </div>
+          <button class="btn-pill secondary" data-action="reactivate-task" data-id="${t.id}">Reativar</button>
+        `;
+        cancelledContainer.appendChild(div);
+      });
+    }
+
+    // ==================== RENDER: DDoS ====================
+    function renderDdos() {
+      const activeList = document.getElementById('ddosActiveList');
+      const historyList = document.getElementById('ddosHistoryList');
+
+      const active = appState.ddos.filter(d => d.status === 'active');
+      const history = appState.ddos.filter(d => d.status !== 'active');
+
+      activeList.innerHTML = active.length ? '' : '<span class="muted">Nenhum DDoS ativo.</span>';
+      active.forEach(d => {
+        const div = document.createElement('div');
+        div.className = 'ddos-item';
+        div.innerHTML = `
+          <div class="ddos-main">
+            <div class="ddos-person">${d.person}</div>
+            <div class="ddos-subject">${d.subject}</div>
+          </div>
+          <div class="ddos-meta">
+            Canal: ${d.channel}<br/>
+            Tentativas: ${d.attempts || 1}
+          </div>
+          <div class="ddos-actions">
+            <button class="btn-pill secondary" data-ddos-action="concluir" data-id="${d.id}">Concluir</button>
+            <button class="btn-pill secondary" data-ddos-action="derivar" data-id="${d.id}">Derivar</button>
+          </div>
+        `;
+        activeList.appendChild(div);
+      });
+
+      historyList.innerHTML = history.length ? '' : '<span class="muted">Nenhum histórico ainda.</span>';
+      history.forEach(d => {
+        const div = document.createElement('div');
+        div.className = 'ddos-item';
+        const statusText = d.status === 'derived' ? 'Derivado' : 'Concluído';
+        const statusClass = d.status === 'derived' ? 'badge hot' : 'badge';
+        div.innerHTML = `
+          <div class="ddos-main">
+            <div class="ddos-person">${d.person}</div>
+            <div class="ddos-subject">${d.subject}</div>
+          </div>
+          <div class="ddos-meta">
+            Status: ${statusText}<br/>
+            Derivações: ${d.derivations || 0}
+          </div>
+          <div class="ddos-actions">
+            <span class="${statusClass}">${statusText}</span>
+          </div>
+        `;
+        historyList.appendChild(div);
+      });
+    }
+
+    // ==================== RENDER: TAREFAS ====================
+    function formatDateBR(iso) {
+      if (!iso) return '';
+      const [y, m, d] = iso.split('-');
+      return `${d}/${m}/${y}`;
+    }
+
+    function isLate(task) {
+      if (!task.deadline || task.completed) return false;
+      const today = todayISO();
+      return task.deadline < today;
+    }
+
+    function isToday(task) {
+      if (!task.deadline || task.completed) return false;
+      return task.deadline === todayISO();
+    }
+
+    function shouldShowTask(task) {
+      const f = appState.ui.filter;
+      if (f === 'all') return true;
+      if (f === 'today') return isToday(task);
+      if (f === 'late') return isLate(task);
+      if (f === 'no-deadline') return !task.deadline;
+      if (f === 'critical') return !!task.critical;
+      return true;
+    }
+
+    function renderTasks() {
+      const container = document.getElementById('tasksList');
+      container.innerHTML = '';
+      const roots = appState.tasks.filter(t => !t.parentId);
+      // ordem simples por createdAt
+      roots.sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
+
+      roots.forEach(root => {
+        renderTaskRecursive(root, 0, container, false);
+      });
+
+      // forms inline (edição/subtask)
+      if (appState.ui.editingTaskId) {
+        insertTaskEditForm(appState.ui.editingTaskId);
+      } else if (appState.ui.subParentId) {
+        insertSubtaskForm(appState.ui.subParentId);
+      }
+    }
+
+    function renderTaskRecursive(task, level, container, parentCollapsed) {
+      if (parentCollapsed) return;
+      if (!shouldShowTask(task)) {
+        // mesmo se filtrado, ainda assim precisa mostrar se tem filhos que passarem no filtro
+        const anyChildVisible = getChildren(task.id).some(c => shouldShowTask(c));
+        if (!anyChildVisible) return;
+      }
+
+      const children = getChildren(task.id);
+      const row = document.createElement('div');
+      row.className = 'task-row';
+      row.dataset.taskId = task.id;
+      row.addEventListener('dblclick', () => openTaskEdit(task.id));
+
+      const indentClass = `task-indent-${Math.min(level, 3)}`;
+      const toggle = children.length
+        ? `<span class="toggle-icon" data-toggle-child="${task.id}">${isCollapsed(task.id) ? '▸' : '▾'}</span>`
+        : '';
+
+      const tags = [];
+      if (task.critical) tags.push('<span class="tag-pill tag-critical">Caminho crítico</span>');
+      if (isLate(task)) tags.push('<span class="tag-pill tag-late">Atrasada</span>');
+      if (!task.deadline) tags.push('<span class="tag-pill tag-no-deadline">Sem deadline</span>');
+
+      row.innerHTML = `
+        <div class="task-drag">${toggle}⋮⋮</div>
+        <div class="task-main">
+          <div class="task-title-line ${indentClass}">
+            <span class="task-title ${task.critical ? 'critical' : ''} ${task.completed ? 'completed' : ''}">
+              ${task.title}
+            </span>
+            ${tags.join('')}
+          </div>
+          <div class="task-tags">
+            ${task.description || ''}
+          </div>
+        </div>
+        <div>
+          ${
+            task.reportTo
+              ? `<span class="report-pill"><span class="report-dot"></span>${task.reportTo}</span>`
+              : '<span class="muted">—</span>'
+          }
+        </div>
+        <div class="task-deadline ${
+          !task.deadline
+            ? 'no-deadline'
+            : isLate(task)
+            ? 'late'
+            : isToday(task)
+            ? 'today'
+            : ''
+        }">
+          ${task.deadline ? formatDateBR(task.deadline) : 'Sem deadline'}
+        </div>
+        <div class="task-progress-cell">
+          <div class="task-progress-bar">
+            <div class="task-progress-inner" style="width:${task.progress || 0}%;"></div>
+          </div>
+          <div class="task-progress-text">${task.progress || 0}%</div>
+        </div>
+        <div class="task-actions">
+          <button class="play-btn" data-play-task="${task.id}">▶</button>
+          <div class="check-box" data-complete-task="${task.id}" title="Concluir"></div>
+          <button class="btn-icon-circle" data-add-sub="${task.id}" title="Adicionar subtask">＋</button>
+        </div>
+      `;
+
+      container.appendChild(row);
+
+      const collapsed = isCollapsed(task.id);
+      if (!collapsed) {
+        children
+          .sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''))
+          .forEach(child => renderTaskRecursive(child, level + 1, container, false));
+      }
+    }
+
+    function openTaskEdit(id) {
+      appState.ui.editingTaskId = id;
+      appState.ui.subParentId = null;
+      renderTasks();
+    }
+
+    function openSubtaskForm(parentId) {
+      appState.ui.subParentId = parentId;
+      appState.ui.editingTaskId = null;
+      renderTasks();
+    }
+
+    function insertTaskEditForm(taskId) {
+      const wrapper = document.getElementById('tasksList');
+      const rows = Array.from(wrapper.querySelectorAll('.task-row'));
+      const targetRow = rows.find(r => r.dataset.taskId === taskId);
+      if (!targetRow) return;
+      const task = findTask(taskId);
+      if (!task) return;
+
+      const form = document.createElement('div');
+      form.className = 'task-form-inline';
+      form.innerHTML = `
+        <div></div>
+        <div>
+          <div class="field-label">Título</div>
+          <input class="input" id="editTitle" value="${task.title.replace(/"/g, '&quot;')}" />
+        </div>
+        <div>
+          <div class="field-label">Reportar</div>
+          <input class="input" id="editReportTo" value="${(task.reportTo || '').replace(/"/g, '&quot;')}" />
+        </div>
+        <div>
+          <div class="field-label">Deadline</div>
+          <input class="input" id="editDeadline" type="date" value="${task.deadline || ''}" />
+        </div>
+        <div>
+          <div class="field-label">Critico / Prog.</div>
+          <div style="display:flex;gap:4px;">
+            <label style="font-size:10px;display:flex;align-items:center;gap:2px;">
+              <input type="checkbox" id="editCritical" ${task.critical ? 'checked' : ''} /> Crit.
+            </label>
+            <input class="input" id="editProgress" style="width:40px;" type="number" min="0" max="100" value="${
+              task.progress || 0
+            }" />
+          </div>
+        </div>
+        <div class="task-form-actions">
+          <button class="btn-pill secondary" id="editCancelBtn">Cancelar</button>
+          <button class="btn-pill" id="editSaveBtn">Salvar</button>
+        </div>
+      `;
+      targetRow.insertAdjacentElement('afterend', form);
+
+      document.getElementById('editCancelBtn').onclick = () => {
+        appState.ui.editingTaskId = null;
+        renderTasks();
+      };
+      document.getElementById('editSaveBtn').onclick = () => {
+        const title = document.getElementById('editTitle').value.trim() || task.title;
+        const reportTo = document.getElementById('editReportTo').value.trim();
+        const deadline = document.getElementById('editDeadline').value;
+        const critical = document.getElementById('editCritical').checked;
+        const progress = Number(document.getElementById('editProgress').value) || 0;
+        updateTask(taskId, { title, reportTo, deadline, critical, progress });
+        appState.ui.editingTaskId = null;
+      };
+    }
+
+    function insertSubtaskForm(parentId) {
+      const wrapper = document.getElementById('tasksList');
+      const rows = Array.from(wrapper.querySelectorAll('.task-row'));
+      const targetRow = rows.find(r => r.dataset.taskId === parentId);
+      if (!targetRow) return;
+      const parentTask = findTask(parentId);
+      if (!parentTask) return;
+
+      const form = document.createElement('div');
+      form.className = 'task-form-inline';
+      form.innerHTML = `
+        <div></div>
+        <div>
+          <div class="field-label">Nova subtask abaixo de "${parentTask.title}"</div>
+          <input class="input" id="subTitle" placeholder="Título da subtask" />
+        </div>
+        <div>
+          <div class="field-label">Reportar</div>
+          <input class="input" id="subReportTo" placeholder="Pessoa para reportar" />
+        </div>
+        <div>
+          <div class="field-label">Deadline</div>
+          <input class="input" id="subDeadline" type="date" />
+        </div>
+        <div>
+          <div class="field-label">Critico / Prog.</div>
+          <div style="display:flex;gap:4px;">
+            <label style="font-size:10px;display:flex;align-items:center;gap:2px;">
+              <input type="checkbox" id="subCritical" /> Crit.
+            </label>
+            <input class="input" id="subProgress" style="width:40px;" type="number" min="0" max="100" value="0" />
+          </div>
+        </div>
+        <div class="task-form-actions">
+          <button class="btn-pill secondary" id="subCancelBtn">Cancelar</button>
+          <button class="btn-pill" id="subSaveBtn">Adicionar</button>
+        </div>
+      `;
+      targetRow.insertAdjacentElement('afterend', form);
+
+      document.getElementById('subCancelBtn').onclick = () => {
+        appState.ui.subParentId = null;
+        renderTasks();
+      };
+      document.getElementById('subSaveBtn').onclick = () => {
+        const title = document.getElementById('subTitle').value.trim() || 'Nova subtask';
+        const reportTo = document.getElementById('subReportTo').value.trim();
+        const deadline = document.getElementById('subDeadline').value;
+        const critical = document.getElementById('subCritical').checked;
+        const progress = Number(document.getElementById('subProgress').value) || 0;
+        createTask({ title, parentId, reportTo, deadline, critical, progress });
+        appState.ui.subParentId = null;
+      };
+    }
+
+    // ==================== RENDER: INSIGHTS ====================
+    function renderInsights() {
+      const ddosAtivos = appState.ddos.filter(d => d.status === 'active');
+      const ddosDerivados = appState.ddos.filter(d => d.status === 'derived');
+      const ddosConcluidos = appState.ddos.filter(d => d.status === 'concluded');
+
+      document.getElementById('insightDdosAtivos').textContent = ddosAtivos.length;
+      const ddosFooter = document.getElementById('insightDdosFooter');
+      ddosFooter.textContent =
+        ddosAtivos.length === 0
+          ? 'Nenhum DDoS pendente.'
+          : `${ddosDerivados.length} derivados · ${ddosConcluidos.length} concluídos.`;
+
+      const tasks = appState.tasks;
+
+      const semDeadline = tasks.filter(t => !t.deadline && !t.completed);
+      document.getElementById('insightSemDeadline').textContent = semDeadline.length;
+
+      const atrasados = tasks.filter(t => isLate(t));
+      document.getElementById('insightAtrasados').textContent = atrasados.length;
+      document.getElementById('insightAtrasadosFooter').textContent =
+        atrasados.length > 0
+          ? `Ex.: ${atrasados.slice(0, 2).map(t => t.title).join(' · ')}`
+          : 'Nenhum atraso no momento.';
+
+      const hoje = tasks.filter(t => isToday(t));
+      document.getElementById('insightHoje').textContent = hoje.length;
+      document.getElementById('insightHojeFooter').textContent =
+        hoje.length > 0
+          ? `Ex.: ${hoje.slice(0, 2).map(t => t.title).join(' · ')}`
+          : 'Nada com deadline hoje.';
+
+      // Pessoas para quem você precisa reportar (tarefas não concluídas com reportTo)
+      const reportMap = {};
+      tasks.forEach(t => {
+        if (!t.completed && t.reportTo) {
+          if (!reportMap[t.reportTo]) reportMap[t.reportTo] = [];
+          reportMap[t.reportTo].push(t);
+        }
+      });
+      const reportList = document.getElementById('insightReportList');
+      reportList.innerHTML = '';
+      const people = Object.keys(reportMap);
+      if (people.length === 0) {
+        reportList.innerHTML = '<span class="muted">Nenhuma pessoa pendente de reporte.</span>';
+      } else {
+        people.forEach(p => {
+          const row = document.createElement('div');
+          row.className = 'insight-row';
+          const tlist = reportMap[p].slice(0, 3).map(t => t.title).join(' · ');
+          row.innerHTML = `
+            <div>
+              <div style="font-weight:500;">${p}</div>
+              <div class="muted">${reportMap[p].length} tarefa(s): ${tlist}</div>
+            </div>
+            <div class="muted">${reportMap[p].some(isLate) ? '⚠ atrasos' : 'OK'}</div>
+          `;
+          reportList.appendChild(row);
+        });
+      }
+
+      // Menções rápidas de tarefas (holofote)
+      const mentionsContainer = document.getElementById('insightTaskMentions');
+      mentionsContainer.innerHTML = '';
+      // Vamos sugerir: críticos, atrasados e items de hoje
+      const importantTasks = [
+        ...tasks.filter(t => t.critical),
+        ...atrasados,
+        ...hoje
+      ];
+      const unique = [];
+      const seen = new Set();
+      importantTasks.forEach(t => {
+        if (!seen.has(t.id)) {
+          seen.add(t.id);
+          unique.push(t);
+        }
+      });
+      if (unique.length === 0) {
+        mentionsContainer.innerHTML = '<span class="muted">Nenhuma tarefa relevante no momento.</span>';
+      } else {
+        unique.slice(0, 6).forEach(t => {
+          const btn = document.createElement('button');
+          btn.className = 'task-ref-pill';
+          btn.textContent = t.title;
+          btn.onclick = () => highlightTask(t.id);
+          mentionsContainer.appendChild(btn);
+        });
+      }
+    }
+
+    // ==================== HOLOFOTE: DESTACAR TAREFA NA LISTA ====================
+    function highlightTask(taskId) {
+      const wrapper = document.getElementById('tasksWrapper');
+      const row = wrapper.querySelector(`.task-row[data-task-id="${taskId}"]`);
+      if (!row) {
+        // talvez esteja colapsado; expandir pais
+        let t = findTask(taskId);
+        while (t && t.parentId) {
+          const parentId = t.parentId;
+          const idx = appState.ui.collapsed.indexOf(parentId);
+          if (idx >= 0) appState.ui.collapsed.splice(idx, 1);
+          t = findTask(parentId);
+        }
+        saveState();
+        renderTasks();
+        const row2 = wrapper.querySelector(`.task-row[data-task-id="${taskId}"]`);
+        if (!row2) return;
+        row2.classList.add('highlight');
+        row2.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => row2.classList.remove('highlight'), 1500);
+        return;
+      }
+      row.classList.add('highlight');
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => row.classList.remove('highlight'), 1500);
+    }
+
+    // ==================== THEME ====================
+    function loadTheme() {
+      const theme = localStorage.getItem('taskDdosTheme') || 'dark';
+      if (theme === 'dark') document.body.classList.add('dark');
+      else document.body.classList.remove('dark');
+    }
+
+    function toggleTheme() {
+      document.body.classList.toggle('dark');
+      const theme = document.body.classList.contains('dark') ? 'dark' : 'light';
+      localStorage.setItem('taskDdosTheme', theme);
+    }
+
+    // ==================== BACKUP (EXPORT / IMPORT) ====================
+    function exportState() {
+      const data = localStorage.getItem(STORAGE_KEY) || JSON.stringify(appState);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'task-ddos-backup.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importState(file) {
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          const data = JSON.parse(e.target.result);
+          appState = data;
+          saveState();
+          renderAll();
+          alert('Backup importado com sucesso.');
+        } catch (err) {
+          alert('Arquivo inválido.');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // ==================== RENDER GLOBAL ====================
+    function renderAll() {
+      renderCurrentTask();
+      renderPausedAndCancelled();
+      renderDdos();
+      recomputeParentsProgressAndDeadlines();
+      renderTasks();
+      renderInsights();
+    }
+
+    // ==================== EVENTOS GERAIS ====================
+    function setupEvents() {
+      // Now playing
+      document.getElementById('btnFinishCurrent').onclick = finishCurrentTask;
+      document.getElementById('btnPauseCurrent').onclick = pauseCurrentTask;
+      document.getElementById('btnCancelCurrent').onclick = cancelCurrentTask;
+
+      // Pausadas / Canceladas delegadas
+      document.getElementById('section-now').addEventListener('click', (e) => {
+        const playFromPaused = e.target.closest('[data-action="play-from-paused"]');
+        if (playFromPaused) {
+          const id = playFromPaused.dataset.id;
+          playTask(id);
+        }
+        const reactivate = e.target.closest('[data-action="reactivate-task"]');
+        if (reactivate) {
+          const id = reactivate.dataset.id;
+          reactivateTask(id);
+        }
+        const ddosBtn = e.target.closest('[data-ddos-action]');
+        if (ddosBtn) {
+          const id = ddosBtn.dataset.id;
+          const action = ddosBtn.dataset.ddosAction;
+          if (action === 'concluir') concludeDdos(id);
+          if (action === 'derivar') deriveDdos(id);
+        }
+      });
+
+      // DDoS
+      document.getElementById('ddosAddBtn').onclick = addDdos;
+
+      // Filtros
+      document.querySelectorAll('.chip').forEach(chip => {
+        chip.onclick = () => {
+          document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+          chip.classList.add('active');
+          appState.ui.filter = chip.dataset.filter;
+          saveState();
+          renderTasks();
+        };
+      });
+
+      // Botão adicionar tarefa raiz
+      document.getElementById('addRootTaskBtn').onclick = () => {
+        const title = prompt('Título da tarefa raiz:');
+        if (!title) return;
+        createTask({ title, parentId: null });
+      };
+
+      // Delegação em lista de tarefas
+      document.getElementById('tasksWrapper').addEventListener('click', (e) => {
+        const playBtn = e.target.closest('[data-play-task]');
+        if (playBtn) {
+          const id = playBtn.dataset.playTask;
+          playTask(id);
+        }
+        const completeBox = e.target.closest('[data-complete-task]');
+        if (completeBox) {
+          const id = completeBox.dataset.completeTask;
+          toggleComplete(id);
+        }
+        const toggleBtn = e.target.closest('[data-toggle-child]');
+        if (toggleBtn) {
+          const id = toggleBtn.dataset.toggleChild;
+          toggleCollapsed(id);
+        }
+        const addSub = e.target.closest('[data-add-sub]');
+        if (addSub) {
+          const id = addSub.dataset.addSub;
+          openSubtaskForm(id);
+        }
+      });
+
+      // Tema
+      document.getElementById('themeSwitch').onclick = toggleTheme;
+
+      // Backup
+      document.getElementById('exportStateBtn').onclick = exportState;
+      document.getElementById('importStateBtn').onclick = () => {
+        document.getElementById('importFileInput').click();
+      };
+      document.getElementById('importFileInput').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) importState(file);
+        e.target.value = '';
+      });
+
+      // Timer para atualizar tempo da tarefa em execução
+      setInterval(() => {
+        if (appState.currentTaskId) {
+          renderCurrentTask();
+        }
+      }, 1000);
+    }
+
+    // ==================== BOOT ====================
+    loadTheme();
+    loadState();
+    setupEvents();
+    renderAll();
+  </script>
+</body>
+</html>
