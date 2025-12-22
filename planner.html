@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Tree Milestones — LocalStorage</title>
+  <title>Planner Completo — Tree Milestones (LocalStorage)</title>
   <style>
     :root{
       --bg:#0b0f19; --panel:#111a2e; --panel2:#0f1627; --text:#e8eefc;
@@ -63,6 +63,12 @@
       background: color-mix(in srgb, var(--panel) 35%, transparent);
     }
     .pill input{accent-color: var(--accent)}
+    .pill select{
+      border:0; outline:none;
+      background:transparent;
+      color:var(--text);
+      font-size:11px;
+    }
     .status{
       font-size:11px;
       color:var(--muted);
@@ -132,7 +138,7 @@
     }
 
     .titleInput{
-      flex:1; min-width:120px;
+      flex:1; min-width:140px;
       border-radius:9px;
       border:1px solid color-mix(in srgb, var(--line) 85%, transparent);
       background: color-mix(in srgb, var(--bg) 22%, transparent);
@@ -142,6 +148,15 @@
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .titleInput:focus{border-color: color-mix(in srgb, var(--accent) 70%, transparent)}
+
+    .rightPack{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
     .badges{display:flex; gap:6px; align-items:center; flex-wrap:wrap}
     .badge{
       font-size:10px; padding:3px 7px; border-radius:999px;
@@ -154,7 +169,13 @@
     .badge.danger{border-color: color-mix(in srgb, var(--danger) 60%, transparent); color: color-mix(in srgb, var(--danger) 20%, var(--text)); background: color-mix(in srgb, var(--danger) 12%, transparent)}
     .badge.ok{border-color: color-mix(in srgb, var(--ok) 60%, transparent); color: color-mix(in srgb, var(--ok) 20%, var(--text)); background: color-mix(in srgb, var(--ok) 10%, transparent)}
 
-    /* ---- Actions bar (agora por duplo clique) ---- */
+    /* Edit toggle: mostra/esconde TUDO que for editOnly */
+    .editOnly{ display:none !important; }
+    .editMode .editOnly{ display:inline-flex !important; }
+    .editMode .editOnly.iconBtn{ display:inline-grid !important; }
+    .alwaysOn{ display:inline-flex !important; }
+
+    /* Barra de ações (abre no duplo clique) */
     .actionsBar{
       display:flex;
       align-items:center;
@@ -162,7 +183,6 @@
       padding:6px 8px;
       border-top:1px solid color-mix(in srgb, var(--line) 55%, transparent);
       background: color-mix(in srgb, var(--bg) 10%, transparent);
-
       opacity:0;
       max-height:0;
       overflow:hidden;
@@ -171,14 +191,9 @@
     }
     .row.actionsOpen .actionsBar{
       opacity:1;
-      max-height:60px;
+      max-height:70px;
       pointer-events:auto;
     }
-    .actionsBar .spacer{flex:1}
-
-    .editOnly{display:none;}
-    .editMode .editOnly{display:inline-grid;} /* iconBtn */
-    .editMode .editOnly.inline{display:inline-flex;} /* badges/inputs */
 
     .row-body{
       padding:8px 8px 10px;
@@ -214,19 +229,68 @@
       padding:7px 8px; outline:none; font-size:12px;
     }
     .miniRow input:focus{border-color: color-mix(in srgb, var(--accent) 70%, transparent)}
+    .miniRow select{
+      flex:1; min-width:160px;
+      border-radius:10px;
+      border:1px solid color-mix(in srgb, var(--line) 85%, transparent);
+      background: color-mix(in srgb, var(--bg) 22%, transparent);
+      color:var(--text);
+      padding:7px 8px; outline:none; font-size:12px;
+    }
     .list{display:flex; flex-direction:column; gap:6px; margin-top:8px}
+
+    /* Links compactos */
     .itemLine{
       display:flex; gap:8px; align-items:center;
-      padding:7px;
+      padding:6px 8px;
       border-radius:10px;
       border:1px solid color-mix(in srgb, var(--line) 70%, transparent);
       background: color-mix(in srgb, var(--panel) 35%, transparent);
       font-size:12px;
+      min-width:0;
     }
-    .itemLine a{color: color-mix(in srgb, var(--accent) 55%, var(--text)); text-decoration:none}
-    .itemLine a:hover{text-decoration:underline}
+    .itemLine .linkTitle{
+      font-weight:800;
+      cursor:pointer;
+      user-select:none;
+    }
+    .itemLine .linkUrl{
+      color: var(--muted);
+      font-size:10px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      max-width: 520px;
+    }
+    @media (max-width: 900px){
+      .itemLine .linkUrl{ max-width: 240px; }
+    }
+    .linkMenu{
+      position:fixed;
+      z-index:9999;
+      border:1px solid color-mix(in srgb, var(--line) 70%, transparent);
+      background: color-mix(in srgb, var(--panel) 92%, transparent);
+      border-radius:12px;
+      box-shadow: var(--shadow);
+      padding:6px;
+      min-width: 190px;
+    }
+    .linkMenu button{
+      width:100%;
+      text-align:left;
+      border:0;
+      background:transparent;
+      color:var(--text);
+      padding:8px 10px;
+      border-radius:10px;
+      cursor:pointer;
+      font-size:12px;
+    }
+    .linkMenu button:hover{
+      background: color-mix(in srgb, var(--accent) 14%, transparent);
+    }
+
     .muted{color:var(--muted)}
-    .right{margin-left:auto; display:flex; gap:6px}
     .chip{
       display:inline-flex; align-items:center; gap:8px;
       padding:6px 9px; border-radius:12px;
@@ -260,8 +324,6 @@
       user-select:none;
       cursor:pointer;
     }
-    .sectionTitle .muted{cursor:default;}
-    .sectionTitle .spacer{cursor:default;}
     .collapsedContent{display:none;}
     .card.open .collapsedContent{display:block;}
 
@@ -360,6 +422,7 @@
       border:1px solid color-mix(in srgb, var(--line) 65%, transparent);
       background: color-mix(in srgb, var(--bg) 10%, transparent);
       cursor:pointer; font-size:11px;
+      min-width:0;
     }
     .pItem:hover{ border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
     .pMeta{ color: var(--muted); font-size:10px; margin-left:auto; white-space:nowrap; }
@@ -371,20 +434,35 @@
   <div class="wrap">
     <div class="topbar">
       <div>
-        <div class="title">Tree Milestones (LocalStorage)</div>
-        <div class="sub">Salvar no dispositivo via LocalStorage • Backup/Import</div>
+        <div class="title">Planner Completo (LocalStorage)</div>
+        <div class="sub">Chave fixa: <span class="k">planner-completo</span> • Backup/Import • Duplo clique no item abre ações</div>
       </div>
       <div class="spacer"></div>
 
       <span id="saveStatus" class="status">💾 Carregando…</span>
       <button class="btn ok" id="saveBtn" title="Salvar agora no LocalStorage">💾 Salvar agora</button>
 
-      <label class="pill" title="Mostra apenas milestones (mantendo os ancestrais para contexto)">
+      <label class="pill" title="Mostra apenas milestones (mantendo ancestrais para contexto)">
         <input id="filterMilestones" type="checkbox" />
         Só milestones
       </label>
 
-      <label class="pill" title="Alterna entre Visualização e Edição">
+      <label class="pill" title="Mostra apenas itens sem pessoas (nem responsável)">
+        <input id="filterNoPeople" type="checkbox" />
+        Sem pessoas
+      </label>
+
+      <label class="pill" title="Filtrar por tipo">
+        Tipo
+        <select id="filterType">
+          <option value="">Todos</option>
+          <option value="reuniao">Reunião</option>
+          <option value="firewall">Regra Firewall</option>
+          <option value="minha-atividade">Minha atividade</option>
+        </select>
+      </label>
+
+      <label class="pill" title="Alterna entre Visualização e Edição (mostra/esconde botões)">
         <input id="editModeToggle" type="checkbox" />
         Modo edição
       </label>
@@ -405,7 +483,7 @@
     <div class="sectionTitle" id="levelTitle">
       <span id="levelChevron">▸</span> 🎛 Aparência por nível (1–5)
       <div class="spacer"></div>
-      <span class="muted" style="font-size:11px;">duplo clique nos itens abre ações</span>
+      <span class="muted" style="font-size:11px;">colapsado por padrão</span>
     </div>
     <div class="collapsedContent">
       <div class="content" id="levelStylePanel"></div>
@@ -417,11 +495,11 @@
   <div class="card">
     <div class="card-head">
       <div class="hint">
-        <div><span class="k">Drag</span>: ⋮⋮ • <span class="k">Drop</span>: em cima=filho, barra=irmão • ▶︎/◀︎ indent/outdent</div>
+        <div><span class="k">Drag</span>: ⋮⋮ • <span class="k">Drop</span>: em cima=filho, barra=irmão • Colapsar fecha tudo</div>
       </div>
       <div class="spacer"></div>
       <div class="chip" title="Contagem atual">
-        📌 <span id="countItems">0</span> • ✅ <span id="countDone">0</span> • ⏳ <span id="countOverdue">0</span>
+        📌 <span id="countItems">0</span> • ✅ <span id="countDone">0</span> • ⚠ <span id="countOverdue">0</span>
       </div>
     </div>
     <div class="content">
@@ -432,7 +510,7 @@
   <div style="height:10px"></div>
 
   <div class="card">
-    <div class="sectionTitle">✅ Concluídos <span class="muted" id="doneHint"></span></div>
+    <div class="sectionTitle" style="cursor:default;">✅ Concluídos <span class="muted" id="doneHint"></span></div>
     <div class="completedList" id="completed"></div>
   </div>
 </main>
@@ -440,6 +518,7 @@
 <script>
 (() => {
   const LS_KEY = "planner-completo";
+  const ALLOWED_TYPES = new Set(["reuniao","firewall","minha-atividade"]);
 
   // ---- time helpers ----
   const nowISO = () => new Date().toISOString();
@@ -464,6 +543,8 @@
   const elCompleted = document.getElementById("completed");
   const elDoneHint = document.getElementById("doneHint");
   const elFilter = document.getElementById("filterMilestones");
+  const elFilterNoPeople = document.getElementById("filterNoPeople");
+  const elFilterType = document.getElementById("filterType");
   const elEditMode = document.getElementById("editModeToggle");
   const elLevelStylePanel = document.getElementById("levelStylePanel");
   const elCountItems = document.getElementById("countItems");
@@ -525,8 +606,7 @@
       return false;
     }
     try{
-      const payload = JSON.stringify(state);
-      localStorage.setItem(LS_KEY, payload);
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
       dirty = false;
       setStatus("ok", "✅ Salvo no dispositivo");
       updateCounters();
@@ -547,7 +627,6 @@
   setInterval(autoSaveIfDirty, 2500);
   saveBtn.addEventListener("click", ()=> forceSave());
 
-  // ---- load ----
   function loadState(){
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) {
@@ -555,10 +634,12 @@
         items: [],
         ui: {
           filterMilestones:false,
+          filterNoPeople:false,
+          filterType:"",
           theme:'dark',
           editMode:false,
           levelStyles: defaultLevelStyles(),
-          levelPanelOpen:false,              // ✅ colapsado por padrão
+          levelPanelOpen:false,
           peopleTop:{ open:true, active:"" }
         }
       };
@@ -569,6 +650,8 @@
 
       parsed.ui ||= {};
       if (typeof parsed.ui.filterMilestones !== "boolean") parsed.ui.filterMilestones = false;
+      if (typeof parsed.ui.filterNoPeople !== "boolean") parsed.ui.filterNoPeople = false;
+      if (typeof parsed.ui.filterType !== "string") parsed.ui.filterType = "";
       if (!parsed.ui.theme) parsed.ui.theme = "dark";
       if (typeof parsed.ui.editMode !== "boolean") parsed.ui.editMode = false;
       parsed.ui.levelStyles ||= defaultLevelStyles();
@@ -583,7 +666,7 @@
 
         if (typeof it.detailsOpen !== "boolean") it.detailsOpen = false;
         if (typeof it.expanded !== "boolean") it.expanded = false;
-        if (typeof it.actionsOpen !== "boolean") it.actionsOpen = false; // ✅ actions por duplo clique
+        if (typeof it.actionsOpen !== "boolean") it.actionsOpen = false;
 
         it.archived = !!it.archived;
         if (typeof it.archiveOpen !== "boolean") it.archiveOpen = false;
@@ -596,6 +679,9 @@
         it.milestone.date ||= "";
 
         it.completed = !!it.completed;
+
+        it.responsibleId ||= "";
+        it.type = ALLOWED_TYPES.has(it.type) ? it.type : "minha-atividade";
       }
       return parsed;
     }catch(e){
@@ -604,7 +690,8 @@
       return {
         items: [],
         ui: {
-          filterMilestones:false, theme:'dark', editMode:false,
+          filterMilestones:false, filterNoPeople:false, filterType:"",
+          theme:'dark', editMode:false,
           levelStyles: defaultLevelStyles(),
           levelPanelOpen:false,
           peopleTop:{ open:true, active:"" }
@@ -620,8 +707,7 @@
     levelCard.classList.toggle("open", !!state.ui.levelPanelOpen);
     levelChevron.textContent = state.ui.levelPanelOpen ? "▾" : "▸";
   }
-  levelTitle.addEventListener("click", (e)=> {
-    // permite selecionar o hint sem toggle (se quiser)
+  levelTitle.addEventListener("click", ()=> {
     state.ui.levelPanelOpen = !state.ui.levelPanelOpen;
     markDirty();
     applyLevelPanelUI();
@@ -653,12 +739,15 @@
     }
     return ids;
   }
+  // ✅ colapsar fecha TUDO
   function collapseSubtree(rootId){
     for (const id of subtreeIds(rootId)){
       const it = getItem(id);
       if (it){
         it.expanded = false;
-        it.actionsOpen = false; // ✅ fecha ações também
+        it.actionsOpen = false;
+        it.detailsOpen = false;
+        it.archiveOpen = false;
       }
     }
   }
@@ -696,21 +785,29 @@
     applyTheme();
   });
 
-  // ---- edit mode ----
+  // ---- filters / edit ----
   elEditMode.addEventListener("change", ()=> {
     state.ui.editMode = elEditMode.checked;
     markDirty();
     render();
   });
-
-  // ---- filter milestones ----
   elFilter.addEventListener("change", ()=> {
     state.ui.filterMilestones = elFilter.checked;
     markDirty();
     render();
   });
+  elFilterNoPeople.addEventListener("change", ()=> {
+    state.ui.filterNoPeople = elFilterNoPeople.checked;
+    markDirty();
+    render();
+  });
+  elFilterType.addEventListener("change", ()=> {
+    state.ui.filterType = elFilterType.value || "";
+    markDirty();
+    render();
+  });
 
-  // ---- rendering helpers ----
+  // ---- visible set for milestones ----
   function visibleSet(){
     if (!state.ui.filterMilestones) return null;
     const visible = new Set();
@@ -757,17 +854,24 @@
   function itemHasNotesOrLinks(item){
     return (!!(item.notes || "").trim()) || ((item.links || []).length > 0);
   }
+  function pendingDays(item){
+    if (item.completed) return 0;
+    return daysBetween(item.createdAt || item.updatedAt, nowISO());
+  }
+  function typeLabel(t){
+    if (t === "reuniao") return "📅 Reunião";
+    if (t === "firewall") return "🛡️ Firewall";
+    return "🧠 Minha atividade";
+  }
 
   // ---- level style panel ----
   function renderLevelStylePanel(){
     elLevelStylePanel.innerHTML = "";
-
     const grid = document.createElement("div");
     grid.className = "levelGrid";
 
     for (let lvl=1; lvl<=5; lvl++){
       const st = state.ui.levelStyles[lvl] || (state.ui.levelStyles[lvl] = defaultLevelStyles()[lvl]);
-
       const box = document.createElement("div");
       box.className = "levelBox";
       box.innerHTML = `<h5>Nível ${lvl}</h5>`;
@@ -948,7 +1052,7 @@
 
     const hint = document.createElement("div");
     hint.className = "pPanelHint";
-    hint.textContent = "Clique em um assunto para navegar até ele na árvore.";
+    hint.textContent = "Clique em um assunto para abrir o item + bloco de notas.";
 
     const clear = document.createElement("button");
     clear.className = "btn ghost";
@@ -1002,15 +1106,23 @@
         line.appendChild(t);
         line.appendChild(meta);
 
+        // ✅ abre item + abre bloco de notas
         line.addEventListener("click", ()=> {
           let p = it.parentId;
-          while(p){
+          while (p){
             const par = getItem(p);
             if (!par) break;
             par.expanded = true;
+            par.actionsOpen = false;
             p = par.parentId;
           }
+
           it.archived = false;
+          it.expanded = true;
+          it.detailsOpen = true;
+          it.actionsOpen = false;
+
+          touchItem(it);
           markDirty();
           render();
           setTimeout(()=> scrollToItem(it.id), 80);
@@ -1036,7 +1148,7 @@
     host.appendChild(panel);
   }
 
-  // ---- notes debounce (sem render para evitar desfoco) ----
+  // ---- notes debounce (não re-renderiza para não desfocar) ----
   const noteTimers = new Map();
   function scheduleNoteTouch(item){
     if (noteTimers.has(item.id)) clearTimeout(noteTimers.get(item.id));
@@ -1048,20 +1160,82 @@
     noteTimers.set(item.id, t);
   }
 
+  // ---- Link menu (copiar URL completa) ----
+  let __linkMenuEl = null;
+  function closeLinkMenu(){
+    if (__linkMenuEl){
+      __linkMenuEl.remove();
+      __linkMenuEl = null;
+    }
+  }
+  function openLinkMenuAt(x, y, url){
+    closeLinkMenu();
+
+    const menu = document.createElement("div");
+    menu.className = "linkMenu";
+
+    const copyBtn = document.createElement("button");
+    copyBtn.textContent = "📋 Copiar URL completa";
+    copyBtn.addEventListener("click", async () => {
+      try{
+        await navigator.clipboard.writeText(url);
+        closeLinkMenu();
+        setStatus("ok", "✅ URL copiada");
+        setTimeout(()=> setStatus(dirty ? "" : "ok", dirty ? "🟡 Alterações pendentes" : "✅ Salvo no dispositivo"), 900);
+      }catch(e){
+        const ta = document.createElement("textarea");
+        ta.value = url;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        ta.remove();
+        closeLinkMenu();
+        alert("URL copiada.");
+      }
+    });
+
+    const openBtn = document.createElement("button");
+    openBtn.textContent = "🔗 Abrir em nova aba";
+    openBtn.addEventListener("click", () => {
+      window.open(url, "_blank", "noopener,noreferrer");
+      closeLinkMenu();
+    });
+
+    menu.appendChild(copyBtn);
+    menu.appendChild(openBtn);
+
+    menu.style.left = `${x}px`;
+    menu.style.top  = `${y}px`;
+
+    document.body.appendChild(menu);
+    __linkMenuEl = menu;
+
+    setTimeout(() => {
+      const onDown = (ev) => {
+        if (!__linkMenuEl) return;
+        if (!__linkMenuEl.contains(ev.target)) closeLinkMenu();
+      };
+      const onKey = (ev) => { if (ev.key === "Escape") closeLinkMenu(); };
+
+      document.addEventListener("mousedown", onDown, { once:true });
+      document.addEventListener("keydown", onKey, { once:true });
+    }, 0);
+  }
+
   // ---- render ----
   function render(){
     document.body.classList.toggle("editMode", !!state.ui.editMode);
 
     elFilter.checked = !!state.ui.filterMilestones;
+    elFilterNoPeople.checked = !!state.ui.filterNoPeople;
+    elFilterType.value = state.ui.filterType || "";
     elEditMode.checked = !!state.ui.editMode;
 
     applyLevelPanelUI();
     if (state.ui.levelPanelOpen) renderLevelStylePanel();
-
     renderPeopleTop();
 
     elTree.innerHTML = "";
-
     const vis = visibleSet();
     const roots = childrenOf(null);
 
@@ -1075,7 +1249,8 @@
       for (const r of roots){
         if (vis && !vis.has(r.id)) continue;
         if (r.archived) continue;
-        frag.appendChild(renderItem(r, 0, vis));
+        const node = renderItem(r, 0, vis);
+        if (node) frag.appendChild(node);
       }
       elTree.appendChild(frag);
     }
@@ -1085,6 +1260,17 @@
   }
 
   function renderItem(item, depth, vis){
+    // filtro por tipo
+    if (state.ui.filterType){
+      if ((item.type || "minha-atividade") !== state.ui.filterType) return document.createDocumentFragment();
+    }
+
+    // filtro sem pessoas (considera responsável também)
+    if (state.ui.filterNoPeople){
+      const hasPeople = (item.people || []).length > 0 || !!(item.responsibleId);
+      if (hasPeople) return document.createDocumentFragment();
+    }
+
     const row = document.createElement("div");
     row.className = "row" + (item.completed ? " done" : "") + (item.actionsOpen ? " actionsOpen" : "");
     row.dataset.id = item.id;
@@ -1094,7 +1280,7 @@
     const head = document.createElement("div");
     head.className = "row-head";
 
-    // ✅ duplo clique alterna barra de ações (exceto em inputs/botões)
+    // duplo clique alterna barra de ações (exceto inputs/botões)
     head.addEventListener("dblclick", (e)=> {
       e.preventDefault();
       const t = e.target;
@@ -1136,11 +1322,23 @@
     });
     handle.addEventListener("dragend", ()=> row.classList.remove("dragging"));
 
-    const btnExpand = document.createElement("button");
-    btnExpand.className = "iconBtn";
-    btnExpand.title = item.expanded ? "Colapsar (colapsa filhos também)" : "Expandir";
-    btnExpand.textContent = item.expanded ? "▾" : "▸";
-    btnExpand.addEventListener("click", ()=> {
+    const title = document.createElement("input");
+    title.className = "titleInput";
+    title.placeholder = "Título…";
+    title.value = item.title ?? "";
+    applyTitleStyleByDepth(title, depth);
+    title.addEventListener("input", ()=> {
+      item.title = title.value;
+      touchItem(item);
+      markDirty();
+      updateCounters();
+    });
+
+    // ---- RIGHT PACK (todos os botões ficam aqui, à direita do título) ----
+    const right = document.createElement("div");
+    right.className = "rightPack";
+
+    const btnExpand = icon(item.expanded ? "▾" : "▸", item.expanded ? "Colapsar (fecha tudo)" : "Expandir", ()=> {
       if (item.expanded) collapseSubtree(item.id);
       else item.expanded = true;
       touchItem(item);
@@ -1148,17 +1346,13 @@
       render();
     });
 
-    // ✅ botão de notas/detalhes fica VERDE se tiver nota ou link
-    const btnDetails = document.createElement("button");
-    btnDetails.className = "iconBtn" + (itemHasNotesOrLinks(item) ? " ok" : "");
-    btnDetails.title = "Abrir / fechar detalhes";
-    btnDetails.textContent = item.detailsOpen ? "🧾" : "🗂";
-    btnDetails.addEventListener("click", ()=> {
+    const btnDetails = icon(item.detailsOpen ? "🧾" : "🗂", "Abrir/fechar bloco de notas/links/pessoas", ()=> {
       item.detailsOpen = !item.detailsOpen;
       touchItem(item);
       markDirty();
       render();
     });
+    if (itemHasNotesOrLinks(item)) btnDetails.classList.add("ok");
 
     const chkDone = document.createElement("input");
     chkDone.type = "checkbox";
@@ -1174,44 +1368,109 @@
       render();
     });
 
-    const title = document.createElement("input");
-    title.className = "titleInput";
-    title.placeholder = "Título…";
-    title.value = item.title ?? "";
-    applyTitleStyleByDepth(title, depth);
-    title.addEventListener("input", ()=> {
-      item.title = title.value;
-      touchItem(item);
-      markDirty();
-      updateCounters();
-    });
-
     const dots = stalenessDots(stalenessDays(item));
 
     const badges = document.createElement("div");
     badges.className = "badges";
 
+    // Tipo (sempre visível)
+    const typeB = document.createElement("span");
+    typeB.className = "badge alwaysOn";
+    typeB.textContent = typeLabel(item.type || "minha-atividade");
+    badges.appendChild(typeB);
+
+    // Data (sempre visível)
     const dt = item.milestone?.enabled ? (item.milestone.date || "") : "";
     const dateBadge = document.createElement("span");
-    dateBadge.className = "badge";
+    dateBadge.className = "badge alwaysOn";
     dateBadge.textContent = dt ? `📅 ${dt}` : "📅 —";
     badges.appendChild(dateBadge);
 
+    // ⚠ atrasado (sempre visível se milestone habilitado)
+    if (item.milestone?.enabled){
+      const overdueBadge = document.createElement("span");
+      overdueBadge.className = "badge alwaysOn " + (isOverdue(item) ? "danger" : "");
+      overdueBadge.textContent = isOverdue(item) ? "⚠ atrasado" : "🗓";
+      badges.appendChild(overdueBadge);
+    }
+
+    // Dias pendente (enquanto não concluído)
+    const pend = pendingDays(item);
+    const pendBadge = document.createElement("span");
+    pendBadge.className = "badge alwaysOn";
+    pendBadge.title = "Dias pendente (desde criado) enquanto não concluir";
+    pendBadge.textContent = `⏳ ${pend}d`;
+    badges.appendChild(pendBadge);
+
+    // Pessoas (sempre visível)
     const peopleCount = (item.people || []).length;
     const peopleBadge = document.createElement("span");
-    peopleBadge.className = "badge";
+    peopleBadge.className = "badge alwaysOn";
     peopleBadge.title = "Pessoas";
     peopleBadge.textContent = `👤 ${peopleCount}`;
     badges.appendChild(peopleBadge);
 
+    // Responsável (se houver)
+    if (item.responsibleId){
+      const p = (item.people || []).find(x=>x.id===item.responsibleId);
+      if (p?.name){
+        const resp = document.createElement("span");
+        resp.className = "badge alwaysOn";
+        resp.title = "Responsável";
+        resp.textContent = `⭐ ${p.name}`;
+        badges.appendChild(resp);
+      }
+    }
+
+    // Botões de edição (editOnly)
+    const btnAddChild = icon("＋","Adicionar filho", ()=> {
+      addItem(item.id);
+      item.expanded = true;
+      touchItem(item);
+      markDirty();
+      render();
+    });
+    btnAddChild.classList.add("editOnly","iconBtn");
+
+    const btnIndent = icon("▶︎","Indentar", ()=> indentItem(item.id));
+    btnIndent.classList.add("editOnly","iconBtn");
+
+    const btnOutdent = icon("◀︎","Desindentar", ()=> outdentItem(item.id));
+    btnOutdent.classList.add("editOnly","iconBtn");
+
+    const btnArchive = icon(item.archived ? "↩️" : "📦", item.archived ? "Desarquivar" : "Arquivar", () => {
+      item.archived = !item.archived;
+      if (item.archived) item.detailsOpen = false;
+      touchItem(item);
+      markDirty();
+      render();
+    });
+    btnArchive.classList.add("editOnly","iconBtn");
+
+    const btnDel = icon("🗑","Excluir", ()=> {
+      if (!confirm("Excluir este item e todos os filhos?")) return;
+      deleteItem(item.id);
+      markDirty();
+      render();
+    });
+    btnDel.classList.add("editOnly","iconBtn");
+
+    // Right pack order
+    right.appendChild(btnExpand);
+    right.appendChild(btnDetails);
+    right.appendChild(chkDone);
+    right.appendChild(dots);
+    right.appendChild(badges);
+    right.appendChild(btnAddChild);
+    right.appendChild(btnOutdent);
+    right.appendChild(btnIndent);
+    right.appendChild(btnArchive);
+    right.appendChild(btnDel);
+
     head.appendChild(indentWrap);
     head.appendChild(handle);
-    head.appendChild(btnExpand);
-    head.appendChild(btnDetails);
-    head.appendChild(chkDone);
     head.appendChild(title);
-    head.appendChild(dots);
-    head.appendChild(badges);
+    head.appendChild(right);
 
     row.appendChild(head);
 
@@ -1222,36 +1481,13 @@
       row.appendChild(body);
     }
 
-    // ✅ actions bar (aparece no duplo clique)
+    // actions bar (abre no duplo clique) — totalmente em modo edição
     const bar = document.createElement("div");
-    bar.className = "actionsBar";
+    bar.className = "actionsBar editOnly";
 
-    const btnAddChild = icon("＋", "Adicionar filho", () => {
-      addItem(item.id);
-      item.expanded = true;
-      touchItem(item);
-      markDirty();
-      render();
-    });
-    btnAddChild.classList.add("editOnly");
-
-    const btnArchive = icon(item.archived ? "↩️" : "📦", item.archived ? "Desarquivar" : "Arquivar", () => {
-      item.archived = !item.archived;
-      if (item.archived) item.detailsOpen = false;
-      touchItem(item);
-      markDirty();
-      render();
-    });
-    btnArchive.classList.add("editOnly");
-
-    const btnOutdent = icon("◀︎", "Desindentar", ()=> outdentItem(item.id));
-    btnOutdent.classList.add("editOnly");
-
-    const btnIndent = icon("▶︎", "Indentar", ()=> indentItem(item.id));
-    btnIndent.classList.add("editOnly");
-
+    // milestone toggle + date
     const mileBtn = document.createElement("button");
-    mileBtn.className = "badge editOnly inline";
+    mileBtn.className = "badge editOnly";
     mileBtn.title = "Alternar milestone";
     mileBtn.textContent = item.milestone?.enabled ? "⏱ milestone" : "⏱";
     mileBtn.addEventListener("click", ()=> {
@@ -1273,7 +1509,7 @@
     mileDate.style.color = "var(--text)";
     mileDate.style.padding = "4px 8px";
     mileDate.style.fontSize = "11px";
-    mileDate.classList.add("editOnly","inline");
+    mileDate.classList.add("editOnly");
     if (!item.milestone?.enabled) mileDate.style.display = "none";
     mileDate.addEventListener("change", ()=> {
       item.milestone.date = mileDate.value;
@@ -1282,33 +1518,37 @@
       render();
     });
 
-    const over = document.createElement("span");
-    over.className = "badge editOnly inline " + (isOverdue(item) ? "danger" : (item.completed ? "ok" : ""));
-    over.textContent = isOverdue(item) ? "⚠ atrasado" : (item.completed ? "✅" : "🗓");
-    if (!item.milestone?.enabled) over.style.display = "none";
-
-    const btnDel = icon("🗑", "Excluir", ()=> {
-      if (!confirm("Excluir este item e todos os filhos?")) return;
-      deleteItem(item.id);
+    // tipo select
+    const typeSel = document.createElement("select");
+    typeSel.className = "editOnly";
+    typeSel.style.borderRadius = "999px";
+    typeSel.style.border = "1px solid color-mix(in srgb, var(--muted) 22%, transparent)";
+    typeSel.style.background = "color-mix(in srgb, var(--panel) 35%, transparent)";
+    typeSel.style.color = "var(--text)";
+    typeSel.style.padding = "4px 8px";
+    typeSel.style.fontSize = "11px";
+    typeSel.innerHTML = `
+      <option value="reuniao">📅 Reunião</option>
+      <option value="firewall">🛡️ Regra Firewall</option>
+      <option value="minha-atividade">🧠 Minha atividade</option>
+    `;
+    typeSel.value = item.type || "minha-atividade";
+    typeSel.addEventListener("change", ()=> {
+      item.type = ALLOWED_TYPES.has(typeSel.value) ? typeSel.value : "minha-atividade";
+      touchItem(item);
       markDirty();
       render();
     });
-    btnDel.classList.add("editOnly");
 
-    bar.appendChild(btnAddChild);
-    bar.appendChild(btnArchive);
-    bar.appendChild(btnOutdent);
-    bar.appendChild(btnIndent);
     bar.appendChild(mileBtn);
     bar.appendChild(mileDate);
-    bar.appendChild(over);
-    bar.appendChild(spacer());
-    bar.appendChild(btnDel);
+    bar.appendChild(typeSel);
 
     row.appendChild(bar);
 
     row.appendChild(makeDropZone(item.id, "after"));
 
+    // filhos só quando expanded
     if (item.expanded) {
       const kids = childrenOf(item.id);
       const activeKids = kids.filter(k => !k.archived);
@@ -1323,7 +1563,8 @@
         const frag = document.createDocumentFragment();
         for (const c of activeKids){
           if (vis && !vis.has(c.id)) continue;
-          frag.appendChild(renderItem(c, depth+1, vis));
+          const node = renderItem(c, depth+1, vis);
+          if (node) frag.appendChild(node);
         }
         childWrap.appendChild(frag);
         row.appendChild(childWrap);
@@ -1351,7 +1592,8 @@
           const fragA = document.createDocumentFragment();
           for (const c of archivedKids){
             if (vis && !vis.has(c.id)) continue;
-            fragA.appendChild(renderItem(c, depth+1, vis));
+            const node = renderItem(c, depth+1, vis);
+            if (node) fragA.appendChild(node);
           }
           list.appendChild(fragA);
           box.appendChild(list);
@@ -1370,11 +1612,6 @@
     b.title = title;
     b.addEventListener("click", onClick);
     return b;
-  }
-  function spacer(){
-    const d = document.createElement("div");
-    d.className = "spacer";
-    return d;
   }
 
   // ---- Details panels ----
@@ -1433,11 +1670,18 @@
         <button class="btn" style="padding:7px 9px; border-radius:10px;" id="pAdd-${item.id}">Add</button>
         <span class="badge" title="Total">👤 <span id="pTotal-${item.id}">0</span></span>
       </div>
+      <div class="miniRow">
+        <span class="badge" title="Responsável">⭐ Responsável</span>
+        <select id="pResp-${item.id}">
+          <option value="">— sem responsável —</option>
+        </select>
+      </div>
       <div class="list" id="pList-${item.id}"></div>
     `;
     const pName = people.querySelector(`#pName-${item.id}`);
     const pAdd = people.querySelector(`#pAdd-${item.id}`);
     const pTotal = people.querySelector(`#pTotal-${item.id}`);
+    const pResp = people.querySelector(`#pResp-${item.id}`);
     const pList = people.querySelector(`#pList-${item.id}`);
     item.people ||= [];
 
@@ -1446,6 +1690,26 @@
       if (!n) return alert("Digite um nome.");
       item.people.push({ id: uid(), name: n });
       pName.value = "";
+      if (item.people.length === 1) item.responsibleId = item.people[0].id; // auto-responsável no 1º
+      touchItem(item);
+      markDirty();
+      render();
+    });
+
+    function fillRespOptions(){
+      pResp.innerHTML = `<option value="">— sem responsável —</option>`;
+      for (const p of (item.people || [])){
+        const o = document.createElement("option");
+        o.value = p.id;
+        o.textContent = p.name;
+        pResp.appendChild(o);
+      }
+      pResp.value = item.responsibleId || "";
+    }
+    fillRespOptions();
+
+    pResp.addEventListener("change", ()=> {
+      item.responsibleId = pResp.value || "";
       touchItem(item);
       markDirty();
       render();
@@ -1469,16 +1733,37 @@
       container.appendChild(d);
       return;
     }
+
     for (const l of item.links){
       const line = document.createElement("div");
       line.className = "itemLine";
+
       const left = document.createElement("div");
-      left.innerHTML = `<div style="font-weight:750;">${escapeHtml(l.title)}</div>
-                        <div class="muted" style="font-size:11px; word-break:break-all;">
-                          <a href="${escapeAttr(l.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(l.url)}</a>
-                        </div>`;
+      left.style.minWidth = "0";
+
+      const title = document.createElement("div");
+      title.className = "linkTitle";
+      title.textContent = l.title || "(sem título)";
+      title.title = "Clique para copiar/abrir";
+      title.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const rect = title.getBoundingClientRect();
+        openLinkMenuAt(rect.left, rect.bottom + 6, l.url);
+      });
+
+      const url = document.createElement("div");
+      url.className = "linkUrl";
+      url.textContent = l.url || "";
+      url.title = l.url || "";
+
+      left.appendChild(title);
+      left.appendChild(url);
+
       const right = document.createElement("div");
-      right.className = "right";
+      right.style.marginLeft = "auto";
+      right.style.display = "flex";
+      right.style.gap = "6px";
 
       const edit = icon("✏️","Editar", ()=> {
         const nt = prompt("Título:", l.title);
@@ -1499,8 +1784,12 @@
         render();
       });
 
+      edit.classList.add("editOnly","iconBtn");
+      del.classList.add("editOnly","iconBtn");
+
       right.appendChild(edit);
       right.appendChild(del);
+
       line.appendChild(left);
       line.appendChild(right);
       container.appendChild(line);
@@ -1523,9 +1812,20 @@
       const line = document.createElement("div");
       line.className = "itemLine";
       line.innerHTML = `<span style="font-size:16px;">👤</span>
-                        <div style="font-weight:750;">${escapeHtml(p.name)}</div>`;
+                        <div style="font-weight:750;">${escapeHtml(p.name)}</div>
+                        ${item.responsibleId===p.id ? `<span class="badge" style="margin-left:8px;">⭐</span>` : ""}`;
       const right = document.createElement("div");
-      right.className = "right";
+      right.style.marginLeft = "auto";
+      right.style.display = "flex";
+      right.style.gap = "6px";
+
+      const makeResp = icon("⭐","Tornar responsável", ()=> {
+        item.responsibleId = p.id;
+        touchItem(item);
+        markDirty();
+        render();
+      });
+      makeResp.classList.add("editOnly","iconBtn");
 
       const edit = icon("✏️","Editar", ()=> {
         const nn = prompt("Nome:", p.name);
@@ -1538,11 +1838,17 @@
 
       const del = icon("🗑","Remover", ()=> {
         item.people = item.people.filter(x => x.id !== p.id);
+        if (item.responsibleId === p.id) item.responsibleId = "";
         touchItem(item);
         markDirty();
         render();
       });
 
+      makeResp.classList.add("editOnly");
+      edit.classList.add("editOnly");
+      del.classList.add("editOnly");
+
+      right.appendChild(makeResp);
       right.appendChild(edit);
       right.appendChild(del);
       line.appendChild(right);
@@ -1601,7 +1907,6 @@
       .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
       .replaceAll('"',"&quot;").replaceAll("'","&#039;");
   }
-  function escapeAttr(s){ return escapeHtml(s); }
 
   // ---- DnD drop zones ----
   function makeDropZone(targetItemId, where){
@@ -1727,17 +2032,25 @@
       title: "",
       parentId: parentId ?? null,
       order: nextOrder(parentId ?? null),
+
       expanded: false,
       detailsOpen: false,
-      actionsOpen: false,      // ✅ default fechado
+      actionsOpen: false,
+
       completed: false,
       milestone: { enabled:false, date:"" },
+
+      type: "minha-atividade",
+
       links: [],
       notes: "",
       people: [],
+      responsibleId: "",
+
       createdAt: t,
       updatedAt: t,
       completedAt: null,
+
       archived: false,
       archiveOpen: false
     };
@@ -1772,7 +2085,7 @@
   }
   function doBackup(){
     const payload = { exportedAt: nowISO(), version: 1, state };
-    download(`backup-tree-milestones-${new Date().toISOString().slice(0,19).replaceAll(":","")}.json`,
+    download(`backup-planner-${new Date().toISOString().slice(0,19).replaceAll(":","")}.json`,
              JSON.stringify(payload, null, 2));
   }
   function doImportFile(file){
@@ -1786,6 +2099,8 @@
 
         incoming.ui ||= {};
         if (typeof incoming.ui.filterMilestones !== "boolean") incoming.ui.filterMilestones = false;
+        if (typeof incoming.ui.filterNoPeople !== "boolean") incoming.ui.filterNoPeople = false;
+        if (typeof incoming.ui.filterType !== "string") incoming.ui.filterType = "";
         if (!incoming.ui.theme) incoming.ui.theme = "dark";
         if (typeof incoming.ui.editMode !== "boolean") incoming.ui.editMode = false;
         incoming.ui.levelStyles ||= defaultLevelStyles();
@@ -1807,9 +2122,13 @@
           it.milestone ||= { enabled:false, date:"" };
           it.milestone.enabled = !!it.milestone.enabled;
           it.milestone.date ||= "";
+
+          it.type = ALLOWED_TYPES.has(it.type) ? it.type : "minha-atividade";
+
           it.links ||= [];
           it.notes ||= "";
           it.people ||= [];
+          it.responsibleId ||= "";
 
           it.createdAt ||= tNow;
           it.updatedAt ||= it.createdAt;
@@ -1817,6 +2136,9 @@
 
           it.archived = !!it.archived;
           if (typeof it.archiveOpen !== "boolean") it.archiveOpen = false;
+
+          // se o responsibleId apontar pra alguém removido, limpa
+          if (it.responsibleId && !(it.people || []).some(p=>p.id===it.responsibleId)) it.responsibleId = "";
         }
 
         const ids = new Set(incoming.items.map(x=>x.id));
