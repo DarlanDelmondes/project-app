@@ -54,12 +54,7 @@
     }
     [data-theme="light"] .btn{ box-shadow: 0 8px 18px rgba(14,24,40,.10); }
     .btn:hover{border-color: color-mix(in srgb, var(--accent) 55%, transparent)}
-    .btn.ghost{
-      background:transparent;
-      border-color: color-mix(in srgb, var(--muted) 25%, transparent);
-      box-shadow:none;
-    }
-    .btn.danger{border-color: color-mix(in srgb, var(--danger) 55%, transparent); background: color-mix(in srgb, var(--danger) 12%, transparent)}
+    .btn.ghost{ background:transparent; border-color: color-mix(in srgb, var(--muted) 25%, transparent); box-shadow:none; }
     .btn.ok{border-color: color-mix(in srgb, var(--ok) 55%, transparent); background: color-mix(in srgb, var(--ok) 10%, transparent)}
     .pill{
       display:inline-flex; align-items:center; gap:8px;
@@ -68,6 +63,19 @@
       background: color-mix(in srgb, var(--panel) 35%, transparent);
     }
     .pill input{accent-color: var(--accent)}
+    .status{
+      font-size:11px;
+      color:var(--muted);
+      border:1px solid color-mix(in srgb, var(--muted) 22%, transparent);
+      background: color-mix(in srgb, var(--panel) 30%, transparent);
+      padding:6px 9px;
+      border-radius:999px;
+      display:inline-flex; gap:8px; align-items:center;
+      user-select:none;
+    }
+    .status.ok{border-color: color-mix(in srgb, var(--ok) 55%, transparent); color: color-mix(in srgb, var(--ok) 30%, var(--text));}
+    .status.bad{border-color: color-mix(in srgb, var(--danger) 60%, transparent); color: color-mix(in srgb, var(--danger) 30%, var(--text));}
+
     main{max-width:1100px; margin:0 auto; padding:12px 14px 34px}
     .card{
       background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 92%, transparent), color-mix(in srgb, var(--panel2) 92%, transparent));
@@ -88,7 +96,6 @@
       font-size:12px;
     }
 
-    /* Tree (compact) */
     .tree{display:flex; flex-direction:column; gap:6px}
     .row{
       position:relative;
@@ -98,41 +105,29 @@
       overflow:hidden;
     }
     .row.dragging{opacity:.55}
-    .row-head{
-      display:flex; align-items:center; gap:8px;
-      padding:6px 8px;
-    }
+    .row-head{ display:flex; align-items:center; gap:8px; padding:6px 8px; }
     .indent{display:inline-flex; align-items:center; gap:0}
     .indent .pad{width:14px; height:1px}
     .handle{
-      width:22px; height:22px;
-      border-radius:8px;
-      display:grid; place-items:center;
+      width:22px; height:22px; border-radius:8px; display:grid; place-items:center;
       border:1px solid color-mix(in srgb, var(--muted) 22%, transparent);
       background: color-mix(in srgb, var(--panel) 55%, transparent);
-      cursor:grab;
-      user-select:none;
-      font-size:12px;
-      line-height:1;
+      cursor:grab; user-select:none; font-size:12px; line-height:1;
     }
     .handle:active{cursor:grabbing}
     .iconBtn{
-      width:24px; height:24px;
-      border-radius:8px;
+      width:24px; height:24px; border-radius:8px;
       border:1px solid color-mix(in srgb, var(--muted) 22%, transparent);
       background: color-mix(in srgb, var(--panel) 42%, transparent);
       color:var(--text);
       cursor:pointer;
       display:grid; place-items:center;
       user-select:none;
-      font-size:12px;
-      line-height:1;
+      font-size:12px; line-height:1;
     }
     .iconBtn:hover{border-color: color-mix(in srgb, var(--accent) 55%, transparent)}
-
     .titleInput{
-      flex:1;
-      min-width:120px;
+      flex:1; min-width:120px;
       border-radius:9px;
       border:1px solid color-mix(in srgb, var(--line) 85%, transparent);
       background: color-mix(in srgb, var(--bg) 22%, transparent);
@@ -140,14 +135,9 @@
       padding:6px 8px;
       outline:none;
       font-size:12px;
-
-      /* “cortar letra” / elipse */
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .titleInput:focus{border-color: color-mix(in srgb, var(--accent) 70%, transparent)}
-
     .badges{display:flex; gap:6px; align-items:center; flex-wrap:wrap}
     .badge{
       font-size:10px; padding:3px 7px; border-radius:999px;
@@ -164,11 +154,7 @@
       border-top:1px solid color-mix(in srgb, var(--line) 55%, transparent);
       background: color-mix(in srgb, var(--bg) 12%, transparent);
     }
-    .grid{
-      display:grid;
-      grid-template-columns: 1.2fr .8fr .8fr;
-      gap:8px;
-    }
+    .grid{display:grid; grid-template-columns: 1.2fr .8fr .8fr; gap:8px;}
     @media (max-width: 900px){ .grid{grid-template-columns:1fr} }
     .panel{
       border:1px solid color-mix(in srgb, var(--line) 70%, transparent);
@@ -176,37 +162,25 @@
       border-radius:12px;
       padding:8px;
     }
-    .panel h4{
-      margin:0 0 6px;
-      font-size:12px;
-      letter-spacing:.2px;
-      display:flex; align-items:center; gap:8px;
-    }
+    .panel h4{margin:0 0 6px; font-size:12px; letter-spacing:.2px; display:flex; align-items:center; gap:8px;}
     .panel small{color:var(--muted)}
     textarea{
-      width:100%;
-      min-height:90px;
-      resize:vertical;
+      width:100%; min-height:90px; resize:vertical;
       border-radius:10px;
       border:1px solid color-mix(in srgb, var(--line) 85%, transparent);
       background: color-mix(in srgb, var(--bg) 22%, transparent);
       color:var(--text);
-      padding:8px;
-      outline:none;
-      font-size:12px;
+      padding:8px; outline:none; font-size:12px;
     }
     textarea:focus{border-color: color-mix(in srgb, var(--accent) 70%, transparent)}
     .miniRow{display:flex; gap:8px; align-items:center; margin-top:8px; flex-wrap:wrap}
     .miniRow input[type="text"], .miniRow input[type="url"]{
-      flex:1;
-      min-width:160px;
+      flex:1; min-width:160px;
       border-radius:10px;
       border:1px solid color-mix(in srgb, var(--line) 85%, transparent);
       background: color-mix(in srgb, var(--bg) 22%, transparent);
       color:var(--text);
-      padding:7px 8px;
-      outline:none;
-      font-size:12px;
+      padding:7px 8px; outline:none; font-size:12px;
     }
     .miniRow input:focus{border-color: color-mix(in srgb, var(--accent) 70%, transparent)}
     .list{display:flex; flex-direction:column; gap:6px; margin-top:8px}
@@ -235,8 +209,6 @@
       box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 12%, transparent);
     }
     .k{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace}
-
-    /* staleness dots */
     .dots{display:inline-flex; gap:3px; align-items:center}
     .dot{
       width:6px; height:6px; border-radius:999px;
@@ -244,21 +216,12 @@
       border:1px solid color-mix(in srgb, var(--muted) 25%, transparent);
       opacity:.9;
     }
-    .dot.hot{
-      background: color-mix(in srgb, var(--danger) 55%, transparent);
-      border-color: color-mix(in srgb, var(--danger) 35%, transparent);
-    }
-    .dot.fresh{
-      background: color-mix(in srgb, var(--ok) 40%, transparent);
-      border-color: color-mix(in srgb, var(--ok) 25%, transparent);
-    }
+    .dot.hot{ background: color-mix(in srgb, var(--danger) 55%, transparent); border-color: color-mix(in srgb, var(--danger) 35%, transparent); }
+    .dot.fresh{ background: color-mix(in srgb, var(--ok) 40%, transparent); border-color: color-mix(in srgb, var(--ok) 25%, transparent); }
     .dotLabel{font-size:10px;color:var(--muted);margin-left:6px}
 
-    /* completed section */
     .sectionTitle{
-      font-size:12px;
-      font-weight:800;
-      letter-spacing:.2px;
+      font-size:12px; font-weight:800; letter-spacing:.2px;
       color: color-mix(in srgb, var(--text) 92%, var(--muted));
       padding:10px 12px;
       border-bottom:1px solid color-mix(in srgb, var(--line) 55%, transparent);
@@ -277,14 +240,9 @@
     .cTitle{font-weight:800}
     .cMeta{color:var(--muted); font-size:11px}
 
-    /* when completed: strike + faded */
-    .row.done .titleInput{
-      text-decoration: line-through;
-      opacity: .62;
-    }
+    .row.done .titleInput{ text-decoration: line-through; opacity: .62; }
     .row.done{opacity:.92}
 
-    /* archived box header */
     .archiveBox{
       margin:6px 8px 8px;
       border:1px solid color-mix(in srgb, var(--line) 65%, transparent);
@@ -300,21 +258,22 @@
       font-size:11px;
       user-select:none;
     }
-    .archiveList{
-      padding:6px 8px 8px;
-      display:flex; flex-direction:column; gap:6px;
-    }
+    .archiveList{ padding:6px 8px 8px; display:flex; flex-direction:column; gap:6px; }
   </style>
 </head>
+
 <body>
 <header>
   <div class="wrap">
     <div class="topbar">
       <div>
         <div class="title">Tree Milestones (LocalStorage)</div>
-        <div class="sub">Compacto • datas (criado/atualizado/concluído) • bolinhas por dias sem atualização • arquivar/desarquivar</div>
+        <div class="sub">Salvar no dispositivo via LocalStorage • Backup/Import</div>
       </div>
       <div class="spacer"></div>
+
+      <span id="saveStatus" class="status">💾 Carregando…</span>
+      <button class="btn ok" id="saveBtn" title="Salvar agora no LocalStorage">💾 Salvar agora</button>
 
       <label class="pill" title="Mostra apenas milestones (mantendo os ancestrais para contexto)">
         <input id="filterMilestones" type="checkbox" />
@@ -324,7 +283,7 @@
       <button class="btn ghost" id="themeBtn" title="Alternar tema">🌙 Noite</button>
 
       <button class="btn ok" id="addRootBtn">➕ Item</button>
-      <button class="btn ghost" id="backupBtn">💾 Backup</button>
+      <button class="btn ghost" id="backupBtn">📤 Backup</button>
       <button class="btn ghost" id="importBtn">📥 Import</button>
       <input id="importFile" type="file" accept="application/json" hidden />
     </div>
@@ -342,7 +301,6 @@
         📌 <span id="countItems">0</span> • ✅ <span id="countDone">0</span> • ⏳ <span id="countOverdue">0</span>
       </div>
     </div>
-
     <div class="content">
       <div id="tree" class="tree"></div>
     </div>
@@ -357,12 +315,77 @@
 </main>
 
 <script>
-(() => {
-  const LS_KEY = "tree_milestones_v3_archive_done_dates";
-  let state = loadState();
 
-  // --------- time helpers ----------
+    const LS_KEY = "planner-completo";
+
+(() => {
+  // CHAVE FIXA: garante que sempre use o mesmo "slot" do LocalStorage
+
+  const saveStatus = document.getElementById("saveStatus");
+  const saveBtn = document.getElementById("saveBtn");
+
   const nowISO = () => new Date().toISOString();
+
+  let state = loadState();
+  let dirty = false;
+
+  // ---- storage check (se falhar, vai dar status vermelho) ----
+  function storageWritable(){
+    try{
+      const k = "__ls_test__" + Math.random().toString(36).slice(2);
+      localStorage.setItem(k, "1");
+      localStorage.removeItem(k);
+      return true;
+    }catch(e){
+      console.error("LocalStorage não gravável:", e);
+      return false;
+    }
+  }
+  const lsOk = storageWritable();
+
+  function setStatus(kind, text){
+    saveStatus.classList.remove("ok","bad");
+    if (kind) saveStatus.classList.add(kind);
+    saveStatus.textContent = text;
+  }
+
+  function markDirty(){
+    dirty = true;
+    setStatus("", "🟡 Alterações pendentes");
+  }
+
+  function forceSave(){
+    if (!lsOk){
+      setStatus("bad", "⛔ LocalStorage bloqueado");
+      return false;
+    }
+    try{
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+      dirty = false;
+      setStatus("ok", "✅ Salvo no dispositivo");
+      updateCounters();
+      return true;
+    }catch(e){
+      console.error("Erro ao salvar:", e);
+      setStatus("bad", "⛔ Erro ao salvar");
+      alert("Falha ao salvar no LocalStorage. Abra o console (F12) para ver o erro.\nPode ser bloqueio, quota cheia, ou contexto que não persiste storage.");
+      return false;
+    }
+  }
+
+  // autosave: quando a aba é escondida + quando sai
+  function autoSaveIfDirty(){ if (dirty) forceSave(); }
+  window.addEventListener("beforeunload", autoSaveIfDirty);
+  document.addEventListener("visibilitychange", ()=> {
+    if (document.visibilityState === "hidden") autoSaveIfDirty();
+  });
+
+  // autosave também em intervalos (se você ficar editando sem dar blur)
+  setInterval(autoSaveIfDirty, 2500);
+
+  saveBtn.addEventListener("click", ()=> forceSave());
+
+  // ---- time helpers ----
   const dayStart = (d) => { const x = new Date(d); x.setHours(0,0,0,0); return x; };
   const daysBetween = (aISO, bISO) => Math.max(0, Math.floor((dayStart(bISO) - dayStart(aISO)) / (24*60*60*1000)));
   const formatDate = (iso) => {
@@ -375,7 +398,7 @@
     return `${dd}/${mm}/${yy}`;
   };
 
-  // --------- ids / storage ----------
+  // ---- ids / storage ----
   const uid = () => Math.random().toString(36).slice(2,10) + "-" + Date.now().toString(36);
 
   function loadState(){
@@ -392,7 +415,6 @@
         it.createdAt ||= t;
         it.updatedAt ||= it.createdAt;
         it.completedAt ||= null;
-
         if (typeof it.detailsOpen !== "boolean") it.detailsOpen = false;
         if (typeof it.expanded !== "boolean") it.expanded = false;
 
@@ -412,12 +434,7 @@
     }
   }
 
-  function saveState(){
-    localStorage.setItem(LS_KEY, JSON.stringify(state));
-    updateCounters();
-  }
-
-  // --------- domain helpers ----------
+  // ---- domain helpers ----
   function getItem(id){ return state.items.find(x => x.id === id); }
   function childrenOf(parentId){
     return state.items
@@ -455,10 +472,9 @@
     if (dragId === newParentId) return true;
     return new Set(subtreeIds(dragId)).has(newParentId);
   }
-
   function touchItem(item){ item.updatedAt = nowISO(); }
 
-  // --------- milestone / overdue ----------
+  // ---- milestone / overdue ----
   const todayISO = () => {
     const d = new Date();
     const yyyy = d.getFullYear();
@@ -474,20 +490,19 @@
     return dt < todayISO();
   };
 
-  // --------- theme ----------
+  // ---- theme ----
   const themeBtn = document.getElementById("themeBtn");
   function applyTheme(){
     document.documentElement.setAttribute("data-theme", state.ui.theme === 'light' ? 'light' : 'dark');
     themeBtn.textContent = state.ui.theme === 'light' ? "☀️ Dia" : "🌙 Noite";
-    themeBtn.title = state.ui.theme === 'light' ? "Mudar para noite" : "Mudar para dia";
   }
   themeBtn.addEventListener("click", ()=> {
     state.ui.theme = (state.ui.theme === 'light') ? 'dark' : 'light';
-    saveState();
+    markDirty();
     applyTheme();
   });
 
-  // --------- rendering ----------
+  // ---- rendering ----
   const elTree = document.getElementById("tree");
   const elCompleted = document.getElementById("completed");
   const elDoneHint = document.getElementById("doneHint");
@@ -555,16 +570,12 @@
     if (!roots.length){
       const empty = document.createElement("div");
       empty.className = "empty";
-      empty.innerHTML = `
-        <div style="font-weight:800; margin-bottom:6px;">Nenhum item ainda.</div>
-        <div>Adicione itens. Datas (criado/atualizado/concluído) são registradas e as bolinhas contam dias sem atualização.</div>
-      `;
+      empty.innerHTML = `<div style="font-weight:800; margin-bottom:6px;">Nenhum item ainda.</div>`;
       elTree.appendChild(empty);
     } else {
       const frag = document.createDocumentFragment();
       for (const r of roots){
         if (vis && !vis.has(r.id)) continue;
-        // raiz arquivada não deve aparecer (não tem pai pra “caixinha”)
         if (r.archived) continue;
         frag.appendChild(renderItem(r, 0, vis));
       }
@@ -615,7 +626,6 @@
     });
     handle.addEventListener("dragend", ()=> row.classList.remove("dragging"));
 
-    // expand/collapse da árvore (filhos)
     const btnExpand = document.createElement("button");
     btnExpand.className = "iconBtn";
     btnExpand.title = item.expanded ? "Colapsar (colapsa filhos também)" : "Expandir";
@@ -624,11 +634,10 @@
       if (item.expanded) collapseSubtree(item.id);
       else item.expanded = true;
       touchItem(item);
-      saveState();
+      markDirty();
       render();
     });
 
-    // detalhes (notas/links/pessoas)
     const btnDetails = document.createElement("button");
     btnDetails.className = "iconBtn";
     btnDetails.title = "Abrir / fechar detalhes";
@@ -636,11 +645,10 @@
     btnDetails.addEventListener("click", ()=> {
       item.detailsOpen = !item.detailsOpen;
       touchItem(item);
-      saveState();
+      markDirty();
       render();
     });
 
-    // archive/unarchive (vai para caixinha "Arquivados" do pai)
     const btnArchive = document.createElement("button");
     btnArchive.className = "iconBtn";
     btnArchive.title = item.archived ? "Desarquivar" : "Arquivar";
@@ -649,7 +657,7 @@
       item.archived = !item.archived;
       if (item.archived) item.detailsOpen = false;
       touchItem(item);
-      saveState();
+      markDirty();
       render();
     });
 
@@ -657,13 +665,13 @@
     btnOutdent.className = "iconBtn";
     btnOutdent.title = "Desindentar";
     btnOutdent.textContent = "◀︎";
-    btnOutdent.addEventListener("click", ()=> outdentItem(item.id));
+    btnOutdent.addEventListener("click", ()=> { outdentItem(item.id); });
 
     const btnIndent = document.createElement("button");
     btnIndent.className = "iconBtn";
     btnIndent.title = "Indentar";
     btnIndent.textContent = "▶︎";
-    btnIndent.addEventListener("click", ()=> indentItem(item.id));
+    btnIndent.addEventListener("click", ()=> { indentItem(item.id); });
 
     const chkDone = document.createElement("input");
     chkDone.type = "checkbox";
@@ -673,13 +681,9 @@
     chkDone.style.accentColor = "var(--ok)";
     chkDone.addEventListener("change", ()=> {
       item.completed = chkDone.checked;
-      if (item.completed){
-        item.completedAt = nowISO();
-      } else {
-        item.completedAt = null;
-      }
-      touchItem(item); // concluir também atualiza
-      saveState();
+      item.completedAt = item.completed ? nowISO() : null;
+      touchItem(item);
+      markDirty();
       render();
     });
 
@@ -690,27 +694,13 @@
     title.addEventListener("input", ()=> {
       item.title = title.value;
       touchItem(item);
-      saveState();
+      markDirty();
     });
 
-    // dias sem atualização
-    const days = stalenessDays(item);
-    const dots = stalenessDots(days);
+    const dots = stalenessDots(stalenessDays(item));
 
     const badges = document.createElement("div");
     badges.className = "badges";
-
-    const btnAddChild = document.createElement("button");
-    btnAddChild.className = "iconBtn";
-    btnAddChild.title = "Adicionar filho";
-    btnAddChild.textContent = "＋";
-    btnAddChild.addEventListener("click", ()=> {
-      addItem(item.id);
-      item.expanded = true;
-      touchItem(item);
-      saveState();
-      render();
-    });
 
     const mileBtn = document.createElement("button");
     mileBtn.className = "badge";
@@ -722,7 +712,7 @@
       item.milestone.enabled = !item.milestone.enabled;
       if (!item.milestone.enabled) item.milestone.date = "";
       touchItem(item);
-      saveState();
+      markDirty();
       render();
     });
     badges.appendChild(mileBtn);
@@ -741,7 +731,7 @@
       date.addEventListener("change", ()=> {
         item.milestone.date = date.value;
         touchItem(item);
-        saveState();
+        markDirty();
         render();
       });
       badges.appendChild(date);
@@ -759,6 +749,18 @@
     peopleBadge.textContent = `👤 ${peopleCount}`;
     badges.appendChild(peopleBadge);
 
+    const btnAddChild = document.createElement("button");
+    btnAddChild.className = "iconBtn";
+    btnAddChild.title = "Adicionar filho";
+    btnAddChild.textContent = "＋";
+    btnAddChild.addEventListener("click", ()=> {
+      addItem(item.id);
+      item.expanded = true;
+      touchItem(item);
+      markDirty();
+      render();
+    });
+
     const btnDel = document.createElement("button");
     btnDel.className = "iconBtn";
     btnDel.title = "Excluir";
@@ -766,7 +768,7 @@
     btnDel.addEventListener("click", ()=> {
       if (!confirm("Excluir este item e todos os filhos?")) return;
       deleteItem(item.id);
-      saveState();
+      markDirty();
       render();
     });
 
@@ -779,15 +781,13 @@
     head.appendChild(btnIndent);
     head.appendChild(chkDone);
     head.appendChild(title);
-    head.appendChild(btnAddChild);
-
     head.appendChild(dots);
     head.appendChild(badges);
+    head.appendChild(btnAddChild);
     head.appendChild(btnDel);
 
     row.appendChild(head);
 
-    // Detalhes: só abre quando detailsOpen=true
     if (item.detailsOpen) {
       const body = document.createElement("div");
       body.className = "row-body";
@@ -797,21 +797,17 @@
 
     row.appendChild(makeDropZone(item.id, "after"));
 
-    // Filhos: só aparecem se pai expanded
     if (item.expanded) {
       const kids = childrenOf(item.id);
-
       const activeKids = kids.filter(k => !k.archived);
       const archivedKids = kids.filter(k => k.archived);
 
-      // filhos ativos
       if (activeKids.length){
         const childWrap = document.createElement("div");
         childWrap.style.display = "flex";
         childWrap.style.flexDirection = "column";
         childWrap.style.gap = "6px";
         childWrap.style.marginTop = "6px";
-
         const frag = document.createDocumentFragment();
         for (const c of activeKids){
           if (vis && !vis.has(c.id)) continue;
@@ -821,7 +817,6 @@
         row.appendChild(childWrap);
       }
 
-      // "Arquivados" dentro do pai (colapsado por padrão)
       if (archivedKids.length){
         const box = document.createElement("div");
         box.className = "archiveBox";
@@ -829,11 +824,10 @@
         const hdr = document.createElement("div");
         hdr.className = "archiveHdr";
         hdr.innerHTML = `${item.archiveOpen ? "▾" : "▸"} Arquivados (${archivedKids.length})`;
-
         hdr.addEventListener("click", ()=> {
           item.archiveOpen = !item.archiveOpen;
           touchItem(item);
-          saveState();
+          markDirty();
           render();
         });
 
@@ -842,7 +836,6 @@
         if (item.archiveOpen){
           const list = document.createElement("div");
           list.className = "archiveList";
-
           const fragA = document.createDocumentFragment();
           for (const c of archivedKids){
             if (vis && !vis.has(c.id)) continue;
@@ -851,7 +844,6 @@
           list.appendChild(fragA);
           box.appendChild(list);
         }
-
         row.appendChild(box);
       }
     }
@@ -859,13 +851,13 @@
     return row;
   }
 
-  // notes update debounce (para não “carimbar” updatedAt a cada tecla)
+  // notes debounce
   const noteTimers = new Map();
   function scheduleNoteTouch(item){
     if (noteTimers.has(item.id)) clearTimeout(noteTimers.get(item.id));
     const t = setTimeout(()=> {
       touchItem(item);
-      saveState();
+      markDirty();
       render();
     }, 450);
     noteTimers.set(item.id, t);
@@ -911,7 +903,8 @@
       item.links.push({ id: uid(), title: t, url: u });
       lnTitle.value = ""; lnUrl.value = "";
       touchItem(item);
-      saveState(); render();
+      markDirty();
+      render();
     });
 
     renderLinkList(item, lnList);
@@ -939,7 +932,8 @@
       item.people.push({ id: uid(), name: n });
       pName.value = "";
       touchItem(item);
-      saveState(); render();
+      markDirty();
+      render();
     });
 
     renderPeopleList(item, pList, pTotal);
@@ -983,7 +977,8 @@
         l.title = nt.trim() || l.title;
         l.url = nu.trim() || l.url;
         touchItem(item);
-        saveState(); render();
+        markDirty();
+        render();
       });
 
       const del = document.createElement("button");
@@ -993,7 +988,8 @@
       del.addEventListener("click", ()=> {
         item.links = item.links.filter(x => x.id !== l.id);
         touchItem(item);
-        saveState(); render();
+        markDirty();
+        render();
       });
 
       right.appendChild(edit);
@@ -1033,7 +1029,8 @@
         if (nn === null) return;
         p.name = nn.trim() || p.name;
         touchItem(item);
-        saveState(); render();
+        markDirty();
+        render();
       });
 
       const del = document.createElement("button");
@@ -1043,7 +1040,8 @@
       del.addEventListener("click", ()=> {
         item.people = item.people.filter(x => x.id !== p.id);
         touchItem(item);
-        saveState(); render();
+        markDirty();
+        render();
       });
 
       right.appendChild(edit);
@@ -1091,12 +1089,10 @@
                          <div class="cMeta">Concluído: ${formatDate(it.completedAt)} • Atualizado: ${formatDate(it.updatedAt)} • Criado: ${formatDate(it.createdAt)}</div>`;
 
       const dots = stalenessDots(stalenessDays(it));
-      dots.title = "Dias desde a última atualização";
 
       row.appendChild(indent);
       row.appendChild(title);
       row.appendChild(dots);
-
       elCompleted.appendChild(row);
     }
   }
@@ -1108,7 +1104,7 @@
   }
   function escapeAttr(s){ return escapeHtml(s); }
 
-  // --------- DnD drop zones ----------
+  // ---- DnD drop zones ----
   function makeDropZone(targetItemId, where){
     const z = document.createElement("div");
     z.className = "dropZone";
@@ -1124,7 +1120,6 @@
       if (!dragId || dragId === targetItemId) return;
       moveAsSibling(dragId, targetItemId, where);
     });
-
     return z;
   }
 
@@ -1149,7 +1144,7 @@
     normalizeOrders(oldParentId);
 
     touchItem(drag);
-    saveState();
+    markDirty();
     render();
   }
 
@@ -1170,15 +1165,14 @@
     parent.expanded = true;
     touchItem(drag);
     touchItem(parent);
-    saveState();
+    markDirty();
     render();
   }
 
-  // --------- indent / outdent ----------
+  // ---- indent / outdent ----
   function indentItem(id){
     const item = getItem(id);
     if (!item) return;
-
     const sibs = siblingsOf(item);
     const idx = sibs.findIndex(x => x.id === id);
     if (idx <= 0) return;
@@ -1187,7 +1181,6 @@
     if (wouldCreateCycle(id, prev.id)) return alert("Movimento inválido (ciclo).");
 
     const oldParentId = item.parentId ?? null;
-
     item.parentId = prev.id;
     item.order = nextOrder(prev.id);
     prev.expanded = true;
@@ -1196,7 +1189,7 @@
 
     touchItem(item);
     touchItem(prev);
-    saveState();
+    markDirty();
     render();
   }
 
@@ -1223,11 +1216,11 @@
     normalizeOrders(oldParentId);
 
     touchItem(item);
-    saveState();
+    markDirty();
     render();
   }
 
-  // --------- CRUD items ----------
+  // ---- CRUD items ----
   function addItem(parentId){
     const t = nowISO();
     const newItem = {
@@ -1244,17 +1237,15 @@
       notes: "",
       people: [],
 
-      // dates
       createdAt: t,
       updatedAt: t,
       completedAt: null,
 
-      // archive
       archived: false,
       archiveOpen: false
     };
     state.items.push(newItem);
-    saveState();
+    markDirty();
     render();
     setTimeout(() => {
       const row = document.querySelector(`.row[data-id="${CSS.escape(newItem.id)}"]`);
@@ -1271,7 +1262,7 @@
     normalizeOrders(parentId);
   }
 
-  // --------- backup/import ----------
+  // ---- backup/import ----
   function download(filename, text){
     const blob = new Blob([text], {type:"application/json"});
     const a = document.createElement("a");
@@ -1284,7 +1275,7 @@
   }
 
   function doBackup(){
-    const payload = { exportedAt: nowISO(), version: 3, state };
+    const payload = { exportedAt: nowISO(), version: 1, state };
     download(`backup-tree-milestones-${new Date().toISOString().slice(0,19).replaceAll(":","")}.json`,
              JSON.stringify(payload, null, 2));
   }
@@ -1333,10 +1324,11 @@
         }
 
         state = incoming;
-        saveState();
+        markDirty();
         applyTheme();
         render();
-        alert("Import concluído.");
+        //forceSave();
+        alert("Import concluído (salvo no LocalStorage).");
       }catch(e){
         alert("Falha ao importar: arquivo inválido.");
       }
@@ -1344,20 +1336,14 @@
     reader.readAsText(file);
   }
 
-  function clearAll(){
-    state = { items: [], ui: { filterMilestones:false, theme: state?.ui?.theme || 'dark' } };
-    saveState();
-    render();
-  }
-
-  // --------- counters ----------
+  // ---- counters ----
   function updateCounters(){
     elCountItems.textContent = String(state.items.length);
     elCountDone.textContent = String(state.items.filter(i => !!i.completed).length);
     elCountOverdue.textContent = String(state.items.filter(isOverdue).length);
   }
 
-  // --------- UI events ----------
+  // ---- UI events ----
   document.getElementById("addRootBtn").addEventListener("click", ()=> addItem(null));
   document.getElementById("backupBtn").addEventListener("click", doBackup);
   document.getElementById("importBtn").addEventListener("click", ()=> document.getElementById("importFile").click());
@@ -1366,21 +1352,25 @@
     if (f) doImportFile(f);
     e.target.value = "";
   });
-  document.getElementById("clearBtn").addEventListener("click", ()=> {
-    if (!confirm("Apagar tudo do LocalStorage deste app?")) return;
-    clearAll();
-  });
 
   elFilter.addEventListener("change", ()=> {
     state.ui.filterMilestones = elFilter.checked;
-    saveState();
+    markDirty();
     render();
   });
 
-  // --------- init ----------
-  saveState();
+  // ---- init ----
   applyTheme();
   render();
+
+  if (!lsOk){
+    setStatus("bad", "⛔ LocalStorage bloqueado");
+    alert("LocalStorage está bloqueado nesse contexto.\n\nAbra o .html diretamente no navegador (file://) ou em http://localhost.\nSe estiver em modo privado/anônimo, teste fora.");
+  } else {
+    setStatus("ok", "✅ Carregado do dispositivo");
+    // garante que a key exista desde o começo
+    //forceSave();
+  }
 })();
 </script>
 </body>
