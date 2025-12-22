@@ -1,0 +1,1387 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Tree Milestones — LocalStorage</title>
+  <style>
+    :root{
+      --bg:#0b0f19; --panel:#111a2e; --panel2:#0f1627; --text:#e8eefc;
+      --muted:#9db0d1; --line:#243252; --accent:#7aa2ff; --danger:#ff6b6b; --ok:#55e6a5;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 14px;
+    }
+    [data-theme="light"]{
+      --bg:#f6f7fb; --panel:#ffffff; --panel2:#f3f5fb; --text:#0b1220;
+      --muted:#4b5b78; --line:#d6deee; --accent:#2b62ff; --danger:#d93a3a; --ok:#0a8f5a;
+      --shadow: 0 10px 30px rgba(14, 24, 40, .10);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      background: radial-gradient(1200px 800px at 30% -10%, rgba(122,162,255,.22), transparent 60%),
+                  radial-gradient(900px 600px at 110% 10%, rgba(85,230,165,.16), transparent 55%),
+                  var(--bg);
+      color:var(--text);
+    }
+    [data-theme="light"] body{
+      background: radial-gradient(1200px 800px at 30% -10%, rgba(43,98,255,.14), transparent 60%),
+                  radial-gradient(900px 600px at 110% 10%, rgba(10,143,90,.10), transparent 55%),
+                  var(--bg);
+    }
+    header{
+      position:sticky; top:0; z-index:10;
+      background: color-mix(in srgb, var(--bg) 75%, transparent);
+      backdrop-filter: blur(10px);
+      border-bottom:1px solid color-mix(in srgb, var(--line) 65%, transparent);
+    }
+    .wrap{max-width:1100px; margin:0 auto; padding:12px 14px 14px}
+    .topbar{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+    .title{font-weight:850; letter-spacing:.2px; font-size:16px}
+    .sub{color:var(--muted); font-size:11px}
+    .spacer{flex:1}
+    .btn{
+      border:1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+      background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 14%, transparent), color-mix(in srgb, var(--accent) 6%, transparent));
+      color:var(--text);
+      padding:8px 10px;
+      border-radius:11px;
+      cursor:pointer;
+      display:inline-flex; gap:8px; align-items:center;
+      box-shadow: 0 8px 18px color-mix(in srgb, #000 22%, transparent);
+      user-select:none;
+      font-size:12px;
+    }
+    [data-theme="light"] .btn{ box-shadow: 0 8px 18px rgba(14,24,40,.10); }
+    .btn:hover{border-color: color-mix(in srgb, var(--accent) 55%, transparent)}
+    .btn.ghost{
+      background:transparent;
+      border-color: color-mix(in srgb, var(--muted) 25%, transparent);
+      box-shadow:none;
+    }
+    .btn.danger{border-color: color-mix(in srgb, var(--danger) 55%, transparent); background: color-mix(in srgb, var(--danger) 12%, transparent)}
+    .btn.ok{border-color: color-mix(in srgb, var(--ok) 55%, transparent); background: color-mix(in srgb, var(--ok) 10%, transparent)}
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      border:1px solid color-mix(in srgb, var(--muted) 22%, transparent);
+      padding:6px 9px; border-radius:999px; color:var(--muted); font-size:11px;
+      background: color-mix(in srgb, var(--panel) 35%, transparent);
+    }
+    .pill input{accent-color: var(--accent)}
+    main{max-width:1100px; margin:0 auto; padding:12px 14px 34px}
+    .card{
+      background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 92%, transparent), color-mix(in srgb, var(--panel2) 92%, transparent));
+      border:1px solid color-mix(in srgb, var(--line) 70%, transparent);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .card-head{
+      display:flex; align-items:center; gap:10px;
+      padding:10px 12px; border-bottom:1px solid color-mix(in srgb, var(--line) 55%, transparent);
+    }
+    .hint{color:var(--muted); font-size:11px; line-height:1.35}
+    .content{padding:10px}
+    .empty{
+      padding:14px; border:1px dashed color-mix(in srgb, var(--muted) 28%, transparent); border-radius:12px;
+      color:var(--muted); background: color-mix(in srgb, var(--panel2) 45%, transparent);
+      font-size:12px;
+    }
+
+    /* Tree (compact) */
+    .tree{display:flex; flex-direction:column; gap:6px}
+    .row{
+      position:relative;
+      border:1px solid color-mix(in srgb, var(--line) 70%, transparent);
+      background: color-mix(in srgb, var(--panel2) 52%, transparent);
+      border-radius:12px;
+      overflow:hidden;
+    }
+    .row.dragging{opacity:.55}
+    .row-head{
+      display:flex; align-items:center; gap:8px;
+      padding:6px 8px;
+    }
+    .indent{display:inline-flex; align-items:center; gap:0}
+    .indent .pad{width:14px; height:1px}
+    .handle{
+      width:22px; height:22px;
+      border-radius:8px;
+      display:grid; place-items:center;
+      border:1px solid color-mix(in srgb, var(--muted) 22%, transparent);
+      background: color-mix(in srgb, var(--panel) 55%, transparent);
+      cursor:grab;
+      user-select:none;
+      font-size:12px;
+      line-height:1;
+    }
+    .handle:active{cursor:grabbing}
+    .iconBtn{
+      width:24px; height:24px;
+      border-radius:8px;
+      border:1px solid color-mix(in srgb, var(--muted) 22%, transparent);
+      background: color-mix(in srgb, var(--panel) 42%, transparent);
+      color:var(--text);
+      cursor:pointer;
+      display:grid; place-items:center;
+      user-select:none;
+      font-size:12px;
+      line-height:1;
+    }
+    .iconBtn:hover{border-color: color-mix(in srgb, var(--accent) 55%, transparent)}
+
+    .titleInput{
+      flex:1;
+      min-width:120px;
+      border-radius:9px;
+      border:1px solid color-mix(in srgb, var(--line) 85%, transparent);
+      background: color-mix(in srgb, var(--bg) 22%, transparent);
+      color:var(--text);
+      padding:6px 8px;
+      outline:none;
+      font-size:12px;
+
+      /* “cortar letra” / elipse */
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .titleInput:focus{border-color: color-mix(in srgb, var(--accent) 70%, transparent)}
+
+    .badges{display:flex; gap:6px; align-items:center; flex-wrap:wrap}
+    .badge{
+      font-size:10px; padding:3px 7px; border-radius:999px;
+      border:1px solid color-mix(in srgb, var(--muted) 22%, transparent);
+      color:var(--muted);
+      background: color-mix(in srgb, var(--panel) 35%, transparent);
+      display:inline-flex; gap:6px; align-items:center;
+      user-select:none;
+    }
+    .badge.danger{border-color: color-mix(in srgb, var(--danger) 60%, transparent); color: color-mix(in srgb, var(--danger) 20%, var(--text)); background: color-mix(in srgb, var(--danger) 12%, transparent)}
+    .badge.ok{border-color: color-mix(in srgb, var(--ok) 60%, transparent); color: color-mix(in srgb, var(--ok) 20%, var(--text)); background: color-mix(in srgb, var(--ok) 10%, transparent)}
+    .row-body{
+      padding:8px 8px 10px;
+      border-top:1px solid color-mix(in srgb, var(--line) 55%, transparent);
+      background: color-mix(in srgb, var(--bg) 12%, transparent);
+    }
+    .grid{
+      display:grid;
+      grid-template-columns: 1.2fr .8fr .8fr;
+      gap:8px;
+    }
+    @media (max-width: 900px){ .grid{grid-template-columns:1fr} }
+    .panel{
+      border:1px solid color-mix(in srgb, var(--line) 70%, transparent);
+      background: color-mix(in srgb, var(--panel2) 50%, transparent);
+      border-radius:12px;
+      padding:8px;
+    }
+    .panel h4{
+      margin:0 0 6px;
+      font-size:12px;
+      letter-spacing:.2px;
+      display:flex; align-items:center; gap:8px;
+    }
+    .panel small{color:var(--muted)}
+    textarea{
+      width:100%;
+      min-height:90px;
+      resize:vertical;
+      border-radius:10px;
+      border:1px solid color-mix(in srgb, var(--line) 85%, transparent);
+      background: color-mix(in srgb, var(--bg) 22%, transparent);
+      color:var(--text);
+      padding:8px;
+      outline:none;
+      font-size:12px;
+    }
+    textarea:focus{border-color: color-mix(in srgb, var(--accent) 70%, transparent)}
+    .miniRow{display:flex; gap:8px; align-items:center; margin-top:8px; flex-wrap:wrap}
+    .miniRow input[type="text"], .miniRow input[type="url"]{
+      flex:1;
+      min-width:160px;
+      border-radius:10px;
+      border:1px solid color-mix(in srgb, var(--line) 85%, transparent);
+      background: color-mix(in srgb, var(--bg) 22%, transparent);
+      color:var(--text);
+      padding:7px 8px;
+      outline:none;
+      font-size:12px;
+    }
+    .miniRow input:focus{border-color: color-mix(in srgb, var(--accent) 70%, transparent)}
+    .list{display:flex; flex-direction:column; gap:6px; margin-top:8px}
+    .itemLine{
+      display:flex; gap:8px; align-items:center;
+      padding:7px;
+      border-radius:10px;
+      border:1px solid color-mix(in srgb, var(--line) 70%, transparent);
+      background: color-mix(in srgb, var(--panel) 35%, transparent);
+      font-size:12px;
+    }
+    .itemLine a{color: color-mix(in srgb, var(--accent) 55%, var(--text)); text-decoration:none}
+    .itemLine a:hover{text-decoration:underline}
+    .muted{color:var(--muted)}
+    .right{margin-left:auto; display:flex; gap:6px}
+    .chip{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:6px 9px; border-radius:12px;
+      border:1px solid color-mix(in srgb, var(--line) 70%, transparent);
+      background: color-mix(in srgb, var(--panel) 25%, transparent);
+      font-size:12px;
+    }
+    .dropZone{height:8px;border-radius:999px;background:transparent;margin:4px 8px}
+    .dropZone.active{
+      background: color-mix(in srgb, var(--accent) 35%, transparent);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 12%, transparent);
+    }
+    .k{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace}
+
+    /* staleness dots */
+    .dots{display:inline-flex; gap:3px; align-items:center}
+    .dot{
+      width:6px; height:6px; border-radius:999px;
+      background: color-mix(in srgb, var(--muted) 45%, transparent);
+      border:1px solid color-mix(in srgb, var(--muted) 25%, transparent);
+      opacity:.9;
+    }
+    .dot.hot{
+      background: color-mix(in srgb, var(--danger) 55%, transparent);
+      border-color: color-mix(in srgb, var(--danger) 35%, transparent);
+    }
+    .dot.fresh{
+      background: color-mix(in srgb, var(--ok) 40%, transparent);
+      border-color: color-mix(in srgb, var(--ok) 25%, transparent);
+    }
+    .dotLabel{font-size:10px;color:var(--muted);margin-left:6px}
+
+    /* completed section */
+    .sectionTitle{
+      font-size:12px;
+      font-weight:800;
+      letter-spacing:.2px;
+      color: color-mix(in srgb, var(--text) 92%, var(--muted));
+      padding:10px 12px;
+      border-bottom:1px solid color-mix(in srgb, var(--line) 55%, transparent);
+      display:flex; align-items:center; gap:8px;
+    }
+    .completedList{padding:10px; display:flex; flex-direction:column; gap:6px}
+    .cRow{
+      border:1px solid color-mix(in srgb, var(--line) 70%, transparent);
+      background: color-mix(in srgb, var(--panel2) 45%, transparent);
+      border-radius:12px;
+      padding:6px 8px;
+      display:flex; gap:8px; align-items:center;
+      font-size:12px;
+      opacity:.95;
+    }
+    .cTitle{font-weight:800}
+    .cMeta{color:var(--muted); font-size:11px}
+
+    /* when completed: strike + faded */
+    .row.done .titleInput{
+      text-decoration: line-through;
+      opacity: .62;
+    }
+    .row.done{opacity:.92}
+
+    /* archived box header */
+    .archiveBox{
+      margin:6px 8px 8px;
+      border:1px solid color-mix(in srgb, var(--line) 65%, transparent);
+      border-radius:12px;
+      background: color-mix(in srgb, var(--panel) 18%, transparent);
+      overflow:hidden;
+    }
+    .archiveHdr{
+      display:flex; align-items:center; gap:8px;
+      padding:6px 8px;
+      cursor:pointer;
+      color:var(--muted);
+      font-size:11px;
+      user-select:none;
+    }
+    .archiveList{
+      padding:6px 8px 8px;
+      display:flex; flex-direction:column; gap:6px;
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="topbar">
+      <div>
+        <div class="title">Tree Milestones (LocalStorage)</div>
+        <div class="sub">Compacto • datas (criado/atualizado/concluído) • bolinhas por dias sem atualização • arquivar/desarquivar</div>
+      </div>
+      <div class="spacer"></div>
+
+      <label class="pill" title="Mostra apenas milestones (mantendo os ancestrais para contexto)">
+        <input id="filterMilestones" type="checkbox" />
+        Só milestones
+      </label>
+
+      <button class="btn ghost" id="themeBtn" title="Alternar tema">🌙 Noite</button>
+
+      <button class="btn ok" id="addRootBtn">➕ Item</button>
+      <button class="btn ghost" id="backupBtn">💾 Backup</button>
+      <button class="btn ghost" id="importBtn">📥 Import</button>
+      <input id="importFile" type="file" accept="application/json" hidden />
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="card">
+    <div class="card-head">
+      <div class="hint">
+        <div><span class="k">Drag</span>: ⋮⋮ • <span class="k">Drop</span>: em cima=filho, barra=irmão • ▶︎/◀︎ indent/outdent</div>
+      </div>
+      <div class="spacer"></div>
+      <div class="chip" title="Contagem atual">
+        📌 <span id="countItems">0</span> • ✅ <span id="countDone">0</span> • ⏳ <span id="countOverdue">0</span>
+      </div>
+    </div>
+
+    <div class="content">
+      <div id="tree" class="tree"></div>
+    </div>
+  </div>
+
+  <div style="height:10px"></div>
+
+  <div class="card">
+    <div class="sectionTitle">✅ Concluídos <span class="muted" id="doneHint"></span></div>
+    <div class="completedList" id="completed"></div>
+  </div>
+</main>
+
+<script>
+(() => {
+  const LS_KEY = "tree_milestones_v3_archive_done_dates";
+  let state = loadState();
+
+  // --------- time helpers ----------
+  const nowISO = () => new Date().toISOString();
+  const dayStart = (d) => { const x = new Date(d); x.setHours(0,0,0,0); return x; };
+  const daysBetween = (aISO, bISO) => Math.max(0, Math.floor((dayStart(bISO) - dayStart(aISO)) / (24*60*60*1000)));
+  const formatDate = (iso) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "";
+    const dd = String(d.getDate()).padStart(2,"0");
+    const mm = String(d.getMonth()+1).padStart(2,"0");
+    const yy = String(d.getFullYear());
+    return `${dd}/${mm}/${yy}`;
+  };
+
+  // --------- ids / storage ----------
+  const uid = () => Math.random().toString(36).slice(2,10) + "-" + Date.now().toString(36);
+
+  function loadState(){
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return { items: [], ui: { filterMilestones:false, theme:'dark' } };
+    try{
+      const parsed = JSON.parse(raw);
+      if (!parsed || !Array.isArray(parsed.items)) throw new Error("invalid");
+      parsed.ui ||= { filterMilestones:false, theme:'dark' };
+      if (!parsed.ui.theme) parsed.ui.theme = 'dark';
+
+      const t = nowISO();
+      for (const it of parsed.items){
+        it.createdAt ||= t;
+        it.updatedAt ||= it.createdAt;
+        it.completedAt ||= null;
+
+        if (typeof it.detailsOpen !== "boolean") it.detailsOpen = false;
+        if (typeof it.expanded !== "boolean") it.expanded = false;
+
+        it.archived = !!it.archived;
+        if (typeof it.archiveOpen !== "boolean") it.archiveOpen = false;
+
+        it.links ||= [];
+        it.people ||= [];
+        it.notes ||= "";
+        it.milestone ||= { enabled:false, date:"" };
+        it.milestone.enabled = !!it.milestone.enabled;
+        it.milestone.date ||= "";
+      }
+      return parsed;
+    }catch(e){
+      return { items: [], ui: { filterMilestones:false, theme:'dark' } };
+    }
+  }
+
+  function saveState(){
+    localStorage.setItem(LS_KEY, JSON.stringify(state));
+    updateCounters();
+  }
+
+  // --------- domain helpers ----------
+  function getItem(id){ return state.items.find(x => x.id === id); }
+  function childrenOf(parentId){
+    return state.items
+      .filter(x => x.parentId === parentId)
+      .sort((a,b)=> (a.order ?? 0) - (b.order ?? 0));
+  }
+  function siblingsOf(item){ return childrenOf(item.parentId); }
+  function nextOrder(parentId){
+    const kids = childrenOf(parentId);
+    return kids.length ? (kids[kids.length-1].order + 1) : 0;
+  }
+  function normalizeOrders(parentId){
+    const kids = childrenOf(parentId);
+    kids.forEach((k,idx)=> k.order = idx);
+  }
+  function subtreeIds(rootId){
+    const ids = [];
+    const stack = [rootId];
+    while(stack.length){
+      const id = stack.pop();
+      ids.push(id);
+      const kids = childrenOf(id);
+      for (let i = kids.length-1; i>=0; i--) stack.push(kids[i].id);
+    }
+    return ids;
+  }
+  function collapseSubtree(rootId){
+    for (const id of subtreeIds(rootId)){
+      const it = getItem(id);
+      if (it) it.expanded = false;
+    }
+  }
+  function wouldCreateCycle(dragId, newParentId){
+    if (newParentId == null) return false;
+    if (dragId === newParentId) return true;
+    return new Set(subtreeIds(dragId)).has(newParentId);
+  }
+
+  function touchItem(item){ item.updatedAt = nowISO(); }
+
+  // --------- milestone / overdue ----------
+  const todayISO = () => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth()+1).padStart(2,"0");
+    const dd = String(d.getDate()).padStart(2,"0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
+  const isOverdue = (item) => {
+    if (!item.milestone?.enabled) return false;
+    if (item.completed) return false;
+    const dt = item.milestone.date;
+    if (!dt) return false;
+    return dt < todayISO();
+  };
+
+  // --------- theme ----------
+  const themeBtn = document.getElementById("themeBtn");
+  function applyTheme(){
+    document.documentElement.setAttribute("data-theme", state.ui.theme === 'light' ? 'light' : 'dark');
+    themeBtn.textContent = state.ui.theme === 'light' ? "☀️ Dia" : "🌙 Noite";
+    themeBtn.title = state.ui.theme === 'light' ? "Mudar para noite" : "Mudar para dia";
+  }
+  themeBtn.addEventListener("click", ()=> {
+    state.ui.theme = (state.ui.theme === 'light') ? 'dark' : 'light';
+    saveState();
+    applyTheme();
+  });
+
+  // --------- rendering ----------
+  const elTree = document.getElementById("tree");
+  const elCompleted = document.getElementById("completed");
+  const elDoneHint = document.getElementById("doneHint");
+  const elFilter = document.getElementById("filterMilestones");
+  const elCountItems = document.getElementById("countItems");
+  const elCountOverdue = document.getElementById("countOverdue");
+  const elCountDone = document.getElementById("countDone");
+
+  function visibleSet(){
+    if (!state.ui.filterMilestones) return null;
+    const visible = new Set();
+    const milestones = state.items.filter(i => i.milestone?.enabled);
+    for (const m of milestones){
+      visible.add(m.id);
+      let p = m.parentId;
+      while(p){
+        visible.add(p);
+        p = getItem(p)?.parentId ?? null;
+      }
+    }
+    return visible;
+  }
+
+  function depthOf(item){
+    let d = 0;
+    let p = item.parentId;
+    while(p){
+      d++;
+      p = getItem(p)?.parentId ?? null;
+      if (d > 60) break;
+    }
+    return d;
+  }
+
+  function stalenessDays(item){
+    return daysBetween(item.updatedAt || item.createdAt, nowISO());
+  }
+
+  function stalenessDots(days){
+    const wrap = document.createElement("span");
+    wrap.className = "dots";
+    const maxDots = 10;
+    const count = Math.min(days, maxDots);
+    for (let i=0;i<count;i++){
+      const dot = document.createElement("span");
+      dot.className = "dot";
+      if (days <= 1) dot.classList.add("fresh");
+      else if (days >= 5) dot.classList.add("hot");
+      wrap.appendChild(dot);
+    }
+    const label = document.createElement("span");
+    label.className = "dotLabel";
+    label.textContent = days === 0 ? "0d" : `${days}d`;
+    wrap.appendChild(label);
+    return wrap;
+  }
+
+  function render(){
+    elFilter.checked = !!state.ui.filterMilestones;
+    elTree.innerHTML = "";
+
+    const vis = visibleSet();
+    const roots = childrenOf(null);
+
+    if (!roots.length){
+      const empty = document.createElement("div");
+      empty.className = "empty";
+      empty.innerHTML = `
+        <div style="font-weight:800; margin-bottom:6px;">Nenhum item ainda.</div>
+        <div>Adicione itens. Datas (criado/atualizado/concluído) são registradas e as bolinhas contam dias sem atualização.</div>
+      `;
+      elTree.appendChild(empty);
+    } else {
+      const frag = document.createDocumentFragment();
+      for (const r of roots){
+        if (vis && !vis.has(r.id)) continue;
+        // raiz arquivada não deve aparecer (não tem pai pra “caixinha”)
+        if (r.archived) continue;
+        frag.appendChild(renderItem(r, 0, vis));
+      }
+      elTree.appendChild(frag);
+    }
+
+    renderCompleted();
+    updateCounters();
+  }
+
+  function renderItem(item, depth, vis){
+    const row = document.createElement("div");
+    row.className = "row" + (item.completed ? " done" : "");
+    row.dataset.id = item.id;
+
+    row.appendChild(makeDropZone(item.id, "before"));
+
+    const head = document.createElement("div");
+    head.className = "row-head";
+
+    head.addEventListener("dragover", (e)=> { e.preventDefault(); head.style.outline = "2px solid color-mix(in srgb, var(--accent) 35%, transparent)"; head.style.outlineOffset="-2px"; });
+    head.addEventListener("dragleave", ()=> { head.style.outline = ""; });
+    head.addEventListener("drop", (e)=> {
+      head.style.outline = "";
+      e.preventDefault();
+      const dragId = e.dataTransfer.getData("text/plain");
+      if (!dragId || dragId === item.id) return;
+      moveAsChild(dragId, item.id);
+    });
+
+    const indentWrap = document.createElement("div");
+    indentWrap.className = "indent";
+    for(let i=0;i<depth;i++){
+      const pad = document.createElement("div");
+      pad.className = "pad";
+      indentWrap.appendChild(pad);
+    }
+
+    const handle = document.createElement("div");
+    handle.className = "handle";
+    handle.textContent = "⋮⋮";
+    handle.draggable = true;
+    handle.title = "Arraste para reorganizar";
+    handle.addEventListener("dragstart", (e)=> {
+      row.classList.add("dragging");
+      e.dataTransfer.setData("text/plain", item.id);
+      e.dataTransfer.effectAllowed = "move";
+    });
+    handle.addEventListener("dragend", ()=> row.classList.remove("dragging"));
+
+    // expand/collapse da árvore (filhos)
+    const btnExpand = document.createElement("button");
+    btnExpand.className = "iconBtn";
+    btnExpand.title = item.expanded ? "Colapsar (colapsa filhos também)" : "Expandir";
+    btnExpand.textContent = item.expanded ? "▾" : "▸";
+    btnExpand.addEventListener("click", ()=> {
+      if (item.expanded) collapseSubtree(item.id);
+      else item.expanded = true;
+      touchItem(item);
+      saveState();
+      render();
+    });
+
+    // detalhes (notas/links/pessoas)
+    const btnDetails = document.createElement("button");
+    btnDetails.className = "iconBtn";
+    btnDetails.title = "Abrir / fechar detalhes";
+    btnDetails.textContent = item.detailsOpen ? "🧾" : "🗂";
+    btnDetails.addEventListener("click", ()=> {
+      item.detailsOpen = !item.detailsOpen;
+      touchItem(item);
+      saveState();
+      render();
+    });
+
+    // archive/unarchive (vai para caixinha "Arquivados" do pai)
+    const btnArchive = document.createElement("button");
+    btnArchive.className = "iconBtn";
+    btnArchive.title = item.archived ? "Desarquivar" : "Arquivar";
+    btnArchive.textContent = item.archived ? "↩️" : "📦";
+    btnArchive.addEventListener("click", ()=> {
+      item.archived = !item.archived;
+      if (item.archived) item.detailsOpen = false;
+      touchItem(item);
+      saveState();
+      render();
+    });
+
+    const btnOutdent = document.createElement("button");
+    btnOutdent.className = "iconBtn";
+    btnOutdent.title = "Desindentar";
+    btnOutdent.textContent = "◀︎";
+    btnOutdent.addEventListener("click", ()=> outdentItem(item.id));
+
+    const btnIndent = document.createElement("button");
+    btnIndent.className = "iconBtn";
+    btnIndent.title = "Indentar";
+    btnIndent.textContent = "▶︎";
+    btnIndent.addEventListener("click", ()=> indentItem(item.id));
+
+    const chkDone = document.createElement("input");
+    chkDone.type = "checkbox";
+    chkDone.checked = !!item.completed;
+    chkDone.title = "Concluir";
+    chkDone.style.transform = "scale(1.05)";
+    chkDone.style.accentColor = "var(--ok)";
+    chkDone.addEventListener("change", ()=> {
+      item.completed = chkDone.checked;
+      if (item.completed){
+        item.completedAt = nowISO();
+      } else {
+        item.completedAt = null;
+      }
+      touchItem(item); // concluir também atualiza
+      saveState();
+      render();
+    });
+
+    const title = document.createElement("input");
+    title.className = "titleInput";
+    title.placeholder = "Título…";
+    title.value = item.title ?? "";
+    title.addEventListener("input", ()=> {
+      item.title = title.value;
+      touchItem(item);
+      saveState();
+    });
+
+    // dias sem atualização
+    const days = stalenessDays(item);
+    const dots = stalenessDots(days);
+
+    const badges = document.createElement("div");
+    badges.className = "badges";
+
+    const btnAddChild = document.createElement("button");
+    btnAddChild.className = "iconBtn";
+    btnAddChild.title = "Adicionar filho";
+    btnAddChild.textContent = "＋";
+    btnAddChild.addEventListener("click", ()=> {
+      addItem(item.id);
+      item.expanded = true;
+      touchItem(item);
+      saveState();
+      render();
+    });
+
+    const mileBtn = document.createElement("button");
+    mileBtn.className = "badge";
+    mileBtn.title = "Alternar milestone";
+    const mileEnabled = !!item.milestone?.enabled;
+    mileBtn.textContent = mileEnabled ? "⏱ milestone" : "⏱";
+    mileBtn.addEventListener("click", ()=> {
+      item.milestone ||= { enabled:false, date:"" };
+      item.milestone.enabled = !item.milestone.enabled;
+      if (!item.milestone.enabled) item.milestone.date = "";
+      touchItem(item);
+      saveState();
+      render();
+    });
+    badges.appendChild(mileBtn);
+
+    if (mileEnabled){
+      const date = document.createElement("input");
+      date.type = "date";
+      date.value = item.milestone.date || "";
+      date.title = "Data do milestone";
+      date.style.borderRadius = "999px";
+      date.style.border = "1px solid color-mix(in srgb, var(--muted) 22%, transparent)";
+      date.style.background = "color-mix(in srgb, var(--panel) 35%, transparent)";
+      date.style.color = "var(--text)";
+      date.style.padding = "4px 8px";
+      date.style.fontSize = "11px";
+      date.addEventListener("change", ()=> {
+        item.milestone.date = date.value;
+        touchItem(item);
+        saveState();
+        render();
+      });
+      badges.appendChild(date);
+
+      const status = document.createElement("span");
+      status.className = "badge " + (isOverdue(item) ? "danger" : (item.completed ? "ok" : ""));
+      status.textContent = isOverdue(item) ? "⚠ atrasado" : (item.completed ? "✅" : "🗓");
+      badges.appendChild(status);
+    }
+
+    const peopleCount = (item.people || []).length;
+    const peopleBadge = document.createElement("span");
+    peopleBadge.className = "badge";
+    peopleBadge.title = "Pessoas";
+    peopleBadge.textContent = `👤 ${peopleCount}`;
+    badges.appendChild(peopleBadge);
+
+    const btnDel = document.createElement("button");
+    btnDel.className = "iconBtn";
+    btnDel.title = "Excluir";
+    btnDel.textContent = "🗑";
+    btnDel.addEventListener("click", ()=> {
+      if (!confirm("Excluir este item e todos os filhos?")) return;
+      deleteItem(item.id);
+      saveState();
+      render();
+    });
+
+    head.appendChild(indentWrap);
+    head.appendChild(handle);
+    head.appendChild(btnExpand);
+    head.appendChild(btnDetails);
+    head.appendChild(btnArchive);
+    head.appendChild(btnOutdent);
+    head.appendChild(btnIndent);
+    head.appendChild(chkDone);
+    head.appendChild(title);
+    head.appendChild(btnAddChild);
+
+    head.appendChild(dots);
+    head.appendChild(badges);
+    head.appendChild(btnDel);
+
+    row.appendChild(head);
+
+    // Detalhes: só abre quando detailsOpen=true
+    if (item.detailsOpen) {
+      const body = document.createElement("div");
+      body.className = "row-body";
+      body.appendChild(renderExpandedPanels(item));
+      row.appendChild(body);
+    }
+
+    row.appendChild(makeDropZone(item.id, "after"));
+
+    // Filhos: só aparecem se pai expanded
+    if (item.expanded) {
+      const kids = childrenOf(item.id);
+
+      const activeKids = kids.filter(k => !k.archived);
+      const archivedKids = kids.filter(k => k.archived);
+
+      // filhos ativos
+      if (activeKids.length){
+        const childWrap = document.createElement("div");
+        childWrap.style.display = "flex";
+        childWrap.style.flexDirection = "column";
+        childWrap.style.gap = "6px";
+        childWrap.style.marginTop = "6px";
+
+        const frag = document.createDocumentFragment();
+        for (const c of activeKids){
+          if (vis && !vis.has(c.id)) continue;
+          frag.appendChild(renderItem(c, depth+1, vis));
+        }
+        childWrap.appendChild(frag);
+        row.appendChild(childWrap);
+      }
+
+      // "Arquivados" dentro do pai (colapsado por padrão)
+      if (archivedKids.length){
+        const box = document.createElement("div");
+        box.className = "archiveBox";
+
+        const hdr = document.createElement("div");
+        hdr.className = "archiveHdr";
+        hdr.innerHTML = `${item.archiveOpen ? "▾" : "▸"} Arquivados (${archivedKids.length})`;
+
+        hdr.addEventListener("click", ()=> {
+          item.archiveOpen = !item.archiveOpen;
+          touchItem(item);
+          saveState();
+          render();
+        });
+
+        box.appendChild(hdr);
+
+        if (item.archiveOpen){
+          const list = document.createElement("div");
+          list.className = "archiveList";
+
+          const fragA = document.createDocumentFragment();
+          for (const c of archivedKids){
+            if (vis && !vis.has(c.id)) continue;
+            fragA.appendChild(renderItem(c, depth+1, vis));
+          }
+          list.appendChild(fragA);
+          box.appendChild(list);
+        }
+
+        row.appendChild(box);
+      }
+    }
+
+    return row;
+  }
+
+  // notes update debounce (para não “carimbar” updatedAt a cada tecla)
+  const noteTimers = new Map();
+  function scheduleNoteTouch(item){
+    if (noteTimers.has(item.id)) clearTimeout(noteTimers.get(item.id));
+    const t = setTimeout(()=> {
+      touchItem(item);
+      saveState();
+      render();
+    }, 450);
+    noteTimers.set(item.id, t);
+  }
+
+  function renderExpandedPanels(item){
+    const wrap = document.createElement("div");
+    wrap.className = "grid";
+
+    const notes = document.createElement("div");
+    notes.className = "panel";
+    notes.innerHTML = `<h4>📝 Notas <small class="muted">(salva)</small></h4>`;
+    const ta = document.createElement("textarea");
+    ta.placeholder = "Notas…";
+    ta.value = item.notes || "";
+    ta.addEventListener("input", ()=> {
+      item.notes = ta.value;
+      scheduleNoteTouch(item);
+    });
+    notes.appendChild(ta);
+
+    const links = document.createElement("div");
+    links.className = "panel";
+    links.innerHTML = `
+      <h4>🔗 Links <small class="muted">(CRUD)</small></h4>
+      <div class="miniRow">
+        <input type="text" id="lnTitle-${item.id}" placeholder="Título" />
+        <input type="url" id="lnUrl-${item.id}" placeholder="https://..." />
+        <button class="btn" style="padding:7px 9px; border-radius:10px;" id="lnAdd-${item.id}">Add</button>
+      </div>
+      <div class="list" id="lnList-${item.id}"></div>
+    `;
+    const lnTitle = links.querySelector(`#lnTitle-${item.id}`);
+    const lnUrl = links.querySelector(`#lnUrl-${item.id}`);
+    const lnAdd = links.querySelector(`#lnAdd-${item.id}`);
+    const lnList = links.querySelector(`#lnList-${item.id}`);
+    item.links ||= [];
+
+    lnAdd.addEventListener("click", ()=> {
+      const t = (lnTitle.value || "").trim();
+      const u = (lnUrl.value || "").trim();
+      if (!t || !u) return alert("Preencha título e URL.");
+      item.links.push({ id: uid(), title: t, url: u });
+      lnTitle.value = ""; lnUrl.value = "";
+      touchItem(item);
+      saveState(); render();
+    });
+
+    renderLinkList(item, lnList);
+
+    const people = document.createElement("div");
+    people.className = "panel";
+    people.innerHTML = `
+      <h4>👥 Pessoas <small class="muted">(CRUD)</small></h4>
+      <div class="miniRow">
+        <input type="text" id="pName-${item.id}" placeholder="Nome" />
+        <button class="btn" style="padding:7px 9px; border-radius:10px;" id="pAdd-${item.id}">Add</button>
+        <span class="badge" title="Total">👤 <span id="pTotal-${item.id}">0</span></span>
+      </div>
+      <div class="list" id="pList-${item.id}"></div>
+    `;
+    const pName = people.querySelector(`#pName-${item.id}`);
+    const pAdd = people.querySelector(`#pAdd-${item.id}`);
+    const pTotal = people.querySelector(`#pTotal-${item.id}`);
+    const pList = people.querySelector(`#pList-${item.id}`);
+    item.people ||= [];
+
+    pAdd.addEventListener("click", ()=> {
+      const n = (pName.value || "").trim();
+      if (!n) return alert("Digite um nome.");
+      item.people.push({ id: uid(), name: n });
+      pName.value = "";
+      touchItem(item);
+      saveState(); render();
+    });
+
+    renderPeopleList(item, pList, pTotal);
+
+    wrap.appendChild(notes);
+    wrap.appendChild(links);
+    wrap.appendChild(people);
+    return wrap;
+  }
+
+  function renderLinkList(item, container){
+    container.innerHTML = "";
+    if (!item.links?.length){
+      const d = document.createElement("div");
+      d.className = "muted";
+      d.style.fontSize = "11px";
+      d.textContent = "Sem links.";
+      container.appendChild(d);
+      return;
+    }
+    for (const l of item.links){
+      const line = document.createElement("div");
+      line.className = "itemLine";
+      const left = document.createElement("div");
+      left.innerHTML = `<div style="font-weight:750;">${escapeHtml(l.title)}</div>
+                        <div class="muted" style="font-size:11px; word-break:break-all;">
+                          <a href="${escapeAttr(l.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(l.url)}</a>
+                        </div>`;
+      const right = document.createElement("div");
+      right.className = "right";
+
+      const edit = document.createElement("button");
+      edit.className = "iconBtn";
+      edit.title = "Editar";
+      edit.textContent = "✏️";
+      edit.addEventListener("click", ()=> {
+        const nt = prompt("Título:", l.title);
+        if (nt === null) return;
+        const nu = prompt("URL:", l.url);
+        if (nu === null) return;
+        l.title = nt.trim() || l.title;
+        l.url = nu.trim() || l.url;
+        touchItem(item);
+        saveState(); render();
+      });
+
+      const del = document.createElement("button");
+      del.className = "iconBtn";
+      del.title = "Remover";
+      del.textContent = "🗑";
+      del.addEventListener("click", ()=> {
+        item.links = item.links.filter(x => x.id !== l.id);
+        touchItem(item);
+        saveState(); render();
+      });
+
+      right.appendChild(edit);
+      right.appendChild(del);
+      line.appendChild(left);
+      line.appendChild(right);
+      container.appendChild(line);
+    }
+  }
+
+  function renderPeopleList(item, listEl, totalEl){
+    listEl.innerHTML = "";
+    totalEl.textContent = String(item.people?.length || 0);
+
+    if (!item.people?.length){
+      const d = document.createElement("div");
+      d.className = "muted";
+      d.style.fontSize = "11px";
+      d.textContent = "Sem pessoas.";
+      listEl.appendChild(d);
+      return;
+    }
+    for (const p of item.people){
+      const line = document.createElement("div");
+      line.className = "itemLine";
+      line.innerHTML = `<span style="font-size:16px;">👤</span>
+                        <div style="font-weight:750;">${escapeHtml(p.name)}</div>`;
+      const right = document.createElement("div");
+      right.className = "right";
+
+      const edit = document.createElement("button");
+      edit.className = "iconBtn";
+      edit.title = "Editar";
+      edit.textContent = "✏️";
+      edit.addEventListener("click", ()=> {
+        const nn = prompt("Nome:", p.name);
+        if (nn === null) return;
+        p.name = nn.trim() || p.name;
+        touchItem(item);
+        saveState(); render();
+      });
+
+      const del = document.createElement("button");
+      del.className = "iconBtn";
+      del.title = "Remover";
+      del.textContent = "🗑";
+      del.addEventListener("click", ()=> {
+        item.people = item.people.filter(x => x.id !== p.id);
+        touchItem(item);
+        saveState(); render();
+      });
+
+      right.appendChild(edit);
+      right.appendChild(del);
+      line.appendChild(right);
+      listEl.appendChild(line);
+    }
+  }
+
+  function renderCompleted(){
+    elCompleted.innerHTML = "";
+    const done = state.items.filter(i => !!i.completed).sort((a,b)=>{
+      const ta = new Date(a.completedAt || a.updatedAt || a.createdAt).getTime();
+      const tb = new Date(b.completedAt || b.updatedAt || b.createdAt).getTime();
+      return tb - ta;
+    });
+
+    elDoneHint.textContent = `(${done.length})`;
+
+    if (!done.length){
+      const d = document.createElement("div");
+      d.className = "empty";
+      d.style.margin = "10px";
+      d.textContent = "Nada concluído ainda.";
+      elCompleted.appendChild(d);
+      return;
+    }
+
+    for (const it of done){
+      const depth = depthOf(it);
+
+      const row = document.createElement("div");
+      row.className = "cRow";
+
+      const indent = document.createElement("div");
+      indent.className = "indent";
+      for (let i=0;i<depth;i++){
+        const pad = document.createElement("div");
+        pad.className = "pad";
+        indent.appendChild(pad);
+      }
+
+      const title = document.createElement("div");
+      title.innerHTML = `<div class="cTitle">✅ ${escapeHtml(it.title || "(sem título)")}</div>
+                         <div class="cMeta">Concluído: ${formatDate(it.completedAt)} • Atualizado: ${formatDate(it.updatedAt)} • Criado: ${formatDate(it.createdAt)}</div>`;
+
+      const dots = stalenessDots(stalenessDays(it));
+      dots.title = "Dias desde a última atualização";
+
+      row.appendChild(indent);
+      row.appendChild(title);
+      row.appendChild(dots);
+
+      elCompleted.appendChild(row);
+    }
+  }
+
+  function escapeHtml(s){
+    return String(s ?? "")
+      .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+  }
+  function escapeAttr(s){ return escapeHtml(s); }
+
+  // --------- DnD drop zones ----------
+  function makeDropZone(targetItemId, where){
+    const z = document.createElement("div");
+    z.className = "dropZone";
+    z.dataset.target = targetItemId;
+    z.dataset.where = where;
+
+    z.addEventListener("dragover", (e)=> { e.preventDefault(); z.classList.add("active"); });
+    z.addEventListener("dragleave", ()=> z.classList.remove("active"));
+    z.addEventListener("drop", (e)=> {
+      e.preventDefault();
+      z.classList.remove("active");
+      const dragId = e.dataTransfer.getData("text/plain");
+      if (!dragId || dragId === targetItemId) return;
+      moveAsSibling(dragId, targetItemId, where);
+    });
+
+    return z;
+  }
+
+  function moveAsSibling(dragId, targetId, where){
+    const drag = getItem(dragId);
+    const target = getItem(targetId);
+    if (!drag || !target) return;
+
+    const newParentId = target.parentId ?? null;
+    if (wouldCreateCycle(dragId, newParentId)) return alert("Movimento inválido (ciclo).");
+
+    const oldParentId = drag.parentId ?? null;
+    drag.parentId = newParentId;
+
+    let sibs = childrenOf(newParentId).filter(x => x.id !== dragId);
+    const tIndex = sibs.findIndex(x => x.id === targetId);
+    const insertAt = Math.max(0, Math.min((where === "before" ? tIndex : tIndex+1), sibs.length));
+
+    sibs.splice(insertAt, 0, drag);
+    sibs.forEach((x, idx) => x.order = idx);
+
+    normalizeOrders(oldParentId);
+
+    touchItem(drag);
+    saveState();
+    render();
+  }
+
+  function moveAsChild(dragId, newParentId){
+    const drag = getItem(dragId);
+    const parent = getItem(newParentId);
+    if (!drag || !parent) return;
+
+    if (wouldCreateCycle(dragId, newParentId)) return alert("Movimento inválido (ciclo).");
+
+    const oldParentId = drag.parentId ?? null;
+
+    drag.parentId = newParentId;
+    drag.order = nextOrder(newParentId);
+
+    normalizeOrders(oldParentId);
+
+    parent.expanded = true;
+    touchItem(drag);
+    touchItem(parent);
+    saveState();
+    render();
+  }
+
+  // --------- indent / outdent ----------
+  function indentItem(id){
+    const item = getItem(id);
+    if (!item) return;
+
+    const sibs = siblingsOf(item);
+    const idx = sibs.findIndex(x => x.id === id);
+    if (idx <= 0) return;
+
+    const prev = sibs[idx-1];
+    if (wouldCreateCycle(id, prev.id)) return alert("Movimento inválido (ciclo).");
+
+    const oldParentId = item.parentId ?? null;
+
+    item.parentId = prev.id;
+    item.order = nextOrder(prev.id);
+    prev.expanded = true;
+
+    normalizeOrders(oldParentId);
+
+    touchItem(item);
+    touchItem(prev);
+    saveState();
+    render();
+  }
+
+  function outdentItem(id){
+    const item = getItem(id);
+    if (!item || item.parentId == null) return;
+
+    const parent = getItem(item.parentId);
+    if (!parent) return;
+
+    const grand = parent.parentId ?? null;
+    if (wouldCreateCycle(id, grand)) return alert("Movimento inválido (ciclo).");
+
+    const oldParentId = item.parentId;
+    item.parentId = grand;
+
+    let sibs = childrenOf(grand).filter(x => x.id !== id);
+    const pIndex = sibs.findIndex(x => x.id === parent.id);
+    const insertAt = Math.max(0, Math.min(pIndex+1, sibs.length));
+
+    sibs.splice(insertAt, 0, item);
+    sibs.forEach((x, idx)=> x.order = idx);
+
+    normalizeOrders(oldParentId);
+
+    touchItem(item);
+    saveState();
+    render();
+  }
+
+  // --------- CRUD items ----------
+  function addItem(parentId){
+    const t = nowISO();
+    const newItem = {
+      id: uid(),
+      title: "",
+      parentId: parentId ?? null,
+      order: nextOrder(parentId ?? null),
+      expanded: false,
+      detailsOpen: false,
+
+      completed: false,
+      milestone: { enabled:false, date:"" },
+      links: [],
+      notes: "",
+      people: [],
+
+      // dates
+      createdAt: t,
+      updatedAt: t,
+      completedAt: null,
+
+      // archive
+      archived: false,
+      archiveOpen: false
+    };
+    state.items.push(newItem);
+    saveState();
+    render();
+    setTimeout(() => {
+      const row = document.querySelector(`.row[data-id="${CSS.escape(newItem.id)}"]`);
+      row?.querySelector(".titleInput")?.focus();
+    }, 40);
+  }
+
+  function deleteItem(id){
+    const ids = new Set(subtreeIds(id));
+    const victim = getItem(id);
+    const parentId = victim?.parentId ?? null;
+
+    state.items = state.items.filter(x => !ids.has(x.id));
+    normalizeOrders(parentId);
+  }
+
+  // --------- backup/import ----------
+  function download(filename, text){
+    const blob = new Blob([text], {type:"application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function doBackup(){
+    const payload = { exportedAt: nowISO(), version: 3, state };
+    download(`backup-tree-milestones-${new Date().toISOString().slice(0,19).replaceAll(":","")}.json`,
+             JSON.stringify(payload, null, 2));
+  }
+
+  function doImportFile(file){
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const raw = String(reader.result || "");
+        const parsed = JSON.parse(raw);
+        const incoming = parsed?.state?.items ? parsed.state : parsed;
+        if (!incoming || !Array.isArray(incoming.items)) throw new Error("Formato inválido");
+
+        incoming.ui ||= { filterMilestones:false, theme:'dark' };
+        if (!incoming.ui.theme) incoming.ui.theme = 'dark';
+
+        const tNow = nowISO();
+        for (const it of incoming.items){
+          it.id ||= uid();
+          it.title ||= "";
+          it.parentId = (it.parentId === undefined) ? null : it.parentId;
+          it.order = (typeof it.order === "number") ? it.order : 0;
+
+          it.expanded = !!it.expanded;
+          it.detailsOpen = !!it.detailsOpen;
+
+          it.completed = !!it.completed;
+          it.milestone ||= { enabled:false, date:"" };
+          it.milestone.enabled = !!it.milestone.enabled;
+          it.milestone.date ||= "";
+          it.links ||= [];
+          it.notes ||= "";
+          it.people ||= [];
+
+          it.createdAt ||= tNow;
+          it.updatedAt ||= it.createdAt;
+          it.completedAt = it.completed ? (it.completedAt || it.updatedAt || tNow) : null;
+
+          it.archived = !!it.archived;
+          if (typeof it.archiveOpen !== "boolean") it.archiveOpen = false;
+        }
+
+        const ids = new Set(incoming.items.map(x=>x.id));
+        for (const it of incoming.items){
+          if (it.parentId != null && !ids.has(it.parentId)) it.parentId = null;
+        }
+
+        state = incoming;
+        saveState();
+        applyTheme();
+        render();
+        alert("Import concluído.");
+      }catch(e){
+        alert("Falha ao importar: arquivo inválido.");
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function clearAll(){
+    state = { items: [], ui: { filterMilestones:false, theme: state?.ui?.theme || 'dark' } };
+    saveState();
+    render();
+  }
+
+  // --------- counters ----------
+  function updateCounters(){
+    elCountItems.textContent = String(state.items.length);
+    elCountDone.textContent = String(state.items.filter(i => !!i.completed).length);
+    elCountOverdue.textContent = String(state.items.filter(isOverdue).length);
+  }
+
+  // --------- UI events ----------
+  document.getElementById("addRootBtn").addEventListener("click", ()=> addItem(null));
+  document.getElementById("backupBtn").addEventListener("click", doBackup);
+  document.getElementById("importBtn").addEventListener("click", ()=> document.getElementById("importFile").click());
+  document.getElementById("importFile").addEventListener("change", (e)=> {
+    const f = e.target.files?.[0];
+    if (f) doImportFile(f);
+    e.target.value = "";
+  });
+  document.getElementById("clearBtn").addEventListener("click", ()=> {
+    if (!confirm("Apagar tudo do LocalStorage deste app?")) return;
+    clearAll();
+  });
+
+  elFilter.addEventListener("change", ()=> {
+    state.ui.filterMilestones = elFilter.checked;
+    saveState();
+    render();
+  });
+
+  // --------- init ----------
+  saveState();
+  applyTheme();
+  render();
+})();
+</script>
+</body>
+</html>
