@@ -35,8 +35,9 @@
       backdrop-filter: blur(10px);
       border-bottom:1px solid color-mix(in srgb, var(--line) 65%, transparent);
     }
-    .wrap{max-width:1100px; margin:0 auto; padding:12px 14px 14px}
+    .wrap{max-width:1200px; margin:0 auto; padding:12px 14px 14px}
     .topbar{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+    .titleRow{display:flex; align-items:center; gap:10px}
     .title{font-weight:850; letter-spacing:.2px; font-size:16px}
     .sub{color:var(--muted); font-size:11px}
     .spacer{flex:1}
@@ -51,6 +52,7 @@
       box-shadow: 0 8px 18px color-mix(in srgb, #000 22%, transparent);
       user-select:none;
       font-size:12px;
+      white-space:nowrap;
     }
     [data-theme="light"] .btn{ box-shadow: 0 8px 18px rgba(14,24,40,.10); }
     .btn:hover{border-color: color-mix(in srgb, var(--accent) 55%, transparent)}
@@ -61,6 +63,7 @@
       border:1px solid color-mix(in srgb, var(--muted) 22%, transparent);
       padding:6px 9px; border-radius:999px; color:var(--muted); font-size:11px;
       background: color-mix(in srgb, var(--panel) 35%, transparent);
+      white-space:nowrap;
     }
     .pill input{accent-color: var(--accent)}
     .pill select{
@@ -78,11 +81,34 @@
       border-radius:999px;
       display:inline-flex; gap:8px; align-items:center;
       user-select:none;
+      white-space:nowrap;
     }
     .status.ok{border-color: color-mix(in srgb, var(--ok) 55%, transparent); color: color-mix(in srgb, var(--ok) 30%, var(--text));}
     .status.bad{border-color: color-mix(in srgb, var(--danger) 60%, transparent); color: color-mix(in srgb, var(--danger) 30%, var(--text));}
 
-    main{max-width:1100px; margin:0 auto; padding:12px 14px 34px}
+    main{max-width:1200px; margin:0 auto; padding:12px 14px 34px}
+
+    /* ---- LAYOUT: esquerda pessoas, direita resto ---- */
+    .layout{
+      display:grid;
+      grid-template-columns: 320px 1fr;
+      gap:12px;
+      align-items:start;
+    }
+    @media (max-width: 980px){
+      .layout{ grid-template-columns: 1fr; }
+    }
+    .side{
+      position:sticky;
+      top:84px;
+      max-height: calc(100vh - 98px);
+      overflow:auto;
+      padding-right:6px;
+    }
+    @media (max-width: 980px){
+      .side{ position:static; max-height:none; overflow:visible; padding-right:0; }
+    }
+
     .card{
       background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 92%, transparent), color-mix(in srgb, var(--panel2) 92%, transparent));
       border:1px solid color-mix(in srgb, var(--line) 70%, transparent);
@@ -165,6 +191,7 @@
       background: color-mix(in srgb, var(--panel) 35%, transparent);
       display:inline-flex; gap:6px; align-items:center;
       user-select:none;
+      white-space:nowrap;
     }
     .badge.danger{border-color: color-mix(in srgb, var(--danger) 60%, transparent); color: color-mix(in srgb, var(--danger) 20%, var(--text)); background: color-mix(in srgb, var(--danger) 12%, transparent)}
     .badge.ok{border-color: color-mix(in srgb, var(--ok) 60%, transparent); color: color-mix(in srgb, var(--ok) 20%, var(--text)); background: color-mix(in srgb, var(--ok) 10%, transparent)}
@@ -200,8 +227,14 @@
       border-top:1px solid color-mix(in srgb, var(--line) 55%, transparent);
       background: color-mix(in srgb, var(--bg) 12%, transparent);
     }
-    .grid{display:grid; grid-template-columns: 1.2fr .8fr .8fr; gap:8px;}
+
+    /* ---- DETAILS: notas maior (direita) + stack à esquerda ---- */
+    .grid{display:grid; grid-template-columns: 1fr 1.7fr; gap:8px;}
     @media (max-width: 900px){ .grid{grid-template-columns:1fr} }
+    .leftStack{display:flex; flex-direction:column; gap:8px;}
+    .notesPanel{ justify-self:end; }
+    @media (max-width: 900px){ .notesPanel{ justify-self:stretch; } }
+
     .panel{
       border:1px solid color-mix(in srgb, var(--line) 70%, transparent);
       background: color-mix(in srgb, var(--panel2) 50%, transparent);
@@ -297,6 +330,7 @@
       border:1px solid color-mix(in srgb, var(--line) 70%, transparent);
       background: color-mix(in srgb, var(--panel) 25%, transparent);
       font-size:12px;
+      white-space:nowrap;
     }
     .dropZone{height:8px;border-radius:999px;background:transparent;margin:4px 8px}
     .dropZone.active{
@@ -380,8 +414,18 @@
     }
     .levelRow label{ display:inline-flex; gap:6px; align-items:center; color:var(--muted); font-size:11px; }
 
-    /* ---- Top Pessoas ---- */
-    .pTopWrap{ width:100%; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    /* ---- Pessoas (sidebar) ---- */
+    .pSideHead{
+      display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+      padding:10px 12px;
+      border-bottom:1px solid color-mix(in srgb, var(--line) 55%, transparent);
+    }
+    .pSideTitle{font-weight:850; font-size:12px; letter-spacing:.2px;}
+    .pSideHint{color:var(--muted); font-size:11px;}
+    .pChips{
+      padding:10px 10px 0;
+      display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+    }
     .pChip{
       display:inline-flex; align-items:center; gap:8px;
       padding:6px 9px; border-radius:999px;
@@ -389,33 +433,27 @@
       background: color-mix(in srgb, var(--panel) 25%, transparent);
       color: var(--text);
       cursor:pointer; user-select:none; font-size:11px;
+      white-space:nowrap;
     }
     .pChip:hover{ border-color: color-mix(in srgb, var(--accent) 60%, transparent); }
     .pChip.active{
       border-color: color-mix(in srgb, var(--accent) 75%, transparent);
       box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 12%, transparent);
     }
-    .pPanel{
-      width:100%;
+    .pListWrap{ padding:10px; display:flex; flex-direction:column; gap:8px; }
+    .pGroup{
       border:1px solid color-mix(in srgb, var(--line) 70%, transparent);
       background: color-mix(in srgb, var(--panel2) 45%, transparent);
       border-radius:12px;
-      padding:10px;
-    }
-    .pPanelHead{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px; }
-    .pPanelTitle{ font-weight:850; font-size:12px; letter-spacing:.2px; }
-    .pPanelHint{ color: var(--muted); font-size:11px; }
-    .pGrid{ display:grid; grid-template-columns: repeat(3, minmax(220px, 1fr)); gap:10px; }
-    @media (max-width: 900px){ .pGrid{ grid-template-columns:1fr; } }
-    .pCard{
-      border:1px solid color-mix(in srgb, var(--line) 70%, transparent);
-      background: color-mix(in srgb, var(--panel) 30%, transparent);
-      border-radius:12px;
-      padding:10px;
       overflow:hidden;
     }
-    .pName{ display:flex; align-items:center; gap:8px; font-weight:850; font-size:12px; margin-bottom:6px; }
-    .pList{ display:flex; flex-direction:column; gap:6px; margin-top:6px; }
+    .pGroupHdr{
+      padding:8px 10px;
+      display:flex; align-items:center; gap:8px;
+      border-bottom:1px solid color-mix(in srgb, var(--line) 55%, transparent);
+      font-weight:850; font-size:12px;
+    }
+    .pItems{ padding:8px 10px; display:flex; flex-direction:column; gap:6px; }
     .pItem{
       display:flex; gap:8px; align-items:center;
       padding:6px 8px; border-radius:10px;
@@ -434,9 +472,14 @@
   <div class="wrap">
     <div class="topbar">
       <div>
-        <div class="title">Planner Completo (LocalStorage)</div>
+        <div class="titleRow">
+          <div class="title">Planner Completo (LocalStorage)</div>
+          <!-- ➕ bem ao lado direito do título -->
+          <button class="btn ok" id="addRootBtn" title="Adicionar item raiz">➕</button>
+        </div>
         <div class="sub">Chave fixa: <span class="k">planner-completo</span> • Backup/Import • Duplo clique no item abre ações</div>
       </div>
+
       <div class="spacer"></div>
 
       <span id="saveStatus" class="status">💾 Carregando…</span>
@@ -469,7 +512,6 @@
 
       <button class="btn ghost" id="themeBtn" title="Alternar tema">🌙 Noite</button>
 
-      <button class="btn ok" id="addRootBtn">➕ Item</button>
       <button class="btn ghost" id="backupBtn">📤 Backup</button>
       <button class="btn ghost" id="importBtn">📥 Import</button>
       <input id="importFile" type="file" accept="application/json" hidden />
@@ -478,40 +520,60 @@
 </header>
 
 <main>
-
-  <div class="card" id="levelCard">
-    <div class="sectionTitle" id="levelTitle">
-      <span id="levelChevron">▸</span> 🎛 Aparência por nível (1–5)
-      <div class="spacer"></div>
-      <span class="muted" style="font-size:11px;">colapsado por padrão</span>
-    </div>
-    <div class="collapsedContent">
-      <div class="content" id="levelStylePanel"></div>
-    </div>
-  </div>
-
-  <div style="height:10px"></div>
-
-  <div class="card">
-    <div class="card-head">
-      <div class="hint">
-        <div><span class="k">Drag</span>: ⋮⋮ • <span class="k">Drop</span>: em cima=filho, barra=irmão • Colapsar fecha tudo</div>
+  <div class="layout">
+    <!-- ESQUERDA: assuntos por pessoa com rolagem vertical -->
+    <aside class="side">
+      <div class="card" id="peopleSideCard">
+        <div class="pSideHead">
+          <div>
+            <div class="pSideTitle">👥 Assuntos por pessoa</div>
+            <div class="pSideHint">Clique em um assunto para abrir o item + bloco de notas.</div>
+          </div>
+          <div class="spacer"></div>
+          <button class="btn ghost" id="peopleClearBtn" style="padding:7px 9px; border-radius:10px;">Limpar foco</button>
+        </div>
+        <div class="pChips" id="peopleChips"></div>
+        <div class="pListWrap" id="peopleList"></div>
       </div>
-      <div class="spacer"></div>
-      <div class="chip" title="Contagem atual">
-        📌 <span id="countItems">0</span> • ✅ <span id="countDone">0</span> • ⚠ <span id="countOverdue">0</span>
+    </aside>
+
+    <!-- DIREITA: resto -->
+    <section>
+      <div class="card" id="levelCard">
+        <div class="sectionTitle" id="levelTitle">
+          <span id="levelChevron">▸</span> 🎛 Aparência por nível (1–5)
+          <div class="spacer"></div>
+          <span class="muted" style="font-size:11px;">colapsado por padrão</span>
+        </div>
+        <div class="collapsedContent">
+          <div class="content" id="levelStylePanel"></div>
+        </div>
       </div>
-    </div>
-    <div class="content">
-      <div id="tree" class="tree"></div>
-    </div>
-  </div>
 
-  <div style="height:10px"></div>
+      <div style="height:10px"></div>
 
-  <div class="card">
-    <div class="sectionTitle" style="cursor:default;">✅ Concluídos <span class="muted" id="doneHint"></span></div>
-    <div class="completedList" id="completed"></div>
+      <div class="card">
+        <div class="card-head">
+          <div class="hint">
+            <div><span class="k">Drag</span>: ⋮⋮ • <span class="k">Drop</span>: em cima=filho, barra=irmão • Colapsar fecha tudo</div>
+          </div>
+          <div class="spacer"></div>
+          <div class="chip" title="Contagem atual">
+            📌 <span id="countItems">0</span> • ✅ <span id="countDone">0</span> • ⚠ <span id="countOverdue">0</span>
+          </div>
+        </div>
+        <div class="content">
+          <div id="tree" class="tree"></div>
+        </div>
+      </div>
+
+      <div style="height:10px"></div>
+
+      <div class="card">
+        <div class="sectionTitle" style="cursor:default;">✅ Concluídos <span class="muted" id="doneHint"></span></div>
+        <div class="completedList" id="completed"></div>
+      </div>
+    </section>
   </div>
 </main>
 
@@ -554,6 +616,11 @@
   const levelCard = document.getElementById("levelCard");
   const levelTitle = document.getElementById("levelTitle");
   const levelChevron = document.getElementById("levelChevron");
+
+  // people sidebar
+  const peopleChips = document.getElementById("peopleChips");
+  const peopleList = document.getElementById("peopleList");
+  const peopleClearBtn = document.getElementById("peopleClearBtn");
 
   // ---- defaults ----
   function defaultLevelStyles(){
@@ -640,7 +707,7 @@
           editMode:false,
           levelStyles: defaultLevelStyles(),
           levelPanelOpen:false,
-          peopleTop:{ open:true, active:"" }
+          peopleTop:{ active:"" }
         }
       };
     }
@@ -656,7 +723,7 @@
       if (typeof parsed.ui.editMode !== "boolean") parsed.ui.editMode = false;
       parsed.ui.levelStyles ||= defaultLevelStyles();
       if (typeof parsed.ui.levelPanelOpen !== "boolean") parsed.ui.levelPanelOpen = false;
-      parsed.ui.peopleTop ||= { open:true, active:"" };
+      parsed.ui.peopleTop ||= { active:"" };
 
       const t = nowISO();
       for (const it of parsed.items){
@@ -694,7 +761,7 @@
           theme:'dark', editMode:false,
           levelStyles: defaultLevelStyles(),
           levelPanelOpen:false,
-          peopleTop:{ open:true, active:"" }
+          peopleTop:{ active:"" }
         }
       };
     }
@@ -807,8 +874,8 @@
     render();
   });
 
-  // ---- visible set for milestones ----
-  function visibleSet(){
+  // ---- visible sets (milestone + type, com ancestrais) ----
+  function visibleSetMilestones(){
     if (!state.ui.filterMilestones) return null;
     const visible = new Set();
     const milestones = state.items.filter(i => i.milestone?.enabled);
@@ -822,6 +889,34 @@
     }
     return visible;
   }
+  function visibleSetType(){
+    const t = (state.ui.filterType || "").trim();
+    if (!t) return null;
+    const visible = new Set();
+    const matches = state.items.filter(i => (i.type || "minha-atividade") === t);
+    for (const m of matches){
+      visible.add(m.id);
+      let p = m.parentId;
+      while(p){
+        visible.add(p);
+        p = getItem(p)?.parentId ?? null;
+      }
+    }
+    return visible;
+  }
+  function intersectSets(a, b){
+    if (!a) return b;
+    if (!b) return a;
+    const out = new Set();
+    for (const x of a) if (b.has(x)) out.add(x);
+    return out;
+  }
+  function combinedVisibleSet(){
+    const m = visibleSetMilestones();
+    const t = visibleSetType();
+    return intersectSets(m, t);
+  }
+
   function depthOf(item){
     let d = 0;
     let p = item.parentId;
@@ -927,23 +1022,7 @@
     elLevelStylePanel.appendChild(grid);
   }
 
-  // ---- top people ----
-  function ensurePeopleTopUI(){
-    let host = document.getElementById("peopleTopHost");
-    if (!host) {
-      const topbar = document.querySelector(".topbar");
-      if (!topbar) return;
-      host = document.createElement("div");
-      host.id = "peopleTopHost";
-      host.style.display = "flex";
-      host.style.flexWrap = "wrap";
-      host.style.gap = "8px";
-      host.style.alignItems = "center";
-      host.style.width = "100%";
-      host.style.marginTop = "8px";
-      topbar.appendChild(host);
-    }
-  }
+  // ---- people sidebar ----
   function buildPeopleIndex(){
     const map = new Map();
     for (const it of state.items){
@@ -980,114 +1059,74 @@
     row.style.boxShadow = "0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent)";
     setTimeout(()=> { row.style.boxShadow = ""; }, 900);
   }
-  function renderPeopleTop(){
-    ensurePeopleTopUI();
-    const host = document.getElementById("peopleTopHost");
-    if (!host) return;
-    host.innerHTML = "";
-
-    const wrap = document.createElement("div");
-    wrap.className = "pTopWrap";
+  function renderPeopleSidebar(){
+    peopleChips.innerHTML = "";
+    peopleList.innerHTML = "";
 
     const idx = buildPeopleIndex();
     if (!idx.length){
-      const small = document.createElement("div");
-      small.className = "pill";
-      small.textContent = "👥 Pessoas: (0)";
-      wrap.appendChild(small);
-      host.appendChild(wrap);
+      const d = document.createElement("div");
+      d.className = "empty";
+      d.textContent = "Sem pessoas ainda.";
+      peopleList.appendChild(d);
       return;
     }
 
-    const toggle = document.createElement("div");
-    toggle.className = "pChip";
-    toggle.textContent = state.ui.peopleTop.open ? "👥 Pessoas ▾" : "👥 Pessoas ▸";
-    toggle.title = "Abrir/fechar painel de pessoas";
-    toggle.addEventListener("click", ()=> {
-      state.ui.peopleTop.open = !state.ui.peopleTop.open;
+    const active = (state.ui.peopleTop.active || "").trim();
+
+    // chips (top 10 + mais)
+    const maxChips = 10;
+    const shown = idx.slice(0, maxChips);
+
+    const allChip = document.createElement("div");
+    allChip.className = "pChip" + (active ? "" : " active");
+    allChip.textContent = `Todos • ${idx.reduce((s,g)=>s+g.items.length,0)}`;
+    allChip.addEventListener("click", ()=> {
+      state.ui.peopleTop.active = "";
       markDirty();
       render();
     });
-    wrap.appendChild(toggle);
+    peopleChips.appendChild(allChip);
 
-    const maxChips = 10;
-    const shown = idx.slice(0, maxChips);
     for (const g of shown){
       const chip = document.createElement("div");
-      chip.className = "pChip" + ((state.ui.peopleTop.active || "") === g.nameOriginal ? " active" : "");
+      chip.className = "pChip" + ((active === g.nameOriginal) ? " active" : "");
       chip.textContent = `👤 ${g.nameOriginal} • ${g.items.length}`;
       chip.addEventListener("click", ()=> {
-        const cur = state.ui.peopleTop.active || "";
-        state.ui.peopleTop.active = (cur === g.nameOriginal) ? "" : g.nameOriginal;
+        state.ui.peopleTop.active = (state.ui.peopleTop.active === g.nameOriginal) ? "" : g.nameOriginal;
         markDirty();
         render();
       });
-      wrap.appendChild(chip);
+      peopleChips.appendChild(chip);
     }
     if (idx.length > maxChips){
       const more = document.createElement("div");
       more.className = "pChip";
       more.textContent = `+${idx.length - maxChips}…`;
+      more.title = "Mostra todos ao remover o foco / ou clique em 'Todos'";
       more.addEventListener("click", ()=> {
-        state.ui.peopleTop.open = true;
+        state.ui.peopleTop.active = "";
         markDirty();
         render();
       });
-      wrap.appendChild(more);
+      peopleChips.appendChild(more);
     }
 
-    host.appendChild(wrap);
-
-    if (!state.ui.peopleTop.open) return;
-
-    const panel = document.createElement("div");
-    panel.className = "pPanel";
-
-    const head = document.createElement("div");
-    head.className = "pPanelHead";
-
-    const ttl = document.createElement("div");
-    ttl.className = "pPanelTitle";
-    ttl.textContent = "Assuntos por pessoa";
-
-    const hint = document.createElement("div");
-    hint.className = "pPanelHint";
-    hint.textContent = "Clique em um assunto para abrir o item + bloco de notas.";
-
-    const clear = document.createElement("button");
-    clear.className = "btn ghost";
-    clear.style.padding = "7px 9px";
-    clear.style.borderRadius = "10px";
-    clear.textContent = "Limpar foco";
-    clear.addEventListener("click", ()=> {
-      state.ui.peopleTop.active = "";
-      markDirty();
-      render();
-    });
-
-    head.appendChild(ttl);
-    head.appendChild(hint);
-    head.appendChild(clear);
-    panel.appendChild(head);
-
-    const grid = document.createElement("div");
-    grid.className = "pGrid";
-
-    const active = (state.ui.peopleTop.active || "").trim();
     const groupsToShow = active ? idx.filter(g => g.nameOriginal === active) : idx;
 
     for (const g of groupsToShow){
-      const card = document.createElement("div");
-      card.className = "pCard";
+      const box = document.createElement("div");
+      box.className = "pGroup";
 
-      const nm = document.createElement("div");
-      nm.className = "pName";
-      nm.textContent = `👤 ${g.nameOriginal} (${g.items.length})`;
+      const hdr = document.createElement("div");
+      hdr.className = "pGroupHdr";
+      hdr.textContent = `👤 ${g.nameOriginal} (${g.items.length})`;
+      box.appendChild(hdr);
 
       const list = document.createElement("div");
-      list.className = "pList";
+      list.className = "pItems";
 
-      const maxItems = 12;
+      const maxItems = 18;
       const slice = g.items.slice(0, maxItems);
 
       for (const it of slice){
@@ -1106,7 +1145,7 @@
         line.appendChild(t);
         line.appendChild(meta);
 
-        // ✅ abre item + abre bloco de notas
+        // abre item + abre bloco de notas
         line.addEventListener("click", ()=> {
           let p = it.parentId;
           while (p){
@@ -1133,20 +1172,21 @@
 
       if (g.items.length > maxItems){
         const more = document.createElement("div");
-        more.className = "pPanelHint";
+        more.className = "muted";
+        more.style.fontSize = "11px";
         more.textContent = `… +${g.items.length - maxItems} assuntos`;
-        more.style.marginTop = "6px";
         list.appendChild(more);
       }
 
-      card.appendChild(nm);
-      card.appendChild(list);
-      grid.appendChild(card);
+      box.appendChild(list);
+      peopleList.appendChild(box);
     }
-
-    panel.appendChild(grid);
-    host.appendChild(panel);
   }
+  peopleClearBtn.addEventListener("click", ()=> {
+    state.ui.peopleTop.active = "";
+    markDirty();
+    render();
+  });
 
   // ---- notes debounce (não re-renderiza para não desfocar) ----
   const noteTimers = new Map();
@@ -1233,10 +1273,10 @@
 
     applyLevelPanelUI();
     if (state.ui.levelPanelOpen) renderLevelStylePanel();
-    renderPeopleTop();
+    renderPeopleSidebar();
 
     elTree.innerHTML = "";
-    const vis = visibleSet();
+    const vis = combinedVisibleSet();
     const roots = childrenOf(null);
 
     if (!roots.length){
@@ -1260,15 +1300,12 @@
   }
 
   function renderItem(item, depth, vis){
-    // filtro por tipo
-    if (state.ui.filterType){
-      if ((item.type || "minha-atividade") !== state.ui.filterType) return document.createDocumentFragment();
-    }
+    if (vis && !vis.has(item.id)) return null;
 
     // filtro sem pessoas (considera responsável também)
     if (state.ui.filterNoPeople){
       const hasPeople = (item.people || []).length > 0 || !!(item.responsibleId);
-      if (hasPeople) return document.createDocumentFragment();
+      if (hasPeople) return null;
     }
 
     const row = document.createElement("div");
@@ -1310,6 +1347,15 @@
       indentWrap.appendChild(pad);
     }
 
+    // ✅ botão de colapsar/expandir do lado esquerdo
+    const btnExpand = icon(item.expanded ? "▾" : "▸", item.expanded ? "Colapsar (fecha tudo)" : "Expandir", ()=> {
+      if (item.expanded) collapseSubtree(item.id);
+      else item.expanded = true;
+      touchItem(item);
+      markDirty();
+      render();
+    });
+
     const handle = document.createElement("div");
     handle.className = "handle";
     handle.textContent = "⋮⋮";
@@ -1332,19 +1378,11 @@
       touchItem(item);
       markDirty();
       updateCounters();
+      renderPeopleSidebar(); // mantém sidebar atualizada sem depender do render completo
     });
 
-    // ---- RIGHT PACK (todos os botões ficam aqui, à direita do título) ----
     const right = document.createElement("div");
     right.className = "rightPack";
-
-    const btnExpand = icon(item.expanded ? "▾" : "▸", item.expanded ? "Colapsar (fecha tudo)" : "Expandir", ()=> {
-      if (item.expanded) collapseSubtree(item.id);
-      else item.expanded = true;
-      touchItem(item);
-      markDirty();
-      render();
-    });
 
     const btnDetails = icon(item.detailsOpen ? "🧾" : "🗂", "Abrir/fechar bloco de notas/links/pessoas", ()=> {
       item.detailsOpen = !item.detailsOpen;
@@ -1373,20 +1411,17 @@
     const badges = document.createElement("div");
     badges.className = "badges";
 
-    // Tipo (sempre visível)
     const typeB = document.createElement("span");
     typeB.className = "badge alwaysOn";
     typeB.textContent = typeLabel(item.type || "minha-atividade");
     badges.appendChild(typeB);
 
-    // Data (sempre visível)
     const dt = item.milestone?.enabled ? (item.milestone.date || "") : "";
     const dateBadge = document.createElement("span");
     dateBadge.className = "badge alwaysOn";
     dateBadge.textContent = dt ? `📅 ${dt}` : "📅 —";
     badges.appendChild(dateBadge);
 
-    // ⚠ atrasado (sempre visível se milestone habilitado)
     if (item.milestone?.enabled){
       const overdueBadge = document.createElement("span");
       overdueBadge.className = "badge alwaysOn " + (isOverdue(item) ? "danger" : "");
@@ -1394,7 +1429,6 @@
       badges.appendChild(overdueBadge);
     }
 
-    // Dias pendente (enquanto não concluído)
     const pend = pendingDays(item);
     const pendBadge = document.createElement("span");
     pendBadge.className = "badge alwaysOn";
@@ -1402,7 +1436,6 @@
     pendBadge.textContent = `⏳ ${pend}d`;
     badges.appendChild(pendBadge);
 
-    // Pessoas (sempre visível)
     const peopleCount = (item.people || []).length;
     const peopleBadge = document.createElement("span");
     peopleBadge.className = "badge alwaysOn";
@@ -1410,7 +1443,6 @@
     peopleBadge.textContent = `👤 ${peopleCount}`;
     badges.appendChild(peopleBadge);
 
-    // Responsável (se houver)
     if (item.responsibleId){
       const p = (item.people || []).find(x=>x.id===item.responsibleId);
       if (p?.name){
@@ -1422,7 +1454,6 @@
       }
     }
 
-    // Botões de edição (editOnly)
     const btnAddChild = icon("＋","Adicionar filho", ()=> {
       addItem(item.id);
       item.expanded = true;
@@ -1455,8 +1486,7 @@
     });
     btnDel.classList.add("editOnly","iconBtn");
 
-    // Right pack order
-    right.appendChild(btnExpand);
+    // right pack
     right.appendChild(btnDetails);
     right.appendChild(chkDone);
     right.appendChild(dots);
@@ -1468,6 +1498,7 @@
     right.appendChild(btnDel);
 
     head.appendChild(indentWrap);
+    head.appendChild(btnExpand); // <-- colapsar/expandir à esquerda
     head.appendChild(handle);
     head.appendChild(title);
     head.appendChild(right);
@@ -1485,7 +1516,6 @@
     const bar = document.createElement("div");
     bar.className = "actionsBar editOnly";
 
-    // milestone toggle + date
     const mileBtn = document.createElement("button");
     mileBtn.className = "badge editOnly";
     mileBtn.title = "Alternar milestone";
@@ -1518,7 +1548,6 @@
       render();
     });
 
-    // tipo select
     const typeSel = document.createElement("select");
     typeSel.className = "editOnly";
     typeSel.style.borderRadius = "999px";
@@ -1619,17 +1648,9 @@
     const wrap = document.createElement("div");
     wrap.className = "grid";
 
-    const notes = document.createElement("div");
-    notes.className = "panel";
-    notes.innerHTML = `<h4>📝 Notas <small class="muted">(salva)</small></h4>`;
-    const ta = document.createElement("textarea");
-    ta.placeholder = "Notas…";
-    ta.value = item.notes || "";
-    ta.addEventListener("input", ()=> {
-      item.notes = ta.value;
-      scheduleNoteTouch(item);
-    });
-    notes.appendChild(ta);
+    // esquerda: links + pessoas empilhados
+    const left = document.createElement("div");
+    left.className = "leftStack";
 
     const links = document.createElement("div");
     links.className = "panel";
@@ -1690,7 +1711,7 @@
       if (!n) return alert("Digite um nome.");
       item.people.push({ id: uid(), name: n });
       pName.value = "";
-      if (item.people.length === 1) item.responsibleId = item.people[0].id; // auto-responsável no 1º
+      if (item.people.length === 1) item.responsibleId = item.people[0].id;
       touchItem(item);
       markDirty();
       render();
@@ -1717,9 +1738,24 @@
 
     renderPeopleList(item, pList, pTotal);
 
+    left.appendChild(links);
+    left.appendChild(people);
+
+    // direita: notas (maior e “puxado” pra direita)
+    const notes = document.createElement("div");
+    notes.className = "panel notesPanel";
+    notes.innerHTML = `<h4>📝 Notas <small class="muted">(salva)</small></h4>`;
+    const ta = document.createElement("textarea");
+    ta.placeholder = "Notas…";
+    ta.value = item.notes || "";
+    ta.addEventListener("input", ()=> {
+      item.notes = ta.value;
+      scheduleNoteTouch(item);
+    });
+    notes.appendChild(ta);
+
+    wrap.appendChild(left);
     wrap.appendChild(notes);
-    wrap.appendChild(links);
-    wrap.appendChild(people);
     return wrap;
   }
 
@@ -2105,7 +2141,7 @@
         if (typeof incoming.ui.editMode !== "boolean") incoming.ui.editMode = false;
         incoming.ui.levelStyles ||= defaultLevelStyles();
         if (typeof incoming.ui.levelPanelOpen !== "boolean") incoming.ui.levelPanelOpen = false;
-        incoming.ui.peopleTop ||= { open:true, active:"" };
+        incoming.ui.peopleTop ||= { active:"" };
 
         const tNow = nowISO();
         for (const it of incoming.items){
@@ -2137,7 +2173,6 @@
           it.archived = !!it.archived;
           if (typeof it.archiveOpen !== "boolean") it.archiveOpen = false;
 
-          // se o responsibleId apontar pra alguém removido, limpa
           if (it.responsibleId && !(it.people || []).some(p=>p.id===it.responsibleId)) it.responsibleId = "";
         }
 
