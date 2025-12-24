@@ -1,0 +1,1790 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CLI Projects — LocalStorage (v7)</title>
+  <style>
+    :root{
+      --bg:#0b0f19; --panel:#0f1627; --panel2:#111a2e; --text:#e8eefc; --muted:#9db0d1;
+      --line:#243252; --accent:#7aa2ff; --ok:#55e6a5; --warn:#ffd36b; --danger:#ff6b6b; --blue:#65a8ff;
+      --shadow: 0 14px 40px rgba(0,0,0,.45); --radius:14px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    }
+    [data-theme="light"]{
+      --bg:#f6f7fb; --panel:#ffffff; --panel2:#f3f5fb; --text:#0b1220; --muted:#4b5b78;
+      --line:#d7deee; --accent:#2f6bff; --ok:#1a9b66; --warn:#b27b00; --danger:#d83a3a; --blue:#1e64ff;
+      --shadow: 0 14px 40px rgba(9,20,45,.12);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
+    .wrap{max-width:1250px;margin:18px auto;padding:0 14px;display:grid;gap:12px}
+    .topbar{
+      display:flex;align-items:center;justify-content:space-between;gap:10px;
+      padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius);
+      background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      box-shadow:var(--shadow);
+    }
+    .brand{display:flex;flex-direction:column;gap:2px}
+    .brand .t{font-weight:900;letter-spacing:.2px}
+    .brand .s{color:var(--muted);font-size:12px}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}
+    button{
+      border:1px solid var(--line);background:var(--panel2);color:var(--text);
+      padding:8px 10px;border-radius:12px;cursor:pointer;font-weight:750
+    }
+    button:hover{border-color:rgba(122,162,255,.6)}
+    .danger{border-color:rgba(255,107,107,.55); color:var(--danger)}
+    .ghost{background:transparent}
+
+    .grid{display:grid;grid-template-columns: 0.52fr 1.48fr; gap:12px}
+    @media (max-width: 980px){ .grid{grid-template-columns:1fr} }
+
+    .card{
+      border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);
+      box-shadow:var(--shadow);overflow:hidden;
+    }
+    .card .hd{
+      padding:12px 14px;border-bottom:1px solid var(--line);
+      display:flex;align-items:center;justify-content:space-between;gap:10px
+    }
+    .card .hd .left{display:flex;flex-direction:column;gap:2px}
+    .card .hd .left .k{font-weight:900}
+    .card .hd .left .v{color:var(--muted);font-size:12px}
+    .card .bd{padding:12px 14px}
+
+    .pill{
+      font-family:var(--mono); font-size:12px; padding:2px 8px; border-radius:999px;
+      border:1px solid var(--line); color:var(--muted); background:rgba(255,255,255,.03)
+    }
+
+    .terminal{
+      font-family:var(--mono); font-size:13px; line-height:1.5;
+      height: 830px; overflow:auto; padding:12px; border-radius:12px;
+      background: radial-gradient(900px 420px at 10% 0%, rgba(122,162,255,.10), transparent 60%),
+                  radial-gradient(900px 420px at 90% 0%, rgba(85,230,165,.08), transparent 55%),
+                  rgba(0,0,0,.08);
+      border:1px solid var(--line);
+    }
+    .line{white-space:pre-wrap; word-break:break-word; margin:0 0 6px 0}
+    .cmd{color:var(--text)}
+    .out{color:var(--text)}
+    .muted{color:var(--muted)}
+    .err{color:var(--danger)}
+    .ok{color:var(--ok)}
+    .warn{color:var(--warn)}
+
+    /* Task color rules */
+    .c-red{color:var(--danger)}
+    .c-yellow{color:var(--warn)}
+    .c-blue{color:var(--blue)}
+    .c-green{color:var(--ok)}
+
+    /* sequenciado: fundo branco + texto preto em negrito */
+    .seqBadge{
+      background:#ffffff;
+      color:#000000 !important;
+      font-weight:900;
+      padding:1px 6px;
+      border-radius:8px;
+    }
+
+    .clickable{cursor:pointer; text-decoration:underline; text-decoration-color:rgba(122,162,255,.45)}
+    .clickable:hover{text-decoration-color:rgba(122,162,255,.9)}
+
+    .inputrow{position:relative; display:flex; gap:10px; align-items:center; margin-top:10px}
+    .cli{
+      width:100%; padding:12px 12px; border-radius:12px; border:1px solid var(--line);
+      background:var(--panel2); color:var(--text); font-family:var(--mono); font-size:13px;
+      outline:none;
+    }
+    .cli:focus{border-color:rgba(122,162,255,.7); box-shadow:0 0 0 4px rgba(122,162,255,.12)}
+
+    /* Autocomplete (acima do input) */
+    .ac{
+      position:absolute; left:0; right:0; bottom:46px; z-index:20;
+      background:var(--panel); border:1px solid var(--line); border-radius:12px;
+      box-shadow:var(--shadow); overflow:hidden; display:none; max-height:280px; overflow:auto;
+    }
+    .ac .item{
+      padding:10px 10px; display:flex; justify-content:space-between; gap:10px; cursor:pointer;
+      border-bottom:1px solid rgba(255,255,255,.06)
+    }
+    [data-theme="light"] .ac .item{border-bottom:1px solid rgba(10,10,10,.06)}
+    .ac .item:last-child{border-bottom:none}
+    .ac .item:hover{background:rgba(122,162,255,.08)}
+    .ac .a{font-family:var(--mono)}
+    .ac .b{color:var(--muted); font-size:12px}
+
+    /* Sidebar: só nome */
+    .treeWrap{font-family:var(--mono); font-size:12.5px; line-height:1.45}
+    .node{display:flex; gap:8px; align-items:center; padding:6px 8px; border-radius:10px; cursor:pointer; position:relative}
+    .node:hover{background:rgba(122,162,255,.08)}
+    .node .name{flex:1}
+    .indent{padding-left:16px}
+
+    /* Drag & drop feedback */
+    .node.dragging{opacity:.55}
+
+    /* “abre um espaço” visível quando a pasta vira alvo */
+    .node.dropTarget{
+      outline:2px dashed rgba(122,162,255,.7);
+      background:rgba(122,162,255,.10);
+      padding-bottom:18px;
+    }
+    .node.dropTarget::after{
+      content:"Solte aqui para mover";
+      position:absolute;
+      left:44px;
+      bottom:4px;
+      font-size:11px;
+      color:var(--muted);
+      font-family:var(--mono);
+    }
+
+    /* Drawer config */
+    .drawerOverlay{position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:flex-end; justify-content:center; padding:16px; z-index:60}
+    .drawer{
+      width:min(980px, 100%); background:var(--panel); border:1px solid var(--line);
+      border-radius:18px; box-shadow:var(--shadow); overflow:hidden;
+    }
+    .drawer .dh{padding:12px 14px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; gap:10px}
+    .drawer .db{padding:12px 14px}
+    .kv{display:grid; gap:10px}
+    .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+    label{display:grid; gap:6px; font-size:12px; color:var(--muted)}
+    input, select, textarea{
+      width:100%; padding:10px 10px; border-radius:12px; border:1px solid var(--line);
+      background:var(--panel2); color:var(--text); outline:none; font-family:var(--sans);
+    }
+    textarea{min-height:92px; resize:vertical}
+    .sep{height:1px;background:var(--line);margin:12px 0}
+    .aliasItem{display:grid; grid-template-columns:1fr 1fr auto; gap:8px; align-items:center}
+
+    /* Modal editor */
+    .modalOverlay{position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; padding:18px; z-index:80}
+    .modal{width:min(920px, 100%); background:var(--panel); border:1px solid var(--line); border-radius:18px; box-shadow:var(--shadow); overflow:hidden}
+    .modal .mh{padding:12px 14px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; gap:10px}
+    .modal .mh .title{font-weight:950}
+    .modal .mb{padding:12px 14px}
+    .modal .mf{padding:12px 14px; border-top:1px solid var(--line); display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap}
+    .row3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px}
+    .badge{font-family:var(--mono);font-size:12px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.03)}
+  </style>
+</head>
+
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand">
+      <div class="t">CLI Projects — LocalStorage</div>
+      <div class="s">Terminal + Árvore • <span class="pill" id="cwdPill">/</span></div>
+    </div>
+    <div class="actions">
+      <button id="btnCopy">Copiar saída</button>
+      <button id="btnExport">Exportar</button>
+      <button id="btnImport">Importar</button>
+      <button id="btnConfig">Config</button>
+      <button id="btnTheme">Tema</button>
+      <button class="danger" id="btnReset">Reset</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="hd">
+        <div class="left">
+          <div class="k">Árvore</div>
+          <div class="v">Somente nomes • Clique pasta = cd • ▶/▼ expande • Arraste e solte na pasta</div>
+        </div>
+      </div>
+      <div class="bd">
+        <div class="treeWrap" id="sidebarTree"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="hd">
+        <div class="left">
+          <div class="k">Terminal</div>
+          <div class="v">
+            <span class="pill">help</span>
+            <span class="pill">mkdir (entra)</span>
+            <span class="pill">ls -ltra</span>
+            <span class="pill">q tipo X</span>
+            <span class="pill">focus</span>
+            <span class="pill">resumo</span>
+          </div>
+        </div>
+        <div class="left" style="text-align:right">
+          <div class="k">Atalhos</div>
+          <div class="v">↑/↓ histórico • Tab completa • Esc fecha</div>
+        </div>
+      </div>
+      <div class="bd">
+        <div class="terminal" id="term"></div>
+        <div class="inputrow">
+          <input class="cli" id="cli" autocomplete="off" spellcheck="false" placeholder="Digite um comando (ex: help)" />
+          <div class="ac" id="ac"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Drawer config -->
+  <div class="drawerOverlay" id="drawerOverlay">
+    <div class="drawer">
+      <div class="dh">
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <div style="font-weight:950">Configurações</div>
+          <div style="font-size:12px;color:var(--muted)">Aliases e defaults</div>
+        </div>
+        <button class="ghost" id="btnCloseConfig">Fechar</button>
+      </div>
+      <div class="db">
+        <div class="kv">
+          <div class="row2">
+            <label>Prioridade padrão (1 alta, 5 baixa)
+              <select id="defPriority">
+                <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+              </select>
+            </label>
+            <label>Status padrão
+              <select id="defStatus">
+                <option value="todo">todo</option>
+                <option value="doing">doing</option>
+                <option value="blocked">blocked</option>
+                <option value="sequenciado">sequenciado</option>
+                <option value="done">done</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="sep"></div>
+
+          <div style="font-size:12px;color:var(--muted)"><b>Aliases</b> (comando → execução)</div>
+          <div id="aliases"></div>
+          <button id="btnAddAlias">Adicionar alias</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal editor -->
+  <div class="modalOverlay" id="modalOverlay">
+    <div class="modal">
+      <div class="mh">
+        <div class="title">Editar atividade</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="badge" id="mPath"></span>
+          <button class="ghost" id="mClose">Fechar</button>
+        </div>
+      </div>
+      <div class="mb">
+        <div class="row2">
+          <label>Nome (arquivo)
+            <input id="mName" />
+          </label>
+          <label>Pasta (caminho)
+            <input id="mFolder" placeholder="/projetos/x" />
+          </label>
+        </div>
+
+        <div class="row3" style="margin-top:10px">
+          <label>Responsável
+            <input id="mResp" />
+          </label>
+          <label>Data (due)
+            <input id="mDue" type="date" />
+          </label>
+          <label>Tipo
+            <input id="mType" />
+          </label>
+        </div>
+
+        <div class="row3" style="margin-top:10px">
+          <label>Status
+            <select id="mStatus">
+              <option value="todo">todo</option>
+              <option value="doing">doing</option>
+              <option value="blocked">blocked</option>
+              <option value="sequenciado">sequenciado</option>
+              <option value="done">done</option>
+            </select>
+          </label>
+          <label>Prioridade (1..5)
+            <select id="mPrio">
+              <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+            </select>
+          </label>
+          <label>Atualizado em
+            <input id="mUpdated" disabled />
+          </label>
+        </div>
+
+        <label style="margin-top:10px">Anotações
+          <textarea id="mNotes"></textarea>
+        </label>
+      </div>
+      <div class="mf">
+        <button class="danger" id="mDelete">Excluir</button>
+        <button id="mSave">Salvar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const LS_KEY = "cli_projects_v7_state";
+  const SET_KEY = "cli_projects_v7_settings";
+  const $ = (id) => document.getElementById(id);
+
+  const term = $("term");
+  const cli = $("cli");
+  const ac = $("ac");
+  const cwdPill = $("cwdPill");
+  const sidebarTree = $("sidebarTree");
+
+  const drawerOverlay = $("drawerOverlay");
+  const defPriority = $("defPriority");
+  const defStatus = $("defStatus");
+  const aliasesBox = $("aliases");
+
+  const modalOverlay = $("modalOverlay");
+  const mPath = $("mPath");
+  const mClose = $("mClose");
+  const mName = $("mName");
+  const mFolder = $("mFolder");
+  const mResp = $("mResp");
+  const mDue = $("mDue");
+  const mType = $("mType");
+  const mStatus = $("mStatus");
+  const mPrio = $("mPrio");
+  const mNotes = $("mNotes");
+  const mUpdated = $("mUpdated");
+  const mDelete = $("mDelete");
+  const mSave = $("mSave");
+
+  let editingId = null;
+  let lastOutputText = "";
+  let inputHistory = [];
+  let histIdx = -1;
+
+  const TAGS = ["@resp","@due","@status","@type","@prio","@note"];
+
+  function nowISO(){ return new Date().toISOString(); }
+  function rid(){ return Math.random().toString(16).slice(2) + Math.random().toString(16).slice(2); }
+  function pad(n){ return String(n).padStart(2,"0"); }
+  function todayISODate(){
+    const d = new Date();
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  }
+  function parseDateTS(dateStr){
+    if(!dateStr) return null;
+    const t = Date.parse(dateStr + "T00:00:00");
+    return isNaN(t) ? null : t;
+  }
+  function isoToDateOnly(iso){ return (iso||"").slice(0,10); }
+  function daysBetween(tsA, tsB){
+    return Math.floor((tsA - tsB) / (24*3600*1000));
+  }
+
+  function escapeHtml(s){
+    return String(s)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  function defaultState(){
+    return {
+      nodes: [
+        { id:"root", type:"dir", name:"/", parentId:null, createdAt: nowISO(), updatedAt: nowISO() },
+        { id: rid(), type:"dir", name:"projetos", parentId:"root", createdAt: nowISO(), updatedAt: nowISO() }
+      ],
+      cwdId:"root"
+    };
+  }
+
+  function defaultSettings(){
+    return {
+      theme:"dark",
+      defPriority: 3,
+      defStatus: "todo",
+      sidebarExpanded: { "root": true },
+      aliases: {
+        "hoje": "q hoje",
+        "atrasadas": "q atrasadas",
+        "por-pessoa": "q por-pessoa",
+        "sem-data": "q sem-data",
+        "sem-resp": "q sem-resp",
+        "sem-att": "q sem-att",
+        "por-projeto": "q por-projeto",
+        "sem-tipo": "q sem-tipo",
+        "por-tipo": "q por-tipo",
+        "agora": "focus",
+        "r": "resumo"
+      }
+    };
+  }
+
+  function loadJSON(key, fallback){
+    const raw = localStorage.getItem(key);
+    if(!raw) return fallback;
+    try{ return JSON.parse(raw); } catch { return fallback; }
+  }
+  function saveState(){ localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+  function saveSettings(){ localStorage.setItem(SET_KEY, JSON.stringify(settings)); }
+
+  let state = loadJSON(LS_KEY, defaultState());
+  let settings = loadJSON(SET_KEY, defaultSettings());
+  settings.aliases = { ...defaultSettings().aliases, ...(settings.aliases||{}) };
+  settings.sidebarExpanded = settings.sidebarExpanded || { "root": true };
+
+  function setTheme(){
+    document.documentElement.setAttribute("data-theme", settings.theme === "light" ? "light" : "dark");
+  }
+
+  function printLine(text, cls="out"){
+    const div = document.createElement("div");
+    div.className = "line " + cls;
+    div.textContent = text;
+    term.appendChild(div);
+    term.scrollTop = term.scrollHeight;
+    lastOutputText += text + "\n";
+  }
+  function printHTMLLine(html, cls="out"){
+    const div = document.createElement("div");
+    div.className = "line " + cls;
+    div.innerHTML = html;
+    term.appendChild(div);
+    term.scrollTop = term.scrollHeight;
+    const tmp = document.createElement("div");
+    tmp.innerHTML = html;
+    lastOutputText += (tmp.textContent || "") + "\n";
+  }
+  function clearOutBuf(){ lastOutputText = ""; }
+
+  function nodeById(id){ return state.nodes.find(n=>n.id===id) || null; }
+  function childrenOf(pid){ return state.nodes.filter(n=>n.parentId===pid); }
+  function isDir(n){ return n && n.type==="dir"; }
+  function isFile(n){ return n && n.type==="file"; }
+
+  function cwdPath(){
+    let cur = nodeById(state.cwdId) || nodeById("root");
+    if(!cur){ state = defaultState(); saveState(); cur = nodeById("root"); }
+    if(cur.id==="root") return "/";
+    const parts = [];
+    while(cur && cur.id!=="root"){
+      parts.push(cur.name);
+      cur = nodeById(cur.parentId);
+    }
+    return "/" + parts.reverse().join("/");
+  }
+  function updateCwd(){ cwdPill.textContent = cwdPath(); }
+
+  function fullPathOf(id){
+    const n = nodeById(id);
+    if(!n) return "";
+    if(n.id==="root") return "/";
+    const parts = [];
+    let cur = n;
+    while(cur && cur.id!=="root"){
+      parts.push(cur.name);
+      cur = nodeById(cur.parentId);
+    }
+    return "/" + parts.reverse().join("/");
+  }
+
+  function resolvePath(pathStr){
+    if(!pathStr || pathStr === ".") return state.cwdId;
+    let curId = pathStr.startsWith("/") ? "root" : state.cwdId;
+    const parts = (pathStr.startsWith("/") ? pathStr.slice(1) : pathStr).split("/").filter(Boolean);
+
+    for(const part of parts){
+      if(part === ".") continue;
+      if(part === ".."){
+        const cur = nodeById(curId);
+        if(cur && cur.parentId) curId = cur.parentId;
+        continue;
+      }
+      const next = childrenOf(curId).find(n=>n.name===part);
+      if(!next) return null;
+      curId = next.id;
+    }
+    return curId;
+  }
+
+  function splitParentAndName(pathStr){
+    const abs = pathStr.startsWith("/");
+    const cleaned = pathStr.replace(/\/+$/,"");
+    const parts = cleaned.split("/").filter(Boolean);
+    const name = parts.pop() || "";
+    const parentPath = (abs?"/":"") + parts.join("/");
+    return { parentPath: parentPath || (abs?"/":"."), name };
+  }
+
+  function touch(id){
+    const n = nodeById(id);
+    if(n) n.updatedAt = nowISO();
+  }
+
+  function createDir(name, parentId){
+    if(!name || name.includes("/")) return {ok:false, err:"Nome inválido."};
+    if(childrenOf(parentId).some(n=>n.name===name)) return {ok:false, err:"Já existe."};
+    const n = { id: rid(), type:"dir", name, parentId, createdAt: nowISO(), updatedAt: nowISO() };
+    state.nodes.push(n);
+    touch(parentId);
+    saveState();
+    return {ok:true, node:n};
+  }
+
+  function createFile(name, parentId, meta){
+    if(!name || name.includes("/")) return {ok:false, err:"Nome inválido."};
+    if(childrenOf(parentId).some(n=>n.name===name)) return {ok:false, err:"Já existe."};
+    const f = {
+      id: rid(), type:"file", name, parentId,
+      createdAt: nowISO(), updatedAt: nowISO(),
+      resp: meta.resp || "",
+      due: meta.due || "",
+      status: meta.status || settings.defStatus,
+      taskType: meta.type || "",
+      prio: Number(meta.prio || settings.defPriority),
+      notes: meta.note || ""
+    };
+    state.nodes.push(f);
+    touch(parentId);
+    saveState();
+    return {ok:true, node:f};
+  }
+
+  function removeNode(id){
+    const n = nodeById(id);
+    if(!n || id==="root") return {ok:false, err:"Não pode."};
+    if(isDir(n) && childrenOf(id).length) return {ok:false, err:"Pasta não vazia (use rm -r)."};
+    const p = n.parentId;
+    state.nodes = state.nodes.filter(x=>x.id!==id);
+    touch(p);
+    if(state.cwdId===id) state.cwdId = p || "root";
+    saveState();
+    return {ok:true};
+  }
+
+  function removeTree(id){
+    const n = nodeById(id);
+    if(!n || id==="root") return {ok:false, err:"Não pode."};
+    const p = n.parentId;
+    const del = new Set();
+    (function dfs(x){
+      del.add(x);
+      for(const c of childrenOf(x)) dfs(c.id);
+    })(id);
+    state.nodes = state.nodes.filter(x=>!del.has(x.id));
+    touch(p);
+    if(del.has(state.cwdId)) state.cwdId = p || "root";
+    saveState();
+    return {ok:true, count: del.size};
+  }
+
+  function moveNode(srcId, dstParentId, newName=null){
+    const src = nodeById(srcId);
+    if(!src || srcId==="root") return {ok:false, err:"Origem inválida."};
+    const nm = newName || src.name;
+    if(childrenOf(dstParentId).some(n=>n.name===nm && n.id!==srcId)) return {ok:false, err:"Destino já tem esse nome."};
+    const oldP = src.parentId;
+    src.parentId = dstParentId;
+    src.name = nm;
+    src.updatedAt = nowISO();
+    touch(oldP); touch(dstParentId);
+    saveState();
+    return {ok:true, node:src};
+  }
+
+  // ----- Drag helpers -----
+  function isDescendantDir(targetDirId, maybeAncestorDirId){
+    if(targetDirId === maybeAncestorDirId) return true;
+    let cur = nodeById(targetDirId);
+    while(cur && cur.parentId){
+      if(cur.parentId === maybeAncestorDirId) return true;
+      cur = nodeById(cur.parentId);
+    }
+    return false;
+  }
+  function canMove(srcId, dstDirId){
+    if(!srcId || !dstDirId) return { ok:false, err:"Move inválido." };
+    if(srcId === "root") return { ok:false, err:"Não pode mover root." };
+
+    const src = nodeById(srcId);
+    const dst = nodeById(dstDirId);
+    if(!src) return { ok:false, err:"Origem não existe." };
+    if(!dst || !isDir(dst)) return { ok:false, err:"Destino não é pasta." };
+
+    if(src.parentId === dstDirId) return { ok:true, noop:true };
+
+    if(isDir(src) && isDescendantDir(dstDirId, srcId)){
+      return { ok:false, err:"Não pode mover uma pasta para dentro dela mesma." };
+    }
+
+    if(childrenOf(dstDirId).some(n => n.name === src.name && n.id !== src.id)){
+      return { ok:false, err:"Já existe um item com esse nome na pasta destino." };
+    }
+
+    return { ok:true, noop:false };
+  }
+  function moveNodeToDir(srcId, dstDirId){
+    const chk = canMove(srcId, dstDirId);
+    if(!chk.ok) return chk;
+    if(chk.noop) return chk;
+
+    const src = nodeById(srcId);
+    const oldP = src.parentId;
+
+    src.parentId = dstDirId;
+    src.updatedAt = nowISO();
+
+    touch(oldP);
+    touch(dstDirId);
+
+    saveState();
+    return { ok:true };
+  }
+
+  function tokenize(s){
+    const out=[]; let cur=""; let inQ=false;
+    for(let i=0;i<s.length;i++){
+      const c=s[i];
+      if(c === '"'){ inQ=!inQ; continue; }
+      if(!inQ && /\s/.test(c)){ if(cur){ out.push(cur); cur=""; } }
+      else cur+=c;
+    }
+    if(cur) out.push(cur);
+    return out;
+  }
+
+  function promptPrefix(){ return `${cwdPath()} $`; }
+  function echoCmd(cmd){ printLine(`${promptPrefix()} ${cmd}`, "cmd"); }
+
+  // escopo recursivo na pasta atual
+  function isDescendantOrSelf(nodeId, rootId){
+    if(nodeId === rootId) return true;
+    let cur = nodeById(nodeId);
+    while(cur && cur.parentId){
+      if(cur.parentId === rootId) return true;
+      cur = nodeById(cur.parentId);
+      if(cur && cur.id === rootId) return true;
+    }
+    return false;
+  }
+  function filesInScope(scopeDirId){
+    return state.nodes.filter(isFile).filter(f => isDescendantOrSelf(f.parentId, scopeDirId));
+  }
+
+  function sortByImportance(a,b){
+    const pa = Number(a.prio||3), pb = Number(b.prio||3);
+    if(pa !== pb) return pa - pb;
+    const ta = Date.parse(a.updatedAt||a.createdAt||nowISO());
+    const tb = Date.parse(b.updatedAt||b.createdAt||nowISO());
+    if(ta !== tb) return ta - tb;
+    return a.name.localeCompare(b.name);
+  }
+  function groupBy(arr, keyFn){
+    const m=new Map();
+    for(const x of arr){
+      const k=keyFn(x);
+      if(!m.has(k)) m.set(k, []);
+      m.get(k).push(x);
+    }
+    return m;
+  }
+
+  // -------- Color rules --------
+  function taskColorClass(t){
+    const today = todayISODate();
+
+    if((t.status||"") === "sequenciado") return "seqBadge";
+    if((t.status||"") === "done") return "c-blue";
+
+    if(t.due){
+      if(t.due < today) return "c-red";
+      if(t.due === today) return "c-yellow";
+    }
+    return "c-green";
+  }
+
+  function renderClickableFileName(file){
+    const cls = taskColorClass(file);
+    return `<span class="clickable ${cls}" data-open="${file.id}">${escapeHtml(file.name)}</span>`;
+  }
+
+  function attachFileDblClickHandlers(){
+    term.querySelectorAll("[data-open]").forEach(elm=>{
+      elm.ondblclick = () => openModal(elm.getAttribute("data-open"));
+    });
+  }
+
+  // -------- Focus magic --------
+  function focusScore(t){
+    if((t.status||"") === "done") return { score: -99999, reason:["done"] };
+
+    const today = todayISODate();
+    const todayTS = parseDateTS(today);
+    const dueTS = t.due ? parseDateTS(t.due) : null;
+
+    let score = 0;
+    const reason = [];
+
+    const pr = Number(t.prio || 3);
+    score += (6 - pr) * 25;
+    reason.push(`prio p${pr} → +${(6-pr)*25}`);
+
+    const st = t.status || "todo";
+    if(st === "doing"){ score += 20; reason.push("doing → +20"); }
+    if(st === "blocked"){ score -= 30; reason.push("blocked → -30"); }
+    if(st === "sequenciado"){ score += 35; reason.push("sequenciado → +35"); }
+
+    if(dueTS !== null){
+      const daysLate = Math.max(0, daysBetween(todayTS, dueTS));
+      const daysAhead = Math.max(0, daysBetween(dueTS, todayTS));
+      if(t.due < today){
+        const add = 140 + Math.min(200, daysLate * 18);
+        score += add;
+        reason.push(`atrasado ${daysLate}d → +${add}`);
+      } else if(t.due === today){
+        score += 90;
+        reason.push("vence hoje → +90");
+      } else {
+        const boost = Math.max(0, 60 - daysAhead * 12);
+        score += boost;
+        reason.push(`vence em ${daysAhead}d → +${boost}`);
+      }
+    } else {
+      score -= 15;
+      reason.push("sem due → -15");
+    }
+
+    const upd = Date.parse(t.updatedAt || t.createdAt || nowISO());
+    const ageDays = Math.max(0, Math.floor((Date.now() - upd) / (24*3600*1000)));
+    const staleBoost = Math.min(40, ageDays * 3);
+    score += staleBoost;
+    if(staleBoost) reason.push(`sem update ${ageDays}d → +${staleBoost}`);
+
+    if(!(t.resp||"").trim()){
+      score -= 10;
+      reason.push("sem resp → -10");
+    }
+
+    return { score, reason };
+  }
+
+  function cmd_focus(){
+    const files = filesInScope(state.cwdId).filter(t => (t.status||"") !== "done");
+    if(!files.length){
+      printLine("focus: nenhum item pendente no escopo atual.", "muted");
+      return;
+    }
+    let best = null;
+    let bestS = -1e9;
+    let bestR = [];
+    for(const t of files){
+      const {score, reason} = focusScore(t);
+      if(score > bestS){
+        bestS = score; best = t; bestR = reason;
+      }
+    }
+    printLine("Seu foco agora (escopo atual, recursivo):", "out");
+    printHTMLLine("  " + fmtTaskLine(best) + ` <span class="muted">[score ${bestS}]</span>`, "out");
+    printLine("Motivo:", "muted");
+    bestR.slice(0,8).forEach(r=>printLine("  - " + r, "muted"));
+    attachFileDblClickHandlers();
+  }
+
+  // ----------------- Commands -----------------
+  function cmd_help(){
+    printLine("Comandos:", "out");
+    printLine("  ls | ls -ltra", "muted");
+    printLine("  mkdir <pasta>        (cria e entra)", "muted");
+    printLine("  cd <pasta|/caminho|..>", "muted");
+    printLine("  rm <caminho> | rm -r <pasta>", "muted");
+    printLine("  mv <origem> <destino>", "muted");
+    printLine("  tree [--depth N]", "muted");
+    printLine("  add <nome> @resp <x> @due <YYYY-MM-DD> @status <todo|doing|blocked|sequenciado|done> @type <...> @prio <1-5> @note <...>", "muted");
+    printLine("  q hoje | atrasadas | por-pessoa | sem-data | sem-resp | sem-att | por-projeto | sem-tipo | por-tipo | tipo <X>", "muted");
+    printLine("  resumo  (roda todas as consultas)", "muted");
+    printLine("  @resp   (lista responsáveis no escopo)", "muted");
+    printLine("  focus   (fórmula mágica do foco agora)", "muted");
+    printLine("  aliases (lista aliases)", "muted");
+    printLine("  pwd | clear", "muted");
+    printLine("Cores: atrasado=vermelho, hoje=amarelo, done=azul, outros=verde, sequenciado=branco/preto", "muted");
+  }
+
+  function cmd_pwd(){ printLine(cwdPath(), "out"); }
+  function cmd_clear(){ term.innerHTML=""; }
+
+  function cmd_ls(args){
+    const flags = args.filter(a=>a.startsWith("-")).join("");
+    const longFmt = flags.includes("l");
+    const sortTime = flags.includes("t");
+    const reverse = flags.includes("r");
+    const showAll = flags.includes("a");
+
+    let kids = childrenOf(state.cwdId);
+    if(!showAll) kids = kids.filter(n=>!n.name.startsWith("."));
+
+    kids.sort((a,b)=>{
+      if(sortTime) return Date.parse(a.updatedAt)-Date.parse(b.updatedAt);
+      return a.name.localeCompare(b.name);
+    });
+    if(reverse) kids.reverse();
+
+    if(!kids.length){ printLine("(vazio)", "muted"); return; }
+
+    if(!longFmt){
+      printLine(kids.map(n=>isDir(n)? `${n.name}/` : n.name).join("  "), "out");
+      return;
+    }
+
+    for(const n of kids){
+      if(isDir(n)){
+        printLine(`d  ${isoToDateOnly(n.updatedAt)}  ${n.name}/`, "out");
+      }else{
+        const pr = String(n.prio ?? 3);
+        const st = (n.status||"todo").padEnd(11," ");
+        const due = (n.due||"-").padEnd(10," ");
+        const resp = (n.resp||"-").padEnd(10," ");
+        const upd = isoToDateOnly(n.updatedAt);
+        const type = (n.taskType||"-").padEnd(10," ");
+        const base = `-  p${pr}  ${st}  ${due}  ${resp}  ${type}  ${upd}  `;
+        printHTMLLine(escapeHtml(base) + renderClickableFileName(n), "out");
+      }
+    }
+    attachFileDblClickHandlers();
+  }
+
+  function cmd_tree(args){
+    const maxDepth = (() => {
+      const i = args.findIndex(a=>a==="--depth");
+      if(i>=0 && args[i+1]) return Math.max(1, parseInt(args[i+1],10)||10);
+      return 50;
+    })();
+
+    printLine(cwdPath(), "out");
+
+    const lines = [];
+    function walk(dirId, prefix, depth){
+      if(depth > maxDepth) return;
+      const kids = childrenOf(dirId).slice().sort((a,b)=>{
+        if(a.type!==b.type) return a.type==="dir"? -1 : 1;
+        return a.name.localeCompare(b.name);
+      });
+      kids.forEach((n, idx)=>{
+        const last = idx === kids.length-1;
+        const branch = last ? "└── " : "├── ";
+        const nextPrefix = prefix + (last ? "    " : "│   ");
+        if(isDir(n)){
+          lines.push(`${escapeHtml(prefix + branch + n.name + "/")}`);
+          walk(n.id, nextPrefix, depth+1);
+        } else {
+          lines.push(`${escapeHtml(prefix + branch)}${renderClickableFileName(n)}`);
+        }
+      });
+    }
+    walk(state.cwdId, "", 1);
+    if(!lines.length) printLine("(vazio)", "muted");
+    else lines.forEach(l=>printHTMLLine(l,"out"));
+    attachFileDblClickHandlers();
+  }
+
+  function cmd_cd(args){
+    const target = args[0] || "/";
+    const id = resolvePath(target);
+    if(!id){ printLine(`cd: não encontrado: ${target}`, "err"); return; }
+    const n = nodeById(id);
+    if(!isDir(n)){ printLine(`cd: não é pasta: ${target}`, "err"); return; }
+    state.cwdId = id;
+    saveState();
+    updateCwd();
+    renderSidebar();
+  }
+
+  function cmd_mkdir(args){
+    if(!args[0]){ printLine("mkdir: faltou nome", "err"); return; }
+    const pathStr = args[0];
+    const { parentPath, name } = splitParentAndName(pathStr);
+    const parentId = resolvePath(parentPath);
+    if(!parentId){ printLine(`mkdir: caminho inválido: ${parentPath}`, "err"); return; }
+    if(!isDir(nodeById(parentId))){ printLine(`mkdir: não é pasta: ${parentPath}`, "err"); return; }
+
+    const r = createDir(name, parentId);
+    if(!r.ok){ printLine("mkdir: " + r.err, "err"); return; }
+
+    state.cwdId = r.node.id; // entra automaticamente
+    saveState();
+    updateCwd();
+    renderSidebar();
+    printLine(`Agora em: ${cwdPath()}`, "muted");
+  }
+
+  function cmd_rm(args){
+    if(!args.length){ printLine("rm: uso: rm [-r] <caminho>", "err"); return; }
+    const recursive = args.includes("-r") || args.includes("-rf") || args.includes("-fr");
+    const pathArg = args.find(a=>!a.startsWith("-"));
+    if(!pathArg){ printLine("rm: faltou caminho", "err"); return; }
+
+    const id = resolvePath(pathArg);
+    if(!id){ printLine(`rm: não encontrado: ${pathArg}`, "err"); return; }
+
+    const n = nodeById(id);
+    if(isDir(n) && recursive){
+      const r = removeTree(id);
+      if(!r.ok) printLine("rm: " + r.err, "err");
+      else printLine(`Removido (recursivo): ${r.count} nós`, "ok");
+    } else {
+      const r = removeNode(id);
+      if(!r.ok) printLine("rm: " + r.err, "err");
+      else printLine("Removido.", "ok");
+    }
+
+    updateCwd();
+    renderSidebar();
+  }
+
+  function cmd_mv(args){
+    if(args.length < 2){ printLine("mv: uso: mv <origem> <destino>", "err"); return; }
+    const srcId = resolvePath(args[0]);
+    if(!srcId){ printLine(`mv: origem não encontrada: ${args[0]}`, "err"); return; }
+
+    const dstId = resolvePath(args[1]);
+    if(dstId){
+      if(!isDir(nodeById(dstId))){ printLine("mv: destino existe e não é pasta", "err"); return; }
+      const src = nodeById(srcId);
+      if(isDir(src) && isDescendantDir(dstId, srcId)){
+        printLine("mv: não pode mover pasta para dentro dela mesma.", "err");
+        return;
+      }
+      const r = moveNode(srcId, dstId, null);
+      if(!r.ok) printLine("mv: " + r.err, "err");
+      updateCwd(); renderSidebar();
+      return;
+    }
+
+    const { parentPath, name } = splitParentAndName(args[1]);
+    const parentId = resolvePath(parentPath);
+    if(!parentId){ printLine(`mv: destino inválido: ${parentPath}`, "err"); return; }
+    if(!isDir(nodeById(parentId))){ printLine(`mv: destino não é pasta: ${parentPath}`, "err"); return; }
+
+    const r = moveNode(srcId, parentId, name);
+    if(!r.ok) printLine("mv: " + r.err, "err");
+    updateCwd(); renderSidebar();
+  }
+
+  function parseAdd(raw){
+    const tokens = tokenize(raw);
+    let i=1;
+    const nameParts=[];
+    const meta={};
+    while(i < tokens.length){
+      const tk=tokens[i];
+      if(tk.startsWith("@")){
+        const tag=tk;
+        const val = (tokens[i+1] && !tokens[i+1].startsWith("@")) ? tokens[i+1] : "";
+        if(tag==="@resp") meta.resp=val;
+        else if(tag==="@due") meta.due=val;
+        else if(tag==="@status") meta.status=val;
+        else if(tag==="@type") meta.type=val;
+        else if(tag==="@prio") meta.prio=val;
+        else if(tag==="@note") meta.note=val;
+        i += val ? 2 : 1;
+      } else {
+        nameParts.push(tk);
+        i++;
+      }
+    }
+    return { name: nameParts.join(" ").trim(), meta };
+  }
+
+  function cmd_add(raw){
+    const { name, meta } = parseAdd(raw);
+    if(!name){
+      printLine("add: uso: add <nome> @resp <pessoa> @due <YYYY-MM-DD> @status <...> @type <...> @prio <1-5> @note <...>", "muted");
+      return;
+    }
+    if(meta.due && !/^\d{4}-\d{2}-\d{2}$/.test(meta.due)){
+      printLine("add: @due deve ser YYYY-MM-DD", "err"); return;
+    }
+    if(meta.prio && !(Number(meta.prio)>=1 && Number(meta.prio)<=5)){
+      printLine("add: @prio deve ser 1..5", "err"); return;
+    }
+    const r = createFile(name, state.cwdId, meta);
+    if(!r.ok) printLine("add: " + r.err, "err");
+    else printLine(`Criado: ${name}`, "ok");
+    renderSidebar();
+  }
+
+  function cmd_at_resp(){
+    const resps = Array.from(new Set(filesInScope(state.cwdId).map(t => (t.resp||"").trim()).filter(Boolean))).sort((a,b)=>a.localeCompare(b));
+    printLine("Responsáveis (escopo atual, recursivo):", "out");
+    if(!resps.length){ printLine("(nenhum)", "muted"); return; }
+    resps.forEach(r=>printLine("  - " + r, "out"));
+  }
+
+  function fmtTaskLine(t){
+    const due = t.due || "-";
+    const resp = t.resp || "-";
+    const st = t.status || "todo";
+    const pr = t.prio || 3;
+    const type = (t.taskType||"-");
+    return `${escapeHtml(`[p${pr}] [${st}] [${due}] [${resp}] [type:${type}] `)}${renderClickableFileName(t)} <span class="muted">${escapeHtml("(" + fullPathOf(t.id) + ")")}</span>`;
+  }
+
+  function cmd_q(args){
+    const mode = args[0] || "";
+    const files = filesInScope(state.cwdId);
+    const today = todayISODate();
+
+    if(mode==="hoje"){
+      const tasks = files.filter(t=>t.due===today && t.status!=="done").sort(sortByImportance);
+      printLine("Atividades de hoje (recursivo):", "out");
+      if(!tasks.length){ printLine("(nenhuma)", "muted"); return; }
+      tasks.forEach(t=>printHTMLLine("  " + fmtTaskLine(t), "out"));
+      attachFileDblClickHandlers();
+      return;
+    }
+
+    if(mode==="atrasadas"){
+      const tasks = files.filter(t=>t.due && t.due < today && t.status!=="done").sort(sortByImportance);
+      const g = groupBy(tasks, t=> fullPathOf(t.parentId));
+      const keys = Array.from(g.keys()).sort((a,b)=>a.localeCompare(b));
+      printLine("Atrasadas por projeto (recursivo):", "out");
+      if(!keys.length){ printLine("(nenhuma)", "muted"); return; }
+      for(const k of keys){
+        printLine("• " + k, "warn");
+        g.get(k).slice().sort(sortByImportance).forEach(t=>printHTMLLine("  " + fmtTaskLine(t), "out"));
+      }
+      attachFileDblClickHandlers();
+      return;
+    }
+
+    if(mode==="por-pessoa"){
+      const tasks = files.filter(t=>(t.resp||"").trim()).sort(sortByImportance);
+      const g = groupBy(tasks, t=>t.resp.trim());
+      const people = Array.from(g.keys()).sort((a,b)=>a.localeCompare(b));
+      printLine("Atividades por pessoa (recursivo):", "out");
+      if(!people.length){ printLine("(nenhuma)", "muted"); return; }
+      for(const p of people){
+        printLine("• " + p, "out");
+        g.get(p).slice().sort(sortByImportance).forEach(t=>printHTMLLine("  " + fmtTaskLine(t), "out"));
+      }
+      attachFileDblClickHandlers();
+      return;
+    }
+
+    if(mode==="sem-data"){
+      const tasks = files.filter(t=>!t.due).sort(sortByImportance);
+      printLine("Sem data (recursivo):", "out");
+      if(!tasks.length){ printLine("(nenhuma)", "muted"); return; }
+      tasks.forEach(t=>printHTMLLine("  " + fmtTaskLine(t), "out"));
+      attachFileDblClickHandlers();
+      return;
+    }
+
+    if(mode==="sem-resp"){
+      const tasks = files.filter(t=>!(t.resp||"").trim()).sort(sortByImportance);
+      printLine("Sem responsável (recursivo):", "out");
+      if(!tasks.length){ printLine("(nenhuma)", "muted"); return; }
+      tasks.forEach(t=>printHTMLLine("  " + fmtTaskLine(t), "out"));
+      attachFileDblClickHandlers();
+      return;
+    }
+
+    if(mode==="sem-att"){
+      const tasks = files.filter(t=>t.status!=="done").slice().sort((a,b)=>{
+        const ta = Date.parse(a.updatedAt||a.createdAt||nowISO());
+        const tb = Date.parse(b.updatedAt||b.createdAt||nowISO());
+        return ta - tb;
+      }).slice(0,30);
+      printLine("Mais antigas sem atualização (top 30, recursivo):", "out");
+      if(!tasks.length){ printLine("(nenhuma)", "muted"); return; }
+      tasks.forEach(t=>printHTMLLine("  " + fmtTaskLine(t) + ` <span class="muted">(upd ${escapeHtml(isoToDateOnly(t.updatedAt))})</span>`, "out"));
+      attachFileDblClickHandlers();
+      return;
+    }
+
+    if(mode==="por-projeto"){
+      const tasks = files.slice().sort(sortByImportance);
+      const g = groupBy(tasks, t=> fullPathOf(t.parentId));
+      const keys = Array.from(g.keys()).sort((a,b)=>a.localeCompare(b));
+      printLine("Atividades por projeto (recursivo):", "out");
+      if(!keys.length){ printLine("(nenhuma)", "muted"); return; }
+      for(const k of keys){
+        printLine("• " + k, "out");
+        g.get(k).slice().sort(sortByImportance).forEach(t=>printHTMLLine("  " + fmtTaskLine(t), "out"));
+      }
+      attachFileDblClickHandlers();
+      return;
+    }
+
+    if(mode==="sem-tipo"){
+      const tasks = files.filter(t=>!(t.taskType||"").trim()).sort(sortByImportance);
+      printLine("Sem tipo (recursivo):", "out");
+      if(!tasks.length){ printLine("(nenhuma)", "muted"); return; }
+      tasks.forEach(t=>printHTMLLine("  " + fmtTaskLine(t), "out"));
+      attachFileDblClickHandlers();
+      return;
+    }
+
+    if(mode==="por-tipo"){
+      const tasks = files.slice().sort(sortByImportance);
+      const g = groupBy(tasks, t=> (t.taskType||"").trim() || "(sem tipo)");
+      const keys = Array.from(g.keys()).sort((a,b)=>a.localeCompare(b));
+      printLine("Atividades por tipo (recursivo):", "out");
+      if(!keys.length){ printLine("(nenhuma)", "muted"); return; }
+      for(const k of keys){
+        printLine("• " + k, "out");
+        g.get(k).slice().sort(sortByImportance).forEach(t=>printHTMLLine("  " + fmtTaskLine(t), "out"));
+      }
+      attachFileDblClickHandlers();
+      return;
+    }
+
+    if(mode==="tipo"){
+      const wanted = (args.slice(1).join(" ")||"").trim().toLowerCase();
+      if(!wanted){
+        printLine("q tipo: uso: q tipo <nome-do-tipo>", "muted");
+        return;
+      }
+      const tasks = files.filter(t => ((t.taskType||"").trim().toLowerCase() === wanted)).sort(sortByImportance);
+      printLine(`Atividades do tipo "${wanted}" (recursivo):`, "out");
+      if(!tasks.length){ printLine("(nenhuma)", "muted"); return; }
+      tasks.forEach(t=>printHTMLLine("  " + fmtTaskLine(t), "out"));
+      attachFileDblClickHandlers();
+      return;
+    }
+
+    printLine("q: modos: hoje | atrasadas | por-pessoa | sem-data | sem-resp | sem-att | por-projeto | sem-tipo | por-tipo | tipo <X>", "muted");
+  }
+
+  function cmd_resumo(){
+    printLine("Resumo (escopo atual, recursivo):", "out");
+    const sections = [
+      { title: "Hoje", run: () => cmd_q(["hoje"]) },
+      { title: "Atrasadas (por projeto)", run: () => cmd_q(["atrasadas"]) },
+      { title: "Por pessoa", run: () => cmd_q(["por-pessoa"]) },
+      { title: "Sem data", run: () => cmd_q(["sem-data"]) },
+      { title: "Sem responsável", run: () => cmd_q(["sem-resp"]) },
+      { title: "Mais antigas sem atualização", run: () => cmd_q(["sem-att"]) },
+      { title: "Por projeto", run: () => cmd_q(["por-projeto"]) },
+      { title: "Sem tipo", run: () => cmd_q(["sem-tipo"]) },
+      { title: "Por tipo", run: () => cmd_q(["por-tipo"]) },
+    ];
+    for(const s of sections){
+      printLine("", "out");
+      printLine("==== " + s.title + " ====", "muted");
+      s.run();
+    }
+  }
+
+  function cmd_aliases(){
+    printLine("Aliases:", "out");
+    Object.entries(settings.aliases).sort((a,b)=>a[0].localeCompare(b[0]))
+      .forEach(([k,v])=>printLine(`  ${k} → ${v}`, "muted"));
+  }
+
+  function runCommand(raw){
+    const trimmed = (raw||"").trim();
+    if(!trimmed) return;
+
+    clearOutBuf();
+    echoCmd(trimmed);
+
+    const head = tokenize(trimmed)[0];
+    if(settings.aliases[head] && head !== "aliases"){
+      const replaced = settings.aliases[head] + trimmed.slice(head.length);
+      return runCommand(replaced);
+    }
+
+    const parts = tokenize(trimmed);
+    const cmd = parts[0];
+    const args = parts.slice(1);
+
+    switch(cmd){
+      case "help": cmd_help(); break;
+      case "ls": cmd_ls(args); break;
+      case "tree": cmd_tree(args); break;
+      case "mkdir": cmd_mkdir(args); break;
+      case "cd": cmd_cd(args); break;
+      case "rm": cmd_rm(args); break;
+      case "mv": cmd_mv(args); break;
+      case "add": cmd_add(trimmed); break;
+      case "q": cmd_q(args); break;
+      case "resumo": cmd_resumo(); break;
+      case "@resp": cmd_at_resp(); break;
+      case "focus": cmd_focus(); break;
+      case "aliases": cmd_aliases(); break;
+      case "pwd": cmd_pwd(); break;
+      case "clear": cmd_clear(); break;
+      default: printLine(`Comando não reconhecido: ${cmd} (digite help)`, "err");
+    }
+
+    updateCwd();
+    renderSidebar();
+  }
+
+  // ---------------- Sidebar (colapsável + drag/drop CORRIGIDO) ----------------
+  function isExpanded(id){ return !!settings.sidebarExpanded[id]; }
+  function toggleExpanded(id){
+    settings.sidebarExpanded[id] = !isExpanded(id);
+    saveSettings();
+    renderSidebar();
+  }
+
+  // auto-expand ao passar por cima com drag
+  const hoverExpandTimers = new Map();
+  function scheduleExpand(dirId){
+    if(isExpanded(dirId)) return;
+    if(hoverExpandTimers.has(dirId)) return;
+    const t = setTimeout(()=>{
+      settings.sidebarExpanded[dirId] = true;
+      saveSettings();
+      renderSidebar();
+      hoverExpandTimers.delete(dirId);
+    }, 550);
+    hoverExpandTimers.set(dirId, t);
+  }
+  function cancelExpand(dirId){
+    const t = hoverExpandTimers.get(dirId);
+    if(t){ clearTimeout(t); hoverExpandTimers.delete(dirId); }
+  }
+
+  function renderSidebar(){
+    sidebarTree.innerHTML = "";
+    const root = nodeById("root");
+    if(!root) return;
+
+    function sortKids(kids){
+      return kids.slice().sort((a,b)=>{
+        if(a.type!==b.type) return a.type==="dir"? -1 : 1;
+        return a.name.localeCompare(b.name);
+      });
+    }
+
+    function addRow(node, depth){
+      const row = document.createElement("div");
+      row.className = "node" + (depth>0 ? " indent" : "");
+      row.style.marginLeft = (depth*10) + "px";
+      row.dataset.nodeId = node.id;
+
+      // DRAG
+      row.draggable = (node.id !== "root");
+      row.addEventListener("dragstart", (e)=>{
+        row.classList.add("dragging");
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", node.id);
+      });
+      row.addEventListener("dragend", ()=>{
+        row.classList.remove("dragging");
+        sidebarTree.querySelectorAll(".dropTarget").forEach(x=>x.classList.remove("dropTarget"));
+      });
+
+      // DROP TARGET (apenas pastas aceitam drop)
+      if(isDir(node)){
+        row.addEventListener("dragover", (e)=>{
+          e.preventDefault();
+          e.stopPropagation();               // <<< CRÍTICO: impede “cair no root”
+          e.dataTransfer.dropEffect = "move";
+          row.classList.add("dropTarget");
+          scheduleExpand(node.id);           // <<< auto-expand ao hover
+        });
+
+        row.addEventListener("dragleave", (e)=>{
+          // se saiu mesmo da linha (não para um filho), remove highlight
+          if(!row.contains(e.relatedTarget)){
+            row.classList.remove("dropTarget");
+            cancelExpand(node.id);
+          }
+        });
+
+        row.addEventListener("drop", (e)=>{
+          e.preventDefault();
+          e.stopPropagation();               // <<< CRÍTICO: impede “cair no root”
+          row.classList.remove("dropTarget");
+          cancelExpand(node.id);
+
+          const srcId = e.dataTransfer.getData("text/plain");
+          if(!srcId) return;
+
+          const r = moveNodeToDir(srcId, node.id);
+          if(!r.ok){
+            printLine("drag/drop: " + r.err, "err");
+            return;
+          }
+          printLine(`Movido para: ${fullPathOf(node.id)}`, "ok");
+          renderSidebar();
+        });
+      }
+
+      // caret (só para pasta)
+      const caret = document.createElement("span");
+      if(isDir(node)){
+        caret.textContent = isExpanded(node.id) ? "▼" : "▶";
+        caret.style.width = "18px";
+        caret.style.userSelect = "none";
+        caret.onclick = (e) => { e.stopPropagation(); toggleExpanded(node.id); };
+      } else {
+        caret.textContent = " ";
+        caret.style.width = "18px";
+      }
+
+      const icon = document.createElement("span");
+      icon.textContent = isDir(node) ? "📁" : "📄";
+
+      const name = document.createElement("span");
+      name.className = "name";
+      name.textContent = isDir(node) ? (node.name + "/") : node.name;
+
+      if(isFile(node)){
+        name.classList.add(taskColorClass(node));
+      }
+
+      row.appendChild(caret);
+      row.appendChild(icon);
+      row.appendChild(name);
+
+      if(isDir(node)){
+        row.onclick = () => {
+          state.cwdId = node.id;
+          saveState();
+          updateCwd();
+          renderSidebar();
+          printLine(`${cwdPath()} $ cd ${fullPathOf(node.id)}`, "cmd");
+          printLine(`Agora em: ${cwdPath()}`, "muted");
+        };
+        row.ondblclick = (e) => { e.stopPropagation(); toggleExpanded(node.id); };
+      } else {
+        row.ondblclick = () => openModal(node.id);
+      }
+
+      sidebarTree.appendChild(row);
+    }
+
+    function walk(dirId, depth){
+      const kids = sortKids(childrenOf(dirId));
+      for(const k of kids){
+        addRow(k, depth);
+        if(isDir(k) && isExpanded(k.id)){
+          walk(k.id, depth+1);
+        }
+      }
+    }
+
+    if(settings.sidebarExpanded["root"] === undefined) settings.sidebarExpanded["root"] = true;
+
+    addRow(root, 0);
+    if(isExpanded("root")) walk("root", 1);
+
+    // DROP no vazio => move pro root, mas SOMENTE se o drop for no container (não em cima de uma pasta)
+    sidebarTree.ondragover = (e)=> e.preventDefault();
+    sidebarTree.ondrop = (e)=>{
+      // se o drop caiu sobre uma .node, deixa os handlers da pasta cuidarem
+      if(e.target && e.target.closest && e.target.closest(".node")) return;
+
+      const srcId = e.dataTransfer.getData("text/plain");
+      if(!srcId) return;
+
+      const r = moveNodeToDir(srcId, "root");
+      if(!r.ok) printLine("drag/drop: " + r.err, "err");
+      else { printLine("Movido para: /", "ok"); renderSidebar(); }
+    };
+  }
+
+  // ---------------- Modal editor ----------------
+  function openModal(fileId){
+    const t = nodeById(fileId);
+    if(!t || !isFile(t)) return;
+    editingId = fileId;
+
+    mPath.textContent = fullPathOf(fileId);
+    mName.value = t.name || "";
+    mFolder.value = fullPathOf(t.parentId || "root");
+    mResp.value = t.resp || "";
+    mDue.value = t.due || "";
+    mType.value = t.taskType || "";
+    mStatus.value = t.status || "todo";
+    mPrio.value = String(t.prio || 3);
+    mNotes.value = t.notes || "";
+    mUpdated.value = (t.updatedAt||"").replace("T"," ").slice(0,19);
+
+    modalOverlay.style.display = "flex";
+  }
+  function closeModal(){ modalOverlay.style.display="none"; editingId=null; }
+
+  modalOverlay.addEventListener("click", (e)=>{ if(e.target===modalOverlay) closeModal(); });
+  mClose.addEventListener("click", closeModal);
+
+  mSave.addEventListener("click", ()=>{
+    const t = nodeById(editingId);
+    if(!t || !isFile(t)) return;
+
+    const newName = (mName.value||"").trim();
+    if(!newName){ alert("Nome inválido."); return; }
+
+    const folderPath = (mFolder.value||"").trim() || "/";
+    const folderId = resolvePath(folderPath);
+    if(!folderId){ alert("Pasta inválida."); return; }
+    if(!isDir(nodeById(folderId))){ alert("Destino não é pasta."); return; }
+
+    if(childrenOf(folderId).some(n=>n.name===newName && n.id!==t.id)){
+      alert("Já existe arquivo com esse nome na pasta destino.");
+      return;
+    }
+
+    const oldParent = t.parentId;
+    t.name = newName;
+    t.parentId = folderId;
+    t.resp = (mResp.value||"").trim();
+    t.due = (mDue.value||"").trim();
+    t.taskType = (mType.value||"").trim();
+    t.status = mStatus.value;
+    t.prio = Number(mPrio.value||3);
+    t.notes = mNotes.value || "";
+    t.updatedAt = nowISO();
+
+    touch(oldParent);
+    touch(folderId);
+    saveState();
+
+    closeModal();
+    printLine("Salvo.", "ok");
+    updateCwd();
+    renderSidebar();
+  });
+
+  mDelete.addEventListener("click", ()=>{
+    const t = nodeById(editingId);
+    if(!t || !isFile(t)) return;
+    if(!confirm("Excluir esta atividade?")) return;
+    const r = removeNode(t.id);
+    if(!r.ok){ alert(r.err); return; }
+    closeModal();
+    printLine("Excluída.", "ok");
+    updateCwd();
+    renderSidebar();
+  });
+
+  // ---------------- Config drawer ----------------
+  $("btnConfig").addEventListener("click", ()=> drawerOverlay.style.display="flex");
+  $("btnCloseConfig").addEventListener("click", ()=> drawerOverlay.style.display="none");
+  drawerOverlay.addEventListener("click", (e)=>{ if(e.target===drawerOverlay) drawerOverlay.style.display="none"; });
+
+  defPriority.value = String(settings.defPriority || 3);
+  defStatus.value = settings.defStatus || "todo";
+
+  defPriority.addEventListener("change", ()=>{
+    settings.defPriority = Number(defPriority.value||3);
+    saveSettings();
+  });
+  defStatus.addEventListener("change", ()=>{
+    settings.defStatus = defStatus.value;
+    saveSettings();
+  });
+
+  function renderAliasesUI(){
+    aliasesBox.innerHTML="";
+    const entries = Object.entries(settings.aliases).sort((a,b)=>a[0].localeCompare(b[0]));
+    for(const [k,v] of entries){
+      const row = document.createElement("div");
+      row.className = "aliasItem";
+
+      const inK = document.createElement("input");
+      inK.value = k;
+
+      const inV = document.createElement("input");
+      inV.value = v;
+
+      const btn = document.createElement("button");
+      btn.textContent = "Salvar";
+      btn.onclick = ()=>{
+        const nk=(inK.value||"").trim();
+        const nv=(inV.value||"").trim();
+        if(!nk || !nv) return;
+        if(nk !== k) delete settings.aliases[k];
+        settings.aliases[nk]=nv;
+        saveSettings();
+        renderAliasesUI();
+        printLine(`Alias salvo: ${nk} → ${nv}`, "ok");
+      };
+
+      row.appendChild(inK);
+      row.appendChild(inV);
+      row.appendChild(btn);
+      aliasesBox.appendChild(row);
+    }
+  }
+  renderAliasesUI();
+
+  $("btnAddAlias").addEventListener("click", ()=>{
+    const k = prompt("Nome do alias:");
+    if(!k) return;
+    const v = prompt("Comando alvo:");
+    if(!v) return;
+    settings.aliases[k.trim()] = v.trim();
+    saveSettings();
+    renderAliasesUI();
+    printLine(`Alias criado: ${k.trim()} → ${v.trim()}`, "ok");
+  });
+
+  // ---------------- Autocomplete ----------------
+  function getKnownScoped(){
+    const files = filesInScope(state.cwdId);
+    const resps = Array.from(new Set(files.map(t=>(t.resp||"").trim()).filter(Boolean))).sort((a,b)=>a.localeCompare(b));
+    const types = Array.from(new Set(files.map(t=>(t.taskType||"").trim()).filter(Boolean))).sort((a,b)=>a.localeCompare(b));
+    const dues  = Array.from(new Set(files.map(t=>(t.due||"").trim()).filter(Boolean))).sort((a,b)=>a.localeCompare(b));
+    return { resps, types, dues, statuses:["todo","doing","blocked","sequenciado","done"], prios:["1","2","3","4","5"] };
+  }
+
+  function currentToken(text, caret){
+    const left = text.slice(0, caret);
+    const m = left.match(/(^|[\s"])([^\s"]*)$/);
+    return m ? m[2] : "";
+  }
+
+  function detectActiveTag(text, caret){
+    const left = text.slice(0, caret);
+    let best = { tag:null, idx:-1 };
+    for(const t of TAGS){
+      const i = left.lastIndexOf(t);
+      if(i > best.idx) best = { tag:t, idx:i };
+    }
+    if(best.idx < 0) return null;
+    const after = left.slice(best.idx + best.tag.length);
+    if(after.length && !/^\s/.test(after)) return null;
+    return best.tag;
+  }
+
+  function showAC(items){
+    ac.innerHTML="";
+    if(!items.length){ ac.style.display="none"; return; }
+    for(const it of items.slice(0,60)){
+      const div = document.createElement("div");
+      div.className="item";
+      div.innerHTML = `<span class="a">${escapeHtml(it.label)}</span><span class="b">${escapeHtml(it.hint||"")}</span>`;
+      div.onclick = ()=> applyAC(it.insert);
+      ac.appendChild(div);
+    }
+    ac.style.display="block";
+  }
+  function hideAC(){ ac.style.display="none"; }
+
+  function applyAC(insert){
+    const text = cli.value;
+    const caret = cli.selectionStart || 0;
+
+    const left = text.slice(0, caret);
+    const right = text.slice(caret);
+    const m = left.match(/(^|[\s"])([^\s"]*)$/);
+    const tokenStart = m ? (left.length - m[2].length) : caret;
+
+    const before = text.slice(0, tokenStart);
+    const after = right;
+    const space = (after.startsWith(" ") || after==="") ? "" : " ";
+    cli.value = before + insert + space + after;
+
+    const newCaret = (before + insert + space).length;
+    cli.setSelectionRange(newCaret, newCaret);
+    hideAC();
+    cli.focus();
+  }
+
+  function refreshAC(){
+    const text = cli.value;
+    const caret = cli.selectionStart || 0;
+    const tok = currentToken(text, caret);
+    const activeTag = detectActiveTag(text, caret);
+    const known = getKnownScoped();
+
+    if(tok.startsWith("@")){
+      const q = tok.toLowerCase();
+      const items = TAGS.filter(t=>t.toLowerCase().startsWith(q)).map(t=>({label:t, insert:t, hint:"tag"}));
+      showAC(items);
+      return;
+    }
+
+    if(activeTag){
+      const q = (tok||"").toLowerCase();
+      const list =
+        activeTag==="@resp" ? known.resps :
+        activeTag==="@type" ? known.types :
+        activeTag==="@due" ? known.dues :
+        activeTag==="@status" ? known.statuses :
+        activeTag==="@prio" ? known.prios : [];
+
+      let items = list
+        .filter(v=>v.toLowerCase().includes(q))
+        .map(v=>({label:v, insert:v, hint:`valor para ${activeTag}`}));
+
+      if(activeTag==="@resp" && !items.length){
+        items = known.resps.length
+          ? known.resps.map(v=>({label:v, insert:v, hint:"responsável"}))
+          : [{label:"(nenhum responsável cadastrado)", insert:"", hint:"crie com add ... @resp <nome>"}];
+      }
+      if(activeTag==="@type" && !items.length){
+        items = known.types.length
+          ? known.types.map(v=>({label:v, insert:v, hint:"tipo"}))
+          : [{label:"(nenhum tipo cadastrado)", insert:"", hint:"crie com add ... @type <tipo>"}];
+      }
+      if(activeTag==="@due" && !items.length){
+        const d = todayISODate();
+        items = [{label:d, insert:d, hint:"hoje"}];
+      }
+
+      showAC(items);
+      return;
+    }
+
+    hideAC();
+  }
+
+  cli.addEventListener("input", refreshAC);
+  cli.addEventListener("blur", ()=> setTimeout(hideAC, 120));
+  cli.addEventListener("keydown", (e)=>{
+    if(e.key==="Tab" && ac.style.display==="block"){
+      e.preventDefault();
+      const first = ac.querySelector(".item");
+      if(first) first.click();
+      return;
+    }
+    if(e.key==="Escape"){ hideAC(); return; }
+
+    if(e.key==="ArrowUp"){
+      if(inputHistory.length){
+        e.preventDefault();
+        if(histIdx < 0) histIdx = inputHistory.length;
+        histIdx = Math.max(0, histIdx-1);
+        cli.value = inputHistory[histIdx] || "";
+        cli.setSelectionRange(cli.value.length, cli.value.length);
+        hideAC();
+      }
+      return;
+    }
+    if(e.key==="ArrowDown"){
+      if(inputHistory.length){
+        e.preventDefault();
+        if(histIdx < 0) return;
+        histIdx = Math.min(inputHistory.length, histIdx+1);
+        cli.value = inputHistory[histIdx] || "";
+        cli.setSelectionRange(cli.value.length, cli.value.length);
+        hideAC();
+      }
+      return;
+    }
+    if(e.key==="Enter"){
+      const cmd = cli.value;
+      cli.value = "";
+      hideAC();
+      inputHistory.push(cmd);
+      histIdx = -1;
+      runCommand(cmd);
+      return;
+    }
+    setTimeout(refreshAC, 0);
+  });
+
+  // ---------------- Top buttons ----------------
+  $("btnCopy").addEventListener("click", async ()=>{
+    try{
+      await navigator.clipboard.writeText(lastOutputText.trim());
+      printLine("Copiado.", "ok");
+    }catch{
+      printLine("Falha ao copiar (permissão do navegador).", "err");
+    }
+  });
+
+  $("btnExport").addEventListener("click", ()=>{
+    const payload = { state, settings };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type:"application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "cli-projects-v7-export.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+    printLine("Exportado.", "ok");
+  });
+
+  $("btnImport").addEventListener("click", ()=>{
+    const inp = document.createElement("input");
+    inp.type="file";
+    inp.accept="application/json";
+    inp.onchange = async ()=>{
+      const file = inp.files && inp.files[0];
+      if(!file) return;
+      const txt = await file.text();
+      try{
+        const obj = JSON.parse(txt);
+        if(obj.state && obj.state.nodes) state = obj.state;
+        if(obj.settings) settings = obj.settings;
+        settings.aliases = { ...defaultSettings().aliases, ...(settings.aliases||{}) };
+        settings.sidebarExpanded = settings.sidebarExpanded || { "root": true };
+        saveState(); saveSettings();
+        setTheme();
+        defPriority.value = String(settings.defPriority || 3);
+        defStatus.value = settings.defStatus || "todo";
+        renderAliasesUI();
+        updateCwd();
+        renderSidebar();
+        printLine("Importado.", "ok");
+      }catch{
+        printLine("JSON inválido.", "err");
+      }
+    };
+    inp.click();
+  });
+
+  $("btnTheme").addEventListener("click", ()=>{
+    settings.theme = (settings.theme==="light") ? "dark" : "light";
+    saveSettings();
+    setTheme();
+  });
+
+  $("btnReset").addEventListener("click", ()=>{
+    if(!confirm("Resetar tudo?")) return;
+    localStorage.removeItem(LS_KEY);
+    localStorage.removeItem(SET_KEY);
+    state = defaultState();
+    settings = defaultSettings();
+    saveState(); saveSettings();
+    setTheme();
+    defPriority.value = String(settings.defPriority);
+    defStatus.value = settings.defStatus;
+    renderAliasesUI();
+    term.innerHTML = "";
+    boot();
+    renderSidebar();
+  });
+
+  // ---------------- Boot ----------------
+  function boot(){
+    updateCwd();
+    printLine("Bem-vindo. Digite 'help' para ver comandos.", "muted");
+    printLine("Exemplos:", "muted");
+    printLine(`  mkdir app   (cria e entra)`, "muted");
+    printLine("  ls -ltra", "muted");
+    printLine("  q por-tipo", "muted");
+    printLine("  q tipo feature", "muted");
+    printLine("  focus", "muted");
+    printLine("  resumo", "muted");
+  }
+
+  // init
+  setTheme();
+  defPriority.value = String(settings.defPriority || 3);
+  defStatus.value = settings.defStatus || "todo";
+  saveState(); saveSettings();
+  boot();
+  renderSidebar();
+})();
+</script>
+</body>
+</html>
