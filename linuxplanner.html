@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>CLI Projects — LocalStorage (v7)</title>
+  <title>CLI Projects — LocalStorage (v8)</title>
   <style>
     :root{
       --bg:#0b0f19; --panel:#0f1627; --panel2:#111a2e; --text:#e8eefc; --muted:#9db0d1;
@@ -37,6 +37,7 @@
     button:hover{border-color:rgba(122,162,255,.6)}
     .danger{border-color:rgba(255,107,107,.55); color:var(--danger)}
     .ghost{background:transparent}
+    .mini{padding:6px 8px;border-radius:10px;font-size:12px}
 
     .grid{display:grid;grid-template-columns: 0.52fr 1.48fr; gap:12px}
     @media (max-width: 980px){ .grid{grid-template-columns:1fr} }
@@ -117,8 +118,11 @@
     .ac .a{font-family:var(--mono)}
     .ac .b{color:var(--muted); font-size:12px}
 
-    /* Sidebar: só nome */
-    .treeWrap{font-family:var(--mono); font-size:12.5px; line-height:1.45}
+    /* Sidebar: rolável */
+    .treeWrap{
+      font-family:var(--mono); font-size:12.5px; line-height:1.45;
+      height: 830px; overflow:auto; padding-right:6px;
+    }
     .node{display:flex; gap:8px; align-items:center; padding:6px 8px; border-radius:10px; cursor:pointer; position:relative}
     .node:hover{background:rgba(122,162,255,.08)}
     .node .name{flex:1}
@@ -196,7 +200,11 @@
       <div class="hd">
         <div class="left">
           <div class="k">Árvore</div>
-          <div class="v">Somente nomes • Clique pasta = cd • ▶/▼ expande • Arraste e solte na pasta</div>
+          <div class="v">Rolável • Clique pasta = cd • ▶/▼ expande • Arraste e solte na pasta</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button class="mini" id="btnCollapseAll">Colapsar tudo</button>
+          <button class="mini" id="btnExpandAll">Expandir tudo</button>
         </div>
       </div>
       <div class="bd">
@@ -212,6 +220,7 @@
             <span class="pill">help</span>
             <span class="pill">mkdir (entra)</span>
             <span class="pill">ls -ltra</span>
+            <span class="pill">url "Nome" https://</span>
             <span class="pill">q tipo X</span>
             <span class="pill">focus</span>
             <span class="pill">resumo</span>
@@ -337,8 +346,8 @@
 
 <script>
 (() => {
-  const LS_KEY = "cli_projects_v7_state";
-  const SET_KEY = "cli_projects_v7_settings";
+  const LS_KEY = "cli_projects_v8_state";
+  const SET_KEY = "cli_projects_v8_settings";
   const $ = (id) => document.getElementById(id);
 
   const term = $("term");
@@ -366,6 +375,9 @@
   const mUpdated = $("mUpdated");
   const mDelete = $("mDelete");
   const mSave = $("mSave");
+
+  const btnCollapseAll = $("btnCollapseAll");
+  const btnExpandAll = $("btnExpandAll");
 
   let editingId = null;
   let lastOutputText = "";
@@ -473,6 +485,8 @@
   function childrenOf(pid){ return state.nodes.filter(n=>n.parentId===pid); }
   function isDir(n){ return n && n.type==="dir"; }
   function isFile(n){ return n && n.type==="file"; }
+  function isUrl(n){ return n && n.type==="url"; }
+  function isAnyItem(n){ return isFile(n) || isUrl(n); }
 
   function cwdPath(){
     let cur = nodeById(state.cwdId) || nodeById("root");
@@ -560,6 +574,29 @@
     touch(parentId);
     saveState();
     return {ok:true, node:f};
+  }
+
+  function createUrl(name, link, parentId, meta){
+    if(!name || name.includes("/")) return {ok:false, err:"Nome inválido."};
+    if(!link || !/^https?:\/\//i.test(link)) return {ok:false, err:"URL inválida (use http/https)."};
+    if(childrenOf(parentId).some(n=>n.name===name)) return {ok:false, err:"Já existe."};
+
+    const u = {
+      id: rid(), type:"url", name, parentId,
+      createdAt: nowISO(), updatedAt: nowISO(),
+      url: link,
+      // campos opcionais (caso você queira tratar como item também)
+      resp: meta.resp || "",
+      due: meta.due || "",
+      status: meta.status || settings.defStatus,
+      taskType: meta.type || "",
+      prio: Number(meta.prio || settings.defPriority),
+      notes: meta.note || ""
+    };
+    state.nodes.push(u);
+    touch(parentId);
+    saveState();
+    return {ok:true, node:u};
   }
 
   function removeNode(id){
@@ -679,6 +716,9 @@
     }
     return false;
   }
+  function itemsInScope(scopeDirId){
+    return state.nodes.filter(isAnyItem).filter(f => isDescendantOrSelf(f.parentId, scopeDirId));
+  }
   function filesInScope(scopeDirId){
     return state.nodes.filter(isFile).filter(f => isDescendantOrSelf(f.parentId, scopeDirId));
   }
@@ -704,10 +744,8 @@
   // -------- Color rules --------
   function taskColorClass(t){
     const today = todayISODate();
-
     if((t.status||"") === "sequenciado") return "seqBadge";
     if((t.status||"") === "done") return "c-blue";
-
     if(t.due){
       if(t.due < today) return "c-red";
       if(t.due === today) return "c-yellow";
@@ -715,14 +753,27 @@
     return "c-green";
   }
 
-  function renderClickableFileName(file){
-    const cls = taskColorClass(file);
-    return `<span class="clickable ${cls}" data-open="${file.id}">${escapeHtml(file.name)}</span>`;
+  function renderClickableName(node){
+    if(isUrl(node)){
+      // duplo clique abre URL
+      return `<span class="clickable" data-url="${escapeHtml(node.url||"")}">${escapeHtml(node.name)}</span>`;
+    }
+    // arquivo normal: abre modal no duplo clique
+    const cls = taskColorClass(node);
+    return `<span class="clickable ${cls}" data-open="${node.id}">${escapeHtml(node.name)}</span>`;
   }
 
-  function attachFileDblClickHandlers(){
+  function attachDblClickHandlers(){
+    // tarefas: abrir modal
     term.querySelectorAll("[data-open]").forEach(elm=>{
       elm.ondblclick = () => openModal(elm.getAttribute("data-open"));
+    });
+    // urls: abrir em nova aba
+    term.querySelectorAll("[data-url]").forEach(elm=>{
+      elm.ondblclick = () => {
+        const u = elm.getAttribute("data-url");
+        if(u) window.open(u, "_blank", "noopener,noreferrer");
+      };
     });
   }
 
@@ -781,15 +832,16 @@
   }
 
   function cmd_focus(){
-    const files = filesInScope(state.cwdId).filter(t => (t.status||"") !== "done");
-    if(!files.length){
+    // foco só faz sentido pra tarefas (file e url podem ser "ref", mas você pode mudar isso depois)
+    const tasks = itemsInScope(state.cwdId).filter(t => (t.status||"") !== "done");
+    if(!tasks.length){
       printLine("focus: nenhum item pendente no escopo atual.", "muted");
       return;
     }
     let best = null;
     let bestS = -1e9;
     let bestR = [];
-    for(const t of files){
+    for(const t of tasks){
       const {score, reason} = focusScore(t);
       if(score > bestS){
         bestS = score; best = t; bestR = reason;
@@ -799,7 +851,7 @@
     printHTMLLine("  " + fmtTaskLine(best) + ` <span class="muted">[score ${bestS}]</span>`, "out");
     printLine("Motivo:", "muted");
     bestR.slice(0,8).forEach(r=>printLine("  - " + r, "muted"));
-    attachFileDblClickHandlers();
+    attachDblClickHandlers();
   }
 
   // ----------------- Commands -----------------
@@ -812,6 +864,7 @@
     printLine("  mv <origem> <destino>", "muted");
     printLine("  tree [--depth N]", "muted");
     printLine("  add <nome> @resp <x> @due <YYYY-MM-DD> @status <todo|doing|blocked|sequenciado|done> @type <...> @prio <1-5> @note <...>", "muted");
+    printLine('  url "Nome" https://site.com  (cria favorito web)', "muted");
     printLine("  q hoje | atrasadas | por-pessoa | sem-data | sem-resp | sem-att | por-projeto | sem-tipo | por-tipo | tipo <X>", "muted");
     printLine("  resumo  (roda todas as consultas)", "muted");
     printLine("  @resp   (lista responsáveis no escopo)", "muted");
@@ -843,14 +896,27 @@
     if(!kids.length){ printLine("(vazio)", "muted"); return; }
 
     if(!longFmt){
-      printLine(kids.map(n=>isDir(n)? `${n.name}/` : n.name).join("  "), "out");
+      printLine(kids.map(n=>{
+        if(isDir(n)) return `${n.name}/`;
+        if(isUrl(n)) return `${n.name}@`;
+        return n.name;
+      }).join("  "), "out");
       return;
     }
 
     for(const n of kids){
       if(isDir(n)){
         printLine(`d  ${isoToDateOnly(n.updatedAt)}  ${n.name}/`, "out");
-      }else{
+      } else if(isUrl(n)) {
+        const pr = String(n.prio ?? 3);
+        const st = (n.status||"todo").padEnd(11," ");
+        const due = (n.due||"-").padEnd(10," ");
+        const resp = (n.resp||"-").padEnd(10," ");
+        const upd = isoToDateOnly(n.updatedAt);
+        const type = (n.taskType||"-").padEnd(10," ");
+        const base = `@  p${pr}  ${st}  ${due}  ${resp}  ${type}  ${upd}  `;
+        printHTMLLine(escapeHtml(base) + renderClickableName(n) + ` <span class="muted">${escapeHtml(" ("+(n.url||"")+")")}</span>`, "out");
+      } else {
         const pr = String(n.prio ?? 3);
         const st = (n.status||"todo").padEnd(11," ");
         const due = (n.due||"-").padEnd(10," ");
@@ -858,10 +924,10 @@
         const upd = isoToDateOnly(n.updatedAt);
         const type = (n.taskType||"-").padEnd(10," ");
         const base = `-  p${pr}  ${st}  ${due}  ${resp}  ${type}  ${upd}  `;
-        printHTMLLine(escapeHtml(base) + renderClickableFileName(n), "out");
+        printHTMLLine(escapeHtml(base) + renderClickableName(n), "out");
       }
     }
-    attachFileDblClickHandlers();
+    attachDblClickHandlers();
   }
 
   function cmd_tree(args){
@@ -887,15 +953,17 @@
         if(isDir(n)){
           lines.push(`${escapeHtml(prefix + branch + n.name + "/")}`);
           walk(n.id, nextPrefix, depth+1);
+        } else if(isUrl(n)) {
+          lines.push(`${escapeHtml(prefix + branch)}🔗 ${renderClickableName(n)} <span class="muted">${escapeHtml(" ("+(n.url||"")+")")}</span>`);
         } else {
-          lines.push(`${escapeHtml(prefix + branch)}${renderClickableFileName(n)}`);
+          lines.push(`${escapeHtml(prefix + branch)}${renderClickableName(n)}`);
         }
       });
     }
     walk(state.cwdId, "", 1);
     if(!lines.length) printLine("(vazio)", "muted");
     else lines.forEach(l=>printHTMLLine(l,"out"));
-    attachFileDblClickHandlers();
+    attachDblClickHandlers();
   }
 
   function cmd_cd(args){
@@ -981,6 +1049,28 @@
     updateCwd(); renderSidebar();
   }
 
+  function parseMetaFromTokens(tokens, startIndex){
+    const meta = {};
+    let i = startIndex;
+    while(i < tokens.length){
+      const tk = tokens[i];
+      if(tk && tk.startsWith("@")){
+        const tag=tk;
+        const val = (tokens[i+1] && !tokens[i+1].startsWith("@")) ? tokens[i+1] : "";
+        if(tag==="@resp") meta.resp=val;
+        else if(tag==="@due") meta.due=val;
+        else if(tag==="@status") meta.status=val;
+        else if(tag==="@type") meta.type=val;
+        else if(tag==="@prio") meta.prio=val;
+        else if(tag==="@note") meta.note=val;
+        i += val ? 2 : 1;
+      } else {
+        i++;
+      }
+    }
+    return meta;
+  }
+
   function parseAdd(raw){
     const tokens = tokenize(raw);
     let i=1;
@@ -1024,8 +1114,30 @@
     renderSidebar();
   }
 
+  function cmd_url(raw){
+    // sintaxe: url "Nome" https://site.com [tags...]
+    const tokens = tokenize(raw);
+    const name = tokens[1] || "";
+    const link = tokens[2] || "";
+    if(!name || !link){
+      printLine('url: uso: url "Nome" https://site.com', "muted");
+      return;
+    }
+    const meta = parseMetaFromTokens(tokens, 3);
+    if(meta.due && !/^\d{4}-\d{2}-\d{2}$/.test(meta.due)){
+      printLine("url: @due deve ser YYYY-MM-DD", "err"); return;
+    }
+    if(meta.prio && !(Number(meta.prio)>=1 && Number(meta.prio)<=5)){
+      printLine("url: @prio deve ser 1..5", "err"); return;
+    }
+    const r = createUrl(name, link, state.cwdId, meta);
+    if(!r.ok) printLine("url: " + r.err, "err");
+    else printLine(`Criado favorito: ${name}`, "ok");
+    renderSidebar();
+  }
+
   function cmd_at_resp(){
-    const resps = Array.from(new Set(filesInScope(state.cwdId).map(t => (t.resp||"").trim()).filter(Boolean))).sort((a,b)=>a.localeCompare(b));
+    const resps = Array.from(new Set(itemsInScope(state.cwdId).map(t => (t.resp||"").trim()).filter(Boolean))).sort((a,b)=>a.localeCompare(b));
     printLine("Responsáveis (escopo atual, recursivo):", "out");
     if(!resps.length){ printLine("(nenhum)", "muted"); return; }
     resps.forEach(r=>printLine("  - " + r, "out"));
@@ -1037,25 +1149,29 @@
     const st = t.status || "todo";
     const pr = t.prio || 3;
     const type = (t.taskType||"-");
-    return `${escapeHtml(`[p${pr}] [${st}] [${due}] [${resp}] [type:${type}] `)}${renderClickableFileName(t)} <span class="muted">${escapeHtml("(" + fullPathOf(t.id) + ")")}</span>`;
+    const base = `[p${pr}] [${st}] [${due}] [${resp}] [type:${type}] `;
+    if(isUrl(t)){
+      return `${escapeHtml(base)}🔗 ${renderClickableName(t)} <span class="muted">${escapeHtml("("+(t.url||"")+")")}</span> <span class="muted">${escapeHtml("(" + fullPathOf(t.id) + ")")}</span>`;
+    }
+    return `${escapeHtml(base)}${renderClickableName(t)} <span class="muted">${escapeHtml("(" + fullPathOf(t.id) + ")")}</span>`;
   }
 
   function cmd_q(args){
     const mode = args[0] || "";
-    const files = filesInScope(state.cwdId);
+    const items = itemsInScope(state.cwdId); // inclui url também
     const today = todayISODate();
 
     if(mode==="hoje"){
-      const tasks = files.filter(t=>t.due===today && t.status!=="done").sort(sortByImportance);
+      const tasks = items.filter(t=>t.due===today && t.status!=="done").sort(sortByImportance);
       printLine("Atividades de hoje (recursivo):", "out");
       if(!tasks.length){ printLine("(nenhuma)", "muted"); return; }
       tasks.forEach(t=>printHTMLLine("  " + fmtTaskLine(t), "out"));
-      attachFileDblClickHandlers();
+      attachDblClickHandlers();
       return;
     }
 
     if(mode==="atrasadas"){
-      const tasks = files.filter(t=>t.due && t.due < today && t.status!=="done").sort(sortByImportance);
+      const tasks = items.filter(t=>t.due && t.due < today && t.status!=="done").sort(sortByImportance);
       const g = groupBy(tasks, t=> fullPathOf(t.parentId));
       const keys = Array.from(g.keys()).sort((a,b)=>a.localeCompare(b));
       printLine("Atrasadas por projeto (recursivo):", "out");
@@ -1064,12 +1180,12 @@
         printLine("• " + k, "warn");
         g.get(k).slice().sort(sortByImportance).forEach(t=>printHTMLLine("  " + fmtTaskLine(t), "out"));
       }
-      attachFileDblClickHandlers();
+      attachDblClickHandlers();
       return;
     }
 
     if(mode==="por-pessoa"){
-      const tasks = files.filter(t=>(t.resp||"").trim()).sort(sortByImportance);
+      const tasks = items.filter(t=>(t.resp||"").trim()).sort(sortByImportance);
       const g = groupBy(tasks, t=>t.resp.trim());
       const people = Array.from(g.keys()).sort((a,b)=>a.localeCompare(b));
       printLine("Atividades por pessoa (recursivo):", "out");
@@ -1078,30 +1194,30 @@
         printLine("• " + p, "out");
         g.get(p).slice().sort(sortByImportance).forEach(t=>printHTMLLine("  " + fmtTaskLine(t), "out"));
       }
-      attachFileDblClickHandlers();
+      attachDblClickHandlers();
       return;
     }
 
     if(mode==="sem-data"){
-      const tasks = files.filter(t=>!t.due).sort(sortByImportance);
+      const tasks = items.filter(t=>!t.due).sort(sortByImportance);
       printLine("Sem data (recursivo):", "out");
       if(!tasks.length){ printLine("(nenhuma)", "muted"); return; }
       tasks.forEach(t=>printHTMLLine("  " + fmtTaskLine(t), "out"));
-      attachFileDblClickHandlers();
+      attachDblClickHandlers();
       return;
     }
 
     if(mode==="sem-resp"){
-      const tasks = files.filter(t=>!(t.resp||"").trim()).sort(sortByImportance);
+      const tasks = items.filter(t=>!(t.resp||"").trim()).sort(sortByImportance);
       printLine("Sem responsável (recursivo):", "out");
       if(!tasks.length){ printLine("(nenhuma)", "muted"); return; }
       tasks.forEach(t=>printHTMLLine("  " + fmtTaskLine(t), "out"));
-      attachFileDblClickHandlers();
+      attachDblClickHandlers();
       return;
     }
 
     if(mode==="sem-att"){
-      const tasks = files.filter(t=>t.status!=="done").slice().sort((a,b)=>{
+      const tasks = items.filter(t=>t.status!=="done").slice().sort((a,b)=>{
         const ta = Date.parse(a.updatedAt||a.createdAt||nowISO());
         const tb = Date.parse(b.updatedAt||b.createdAt||nowISO());
         return ta - tb;
@@ -1109,12 +1225,12 @@
       printLine("Mais antigas sem atualização (top 30, recursivo):", "out");
       if(!tasks.length){ printLine("(nenhuma)", "muted"); return; }
       tasks.forEach(t=>printHTMLLine("  " + fmtTaskLine(t) + ` <span class="muted">(upd ${escapeHtml(isoToDateOnly(t.updatedAt))})</span>`, "out"));
-      attachFileDblClickHandlers();
+      attachDblClickHandlers();
       return;
     }
 
     if(mode==="por-projeto"){
-      const tasks = files.slice().sort(sortByImportance);
+      const tasks = items.slice().sort(sortByImportance);
       const g = groupBy(tasks, t=> fullPathOf(t.parentId));
       const keys = Array.from(g.keys()).sort((a,b)=>a.localeCompare(b));
       printLine("Atividades por projeto (recursivo):", "out");
@@ -1123,21 +1239,21 @@
         printLine("• " + k, "out");
         g.get(k).slice().sort(sortByImportance).forEach(t=>printHTMLLine("  " + fmtTaskLine(t), "out"));
       }
-      attachFileDblClickHandlers();
+      attachDblClickHandlers();
       return;
     }
 
     if(mode==="sem-tipo"){
-      const tasks = files.filter(t=>!(t.taskType||"").trim()).sort(sortByImportance);
+      const tasks = items.filter(t=>!(t.taskType||"").trim()).sort(sortByImportance);
       printLine("Sem tipo (recursivo):", "out");
       if(!tasks.length){ printLine("(nenhuma)", "muted"); return; }
       tasks.forEach(t=>printHTMLLine("  " + fmtTaskLine(t), "out"));
-      attachFileDblClickHandlers();
+      attachDblClickHandlers();
       return;
     }
 
     if(mode==="por-tipo"){
-      const tasks = files.slice().sort(sortByImportance);
+      const tasks = items.slice().sort(sortByImportance);
       const g = groupBy(tasks, t=> (t.taskType||"").trim() || "(sem tipo)");
       const keys = Array.from(g.keys()).sort((a,b)=>a.localeCompare(b));
       printLine("Atividades por tipo (recursivo):", "out");
@@ -1146,7 +1262,7 @@
         printLine("• " + k, "out");
         g.get(k).slice().sort(sortByImportance).forEach(t=>printHTMLLine("  " + fmtTaskLine(t), "out"));
       }
-      attachFileDblClickHandlers();
+      attachDblClickHandlers();
       return;
     }
 
@@ -1156,11 +1272,11 @@
         printLine("q tipo: uso: q tipo <nome-do-tipo>", "muted");
         return;
       }
-      const tasks = files.filter(t => ((t.taskType||"").trim().toLowerCase() === wanted)).sort(sortByImportance);
+      const tasks = items.filter(t => ((t.taskType||"").trim().toLowerCase() === wanted)).sort(sortByImportance);
       printLine(`Atividades do tipo "${wanted}" (recursivo):`, "out");
       if(!tasks.length){ printLine("(nenhuma)", "muted"); return; }
       tasks.forEach(t=>printHTMLLine("  " + fmtTaskLine(t), "out"));
-      attachFileDblClickHandlers();
+      attachDblClickHandlers();
       return;
     }
 
@@ -1219,6 +1335,7 @@
       case "rm": cmd_rm(args); break;
       case "mv": cmd_mv(args); break;
       case "add": cmd_add(trimmed); break;
+      case "url": cmd_url(trimmed); break;
       case "q": cmd_q(args); break;
       case "resumo": cmd_resumo(); break;
       case "@resp": cmd_at_resp(); break;
@@ -1233,7 +1350,7 @@
     renderSidebar();
   }
 
-  // ---------------- Sidebar (colapsável + drag/drop CORRIGIDO) ----------------
+  // ---------------- Sidebar (rolável + colapsar/expandir + drag/drop) ----------------
   function isExpanded(id){ return !!settings.sidebarExpanded[id]; }
   function toggleExpanded(id){
     settings.sidebarExpanded[id] = !isExpanded(id);
@@ -1258,6 +1375,22 @@
     const t = hoverExpandTimers.get(dirId);
     if(t){ clearTimeout(t); hoverExpandTimers.delete(dirId); }
   }
+
+  function collapseAll(){
+    settings.sidebarExpanded = { "root": false };
+    saveSettings();
+    renderSidebar();
+  }
+  function expandAll(){
+    const map = {};
+    state.nodes.filter(isDir).forEach(d => map[d.id] = true);
+    settings.sidebarExpanded = map;
+    saveSettings();
+    renderSidebar();
+  }
+
+  btnCollapseAll.addEventListener("click", collapseAll);
+  btnExpandAll.addEventListener("click", expandAll);
 
   function renderSidebar(){
     sidebarTree.innerHTML = "";
@@ -1293,14 +1426,13 @@
       if(isDir(node)){
         row.addEventListener("dragover", (e)=>{
           e.preventDefault();
-          e.stopPropagation();               // <<< CRÍTICO: impede “cair no root”
+          e.stopPropagation();
           e.dataTransfer.dropEffect = "move";
           row.classList.add("dropTarget");
-          scheduleExpand(node.id);           // <<< auto-expand ao hover
+          scheduleExpand(node.id);
         });
 
         row.addEventListener("dragleave", (e)=>{
-          // se saiu mesmo da linha (não para um filho), remove highlight
           if(!row.contains(e.relatedTarget)){
             row.classList.remove("dropTarget");
             cancelExpand(node.id);
@@ -1309,7 +1441,7 @@
 
         row.addEventListener("drop", (e)=>{
           e.preventDefault();
-          e.stopPropagation();               // <<< CRÍTICO: impede “cair no root”
+          e.stopPropagation();
           row.classList.remove("dropTarget");
           cancelExpand(node.id);
 
@@ -1339,7 +1471,7 @@
       }
 
       const icon = document.createElement("span");
-      icon.textContent = isDir(node) ? "📁" : "📄";
+      icon.textContent = isDir(node) ? "📁" : (isUrl(node) ? "🔗" : "📄");
 
       const name = document.createElement("span");
       name.className = "name";
@@ -1363,6 +1495,10 @@
           printLine(`Agora em: ${cwdPath()}`, "muted");
         };
         row.ondblclick = (e) => { e.stopPropagation(); toggleExpanded(node.id); };
+      } else if(isUrl(node)){
+        row.ondblclick = () => {
+          if(node.url) window.open(node.url, "_blank", "noopener,noreferrer");
+        };
       } else {
         row.ondblclick = () => openModal(node.id);
       }
@@ -1385,10 +1521,9 @@
     addRow(root, 0);
     if(isExpanded("root")) walk("root", 1);
 
-    // DROP no vazio => move pro root, mas SOMENTE se o drop for no container (não em cima de uma pasta)
+    // DROP no vazio => move pro root, somente se não caiu em uma .node
     sidebarTree.ondragover = (e)=> e.preventDefault();
     sidebarTree.ondrop = (e)=>{
-      // se o drop caiu sobre uma .node, deixa os handlers da pasta cuidarem
       if(e.target && e.target.closest && e.target.closest(".node")) return;
 
       const srcId = e.dataTransfer.getData("text/plain");
@@ -1400,7 +1535,7 @@
     };
   }
 
-  // ---------------- Modal editor ----------------
+  // ---------------- Modal editor (somente tarefas normais) ----------------
   function openModal(fileId){
     const t = nodeById(fileId);
     if(!t || !isFile(t)) return;
@@ -1538,10 +1673,10 @@
 
   // ---------------- Autocomplete ----------------
   function getKnownScoped(){
-    const files = filesInScope(state.cwdId);
-    const resps = Array.from(new Set(files.map(t=>(t.resp||"").trim()).filter(Boolean))).sort((a,b)=>a.localeCompare(b));
-    const types = Array.from(new Set(files.map(t=>(t.taskType||"").trim()).filter(Boolean))).sort((a,b)=>a.localeCompare(b));
-    const dues  = Array.from(new Set(files.map(t=>(t.due||"").trim()).filter(Boolean))).sort((a,b)=>a.localeCompare(b));
+    const items = itemsInScope(state.cwdId);
+    const resps = Array.from(new Set(items.map(t=>(t.resp||"").trim()).filter(Boolean))).sort((a,b)=>a.localeCompare(b));
+    const types = Array.from(new Set(items.map(t=>(t.taskType||"").trim()).filter(Boolean))).sort((a,b)=>a.localeCompare(b));
+    const dues  = Array.from(new Set(items.map(t=>(t.due||"").trim()).filter(Boolean))).sort((a,b)=>a.localeCompare(b));
     return { resps, types, dues, statuses:["todo","doing","blocked","sequenciado","done"], prios:["1","2","3","4","5"] };
   }
 
@@ -1707,7 +1842,7 @@
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type:"application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = "cli-projects-v7-export.json";
+    a.download = "cli-projects-v8-export.json";
     a.click();
     URL.revokeObjectURL(a.href);
     printLine("Exportado.", "ok");
@@ -1770,9 +1905,10 @@
     printLine("Bem-vindo. Digite 'help' para ver comandos.", "muted");
     printLine("Exemplos:", "muted");
     printLine(`  mkdir app   (cria e entra)`, "muted");
+    printLine(`  add "Implementar login" @resp Darlan @due ${todayISODate()} @status todo @type feature @prio 1`, "muted");
+    printLine(`  url "Docs do projeto" https://example.com`, "muted");
     printLine("  ls -ltra", "muted");
-    printLine("  q por-tipo", "muted");
-    printLine("  q tipo feature", "muted");
+    printLine("  tree", "muted");
     printLine("  focus", "muted");
     printLine("  resumo", "muted");
   }
