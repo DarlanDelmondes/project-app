@@ -784,17 +784,53 @@
     return null;
   }
 
+  function parseAppRefToken(raw){
+    const s = (raw||"").toString().trim();
+    if(!s) return { name:"", id:"" };
+  
+    // aceita "Nome#ID" (ID após o último #)
+    const idx = s.lastIndexOf("#");
+    if(idx > 0 && idx < s.length-1){
+      return {
+        name: s.slice(0, idx).trim(),
+        id: s.slice(idx+1).trim()
+      };
+    }
+    return { name: s, id: "" };
+  }
+  
+  function resolveAppFromRefToken(raw){
+    const { name, id } = parseAppRefToken(raw);
+  
+    // 1) se vier ID e existir app com esse ID, usa
+    if(id){
+      const byId = nodeById(id);
+      if(byId && isApp(byId)) return byId;
+    }
+  
+    // 2) fallback: tenta pelo name
+    const byName = findAppByName(name);
+    if(byName) return byName;
+  
+    // 3) fallback final: se o token inteiro for um id puro
+    const maybeId = nodeById(raw);
+    if(maybeId && isApp(maybeId)) return maybeId;
+  
+    return null;
+  }
+
   function createConn(parentId, meta){
     const cmdbId = nearestCMDBDirId(parentId);
     if(!cmdbId) return {ok:false, err:"Crie conectividades dentro de uma pasta cmdb."};
 
-    const fromName = meta.from || "";
-    const toName = meta.to || "";
-    const fromApp = findAppByName(fromName) || nodeById(fromName); // também aceita id
-    const toApp = findAppByName(toName) || nodeById(toName);
+    const fromRaw = meta.from || "";
+    const toRaw = meta.to || "";
+    
+    const fromApp = resolveAppFromRefToken(fromRaw);
+    const toApp   = resolveAppFromRefToken(toRaw);
 
-    if(!fromApp || !isApp(fromApp)) return {ok:false, err:"@from precisa ser um application existente (nome ou id)."};
-    if(!toApp || !isApp(toApp)) return {ok:false, err:"@to precisa ser um application existente (nome ou id)."};
+    if(!fromApp || !isApp(fromApp)) return {ok:false, err:"@from precisa ser um application existente (nome#id, nome ou id)."};
+    if(!toApp || !isApp(toApp)) return {ok:false, err:"@to precisa ser um application existente (nome#id, nome ou id)."};
     const port = Number(meta.port || "");
     if(!(port>=1 && port<=65535)) return {ok:false, err:"@port inválida (1..65535)."};
 
@@ -897,10 +933,13 @@
   }
 
   function removeNode(id){
-    const n = nodeById(id);
-    if(!n || id==="root") return {ok:false, err:"Não pode."};
+    if(id === "root") return {ok:false, err:"Não pode."};
 
-    if((isDir(n) || isCMDBDir(n)) && childrenOf(id).length) return {ok:false, err:"Pasta não vazia (use rm -r)."};
+    const n = nodeById(id);
+    if(!n) return {ok:false, err:"Ref não encontrada (id inválido ou já removida)."};
+  
+    if((isDir(n) || isCMDBDir(n)) && childrenOf(id).length)
+      return {ok:false, err:"Pasta não vazia (use rm -r)."};
 
     // se remover app, previne se tiver conn referenciando
     if(isApp(n)){
@@ -1095,12 +1134,30 @@
     term.querySelectorAll("[data-open]").forEach(elm=>{
       elm.ondblclick = () => openModal(elm.getAttribute("data-open"));
     });
+  
     term.querySelectorAll("[data-url]").forEach(elm=>{
       elm.ondblclick = () => {
         const u = elm.getAttribute("data-url");
         if(u) window.open(u, "_blank", "noopener,noreferrer");
       };
     });
+  
+    // ✅ novo: duplo clique apaga connref quebrada
+term.querySelectorAll("[data-delref]").forEach(elm=>{
+  elm.ondblclick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const id = elm.dataset.delref; // <- aqui
+    if(!id) { printLine("ref: id vazio", "err"); return; }
+
+    const r = removeNode(id);
+    if(!r.ok) printLine("ref: " + r.err, "err");
+    else printLine("Ref quebrada removida.", "ok");
+
+    updateCwd();
+    renderSidebar();
+  };
+});
   }
 
   function focusScore(t){
@@ -1280,7 +1337,8 @@
         const target = nodeById(n.refConnId);
         if(!target || !isConn(target)){
           printHTMLLine(
-            `R   ${escapeHtml(isoToDateOnly(n.updatedAt))}  🔗 <span class="c-red">ref quebrada</span> ` +
+            `R   ${escapeHtml(isoToDateOnly(n.updatedAt))}  🔗 ` +
+            `<span class="clickable c-red" data-delref="${escapeHtml(n.id)}">ref quebrada (dblclick apaga)</span> ` +
             `<span class="muted">{connref}</span> <span class="muted">id=${escapeHtml(n.id)}</span>`,
             "out"
           );
@@ -1340,10 +1398,18 @@
         else if(isConnRef(n)){
           const target = nodeById(n.refConnId);
           if(!target || !isConn(target)){
-            lines.push(`${escapeHtml(prefix + branch)}🔗 <span class="c-red">ref quebrada</span> <span class="muted">{connref}</span>`);
+            lines.push(
+              `${escapeHtml(prefix + branch)}🔗 ` +
+              `<span class="clickable c-red" data-delref="${escapeHtml(n.id)}">ref quebrada (dblclick apaga)</span> ` +
+              `<span class="muted">{connref}</span>`
+            );
           } else {
-            lines.push(`${escapeHtml(prefix + branch)}${renderConnAsHTML(target, "🔗")} <span class="muted">{connref}</span>`);
-          }
+            const label = shortConnLabel(target);
+            lines.push(
+              `${escapeHtml(prefix + branch)}🔗 ` +
+              `<span class="clickable" data-openconn="${escapeHtml(target.id)}">${escapeHtml(label)}</span> ` +
+              `<span class="muted">{connref}</span>`
+            );          }
         }
         else {
           lines.push(`${escapeHtml(prefix + branch)}${renderClickableName(n)}`);
@@ -1354,6 +1420,27 @@
     if(!lines.length) printLine("(vazio)", "muted");
     else lines.forEach(l=>printHTMLLine(l,"out"));
     attachDblClickHandlers();
+  }
+
+  function shortConnLabel(conn){
+    const raw =
+      conn?.title ||
+      conn?.name ||
+      conn?.label ||
+      conn?.ref ||
+      conn?.path ||
+      conn?.url ||
+      conn?.id ||
+      "conn";
+  
+    const s = String(raw).trim();
+    const noQ = s.split("?")[0].split("#")[0];
+  
+    // se parecer caminho/URL, pega o último segmento
+    const parts = noQ.split("/").filter(Boolean);
+    const last = parts.length ? parts[parts.length - 1] : noQ;
+  
+    return last.length > 28 ? (last.slice(0, 14) + "…" + last.slice(-10)) : last;
   }
 
   function cmd_cd(args){
@@ -2559,7 +2646,130 @@
     }
   }
 
+  function attachSvgZoomPan(svg){
+    if(svg.__zoomPanAttached) return;
+    svg.__zoomPanAttached = true;
   
+    // garante viewBox inicial
+    const initFromSize = ()=>{
+      const w = Number(svg.getAttribute("width")  || svg.clientWidth  || 1200);
+      const h = Number(svg.getAttribute("height") || svg.clientHeight || 800);
+      if(!svg.getAttribute("viewBox")){
+        svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+      }
+    };
+    initFromSize();
+  
+    const getVB = ()=>{
+      const [x,y,w,h] = (svg.getAttribute("viewBox")||"0 0 1200 800").split(/\s+/).map(Number);
+      return {x,y,w,h};
+    };
+    const setVB = (vb)=>{
+      svg.setAttribute("viewBox", `${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
+    };
+  
+    const clamp = (v, a, b)=> Math.max(a, Math.min(b, v));
+  
+    // limites de zoom (ajuste)
+    const MIN_W = 300;     // máximo zoom-in (menor viewBox)
+    const MAX_W = 20000;   // máximo zoom-out (maior viewBox)
+  
+    // converte mouse -> coords do SVG (no espaço do viewBox)
+    function svgPointFromEvent(evt){
+      const rect = svg.getBoundingClientRect();
+      const vb = getVB();
+      const mx = (evt.clientX - rect.left) / rect.width;   // 0..1
+      const my = (evt.clientY - rect.top)  / rect.height;  // 0..1
+      return {
+        x: vb.x + mx * vb.w,
+        y: vb.y + my * vb.h
+      };
+    }
+  
+    function zoomAt(factor, evt){ // factor <1 zoom in, >1 zoom out
+      const vb = getVB();
+      const p = evt ? svgPointFromEvent(evt) : { x: vb.x + vb.w/2, y: vb.y + vb.h/2 };
+  
+      let newW = vb.w * factor;
+      newW = clamp(newW, MIN_W, MAX_W);
+      const scale = newW / vb.w;
+      const newH = vb.h * scale;
+  
+      // mantém o ponto p “parado” na tela
+      const nx = p.x - (p.x - vb.x) * scale;
+      const ny = p.y - (p.y - vb.y) * scale;
+  
+      setVB({ x:nx, y:ny, w:newW, h:newH });
+    }
+  
+    // wheel: zoom (Ctrl opcional; se quiser sempre zoom, remova o if)
+    svg.addEventListener("wheel", (e)=>{
+      // Se quiser zoom só com Ctrl (estilo navegador), deixe assim:
+      // if(!e.ctrlKey) return;
+      e.preventDefault();
+  
+      const delta = e.deltaY;
+      const factor = delta > 0 ? 1.12 : 0.89;
+      zoomAt(factor, e);
+    }, { passive:false });
+  
+    // pan: arrastar com botão do meio ou com espaço+mouse (configurável)
+    let panning = false;
+    let start = null;
+  
+    function startPan(e){
+      // escolha a regra:
+      // - botão do meio (1)
+      // - ou botão esquerdo + tecla Space
+      const ok = (e.button === 1) || (e.button === 0 && e.code === "Space");
+      if(!ok) return;
+  
+      panning = true;
+      svg.style.cursor = "grabbing";
+      start = { ...svgPointFromEvent(e), vb:getVB() };
+      e.preventDefault();
+    }
+  
+    function movePan(e){
+      if(!panning || !start) return;
+      const p = svgPointFromEvent(e);
+      const dx = p.x - start.x;
+      const dy = p.y - start.y;
+      setVB({
+        x: start.vb.x - dx,
+        y: start.vb.y - dy,
+        w: start.vb.w,
+        h: start.vb.h
+      });
+    }
+  
+    function endPan(){
+      if(!panning) return;
+      panning = false;
+      start = null;
+      svg.style.cursor = "";
+    }
+  
+    svg.addEventListener("mousedown", startPan);
+    window.addEventListener("mousemove", movePan);
+    window.addEventListener("mouseup", endPan);
+  
+    // atalhos: + / - / 0 (reset)
+    window.addEventListener("keydown", (e)=>{
+      if(e.target && (e.target.tagName==="INPUT" || e.target.tagName==="TEXTAREA")) return;
+  
+      if(e.key === "+" || (e.key==="=" && e.ctrlKey)){
+        zoomAt(0.89, null);
+      } else if(e.key === "-" || (e.key==="-" && e.ctrlKey)){
+        zoomAt(1.12, null);
+      } else if(e.key === "0" && (e.ctrlKey || e.metaKey)){
+        // reset: volta ao tamanho atual do svg (width/height)
+        const w = Number(svg.getAttribute("width")  || svg.clientWidth  || 1200);
+        const h = Number(svg.getAttribute("height") || svg.clientHeight || 800);
+        setVB({x:0,y:0,w,h});
+      }
+    });
+  }
 
   // ---------------- Modal (multi-type) ----------------
   function fillAppDropdowns(selectedId){
@@ -2952,11 +3162,23 @@
           if(node.url) window.open(node.url, "_blank", "noopener,noreferrer");
         };
       } 
-        else if(isConnRef(node)) {
-            row.ondblclick = () => openModal(node.refConnId);
-        } else {
-            row.ondblclick = () => openModal(node.id);
-        }
+      else if(isConnRef(node)) {
+        row.ondblclick = () => {
+          const target = nodeById(node.refConnId);
+          if(target && isConn(target)){
+            openModal(target.id);
+            return;
+          }
+          // ✅ ref quebrada: dblclick apaga a connref
+          const r = removeNode(node.id);
+          if(!r.ok) printLine("ref: " + r.err, "err");
+          else printLine("Ref quebrada removida.", "ok");
+          updateCwd();
+          renderSidebar();
+        };
+      } else {
+        row.ondblclick = () => openModal(node.id);
+      }
         sidebarTree.appendChild(row);
         }
 
@@ -3155,7 +3377,7 @@ if(activeTag==="@from" || activeTag==="@to"){
     const port = a?.port ? `:${a.port}` : "";
     return {
       label: `${name}${port}`,
-      insert: `"${name}"`,
+      insert: `"${name}#${a.id}"`,
       hint: appScopeHint(a)
     };
   });
