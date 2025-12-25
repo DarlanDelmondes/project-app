@@ -1889,6 +1889,8 @@
       };
     };
   
+    const clamp = (v, lo, hi)=> Math.max(lo, Math.min(hi, v));
+  
     // init drag handlers once per svg
     if(!svg.__cmdbDragInit){
       svg.__cmdbDragInit = true;
@@ -1898,11 +1900,9 @@
         const target = ev.target;
         if(!target) return;
   
-        // find draggable group
         const g = target.closest && target.closest("[data-dragkey]");
         if(!g) return;
   
-        // don't start drag when it's the hover-only mode and user is just hovering edges (edges are pointer-events none)
         const key = g.getAttribute("data-dragkey");
         if(!key) return;
   
@@ -1931,7 +1931,6 @@
         off.dx = ds.startOff.dx + (pt.x - ds.startPt.x);
         off.dy = ds.startOff.dy + (pt.y - ds.startPt.y);
   
-        // rerender with the mode that started the drag (prevents switching mid-drag)
         renderGraph(svg, ds.modeAtStart || mode);
       });
   
@@ -1952,6 +1951,7 @@
     const esc = (s)=> String(s ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
     const getDc  = (c)=> (c.datacenter || c.dc || "").trim() || "(sem dc)";
     const getEnv = (c)=> (c.ambiente || c.env || "").trim() || "(sem env)";
+    const getNs  = (c)=> (c.namespace || c.ns || c.nspace || c.nameSpace || "").trim() || "(sem namespace)";
   
     // filtro de modo
     function allowConnByMode(c){
@@ -2001,6 +2001,10 @@
     const dcPad = 18;
     const envPad = 16;
   
+    const nsPad = 14;
+    const nsTitleH = 26;
+    const nsGap = 14;
+  
     const cmdbW = 330;
     const cmdbColGap = 22;
     const cmdbRowGap = 22;
@@ -2011,18 +2015,21 @@
     const envTitleH = 30;
     const dcTitleH  = 30;
   
-    const perRow = 3; // cmdb por linha dentro do ambiente
+    const perRow = 3; // cmdb por linha dentro do namespace
   
-    // ---------- 1) agrupar: DC -> ENV -> CMDB ----------
-    const dcMap = new Map(); // dc -> envMap
+    // ---------- 1) agrupar: DC -> ENV -> NAMESPACE -> CMDB ----------
+    const dcMap = new Map(); // dc -> envMap(nsMap(list))
     for(const c of cmdbs){
       const dc  = getDc(c);
       const env = getEnv(c);
+      const ns  = getNs(c);
   
       if(!dcMap.has(dc)) dcMap.set(dc, new Map());
       const envMap = dcMap.get(dc);
-      if(!envMap.has(env)) envMap.set(env, []);
-      envMap.get(env).push(c);
+      if(!envMap.has(env)) envMap.set(env, new Map());
+      const nsMap = envMap.get(env);
+      if(!nsMap.has(ns)) nsMap.set(ns, []);
+      nsMap.get(ns).push(c);
     }
   
     // sort em cada nível
@@ -2031,23 +2038,31 @@
       const envMap = dcMap.get(dc);
       const envs = Array.from(envMap.keys()).sort((a,b)=>a.localeCompare(b));
       const newEnvMap = new Map();
+  
       for(const env of envs){
-        const list = envMap.get(env).slice().sort((a,b)=>a.name.localeCompare(b.name));
-        newEnvMap.set(env, list);
+        const nsMap = envMap.get(env);
+        const nss = Array.from(nsMap.keys()).sort((a,b)=>a.localeCompare(b));
+        const newNsMap = new Map();
+  
+        for(const ns of nss){
+          const list = nsMap.get(ns).slice().sort((a,b)=>a.name.localeCompare(b.name));
+          newNsMap.set(ns, list);
+        }
+        newEnvMap.set(env, newNsMap);
       }
       dcMap.set(dc, newEnvMap);
     }
   
-    // ---------- 2) calcular tamanhos/posições: CMDB dentro de ENV ----------
+    // ---------- 2) calcular tamanhos/posições: CMDB dentro de NAMESPACE dentro de ENV ----------
     const cmdbPos = new Map(); // cmdbId -> {x,y,w,h, appPos:Map(appId->{in,out,mid})}
+    const nsPos  = new Map();  // key "dc||env||ns" -> {x,y,w,h}
     const envPos = new Map();  // key "dc||env" -> {x,y,w,h}
     const dcPos  = new Map();  // dc -> {x,y,w,h}
   
-    let cursorY = pad;
-  
-    function computeEnvBox(dc, env, cmdbList, startX, startY){
-      let x = startX + envPad;
-      let y = startY + envTitleH + envPad;
+    function computeNsBox(dc, env, ns, cmdbList, startX, startY){
+      // startX/startY is top-left of the namespace box
+      let x = startX + nsPad;
+      let y = startY + nsTitleH + nsPad;
   
       let colMaxH = 0;
       let maxX = x, maxY = y;
@@ -2057,12 +2072,12 @@
         const cmdbH = headerH + Math.max(1, appsIn.length)*appH + 22;
   
         if(idx>0 && idx % perRow === 0){
-          x = startX + envPad;
+          x = startX + nsPad;
           y = y + colMaxH + cmdbRowGap;
           colMaxH = 0;
         }
   
-        // base position
+        // base CMDB position
         let cx = x;
         let cy = y;
   
@@ -2079,13 +2094,48 @@
         x = x + cmdbW + cmdbColGap;
       });
   
+      const nsW = (maxX - startX) + nsPad;
+      const nsH = (maxY - startY) + nsPad;
+  
+      return { w: Math.max(nsW, cmdbW + nsPad*2), h: Math.max(nsH, nsTitleH + 80) };
+    }
+  
+    function computeEnvBox(dc, env, nsMap, startX, startY){
+      // stack namespaces vertically inside env
+      let innerY = startY + envTitleH + envPad;
+      const envX = startX;
+  
+      let maxX = envX + envPad;
+      let maxY = innerY;
+  
+      for(const ns of Array.from(nsMap.keys())){
+        const cmdbList = nsMap.get(ns) || [];
+  
+        // base NS position
+        let nx = envX + envPad;
+        let ny = innerY;
+  
+        // apply NS offset
+        const offNs = getOffset("ns:" + dc + "||" + env + "||" + ns);
+        nx += offNs.dx; ny += offNs.dy;
+  
+        const { w: nsW, h: nsH } = computeNsBox(dc, env, ns, cmdbList, nx, ny);
+  
+        nsPos.set(dc + "||" + env + "||" + ns, { x:nx, y:ny, w:nsW, h:nsH });
+  
+        innerY = ny + nsH + nsGap;
+        maxX = Math.max(maxX, nx + nsW);
+        maxY = Math.max(maxY, ny + nsH);
+      }
+  
       const envW = (maxX - startX) + envPad;
       const envH = (maxY - startY) + envPad;
   
-      return { w: Math.max(envW, cmdbW + envPad*2), h: Math.max(envH, envTitleH + 80) };
+      return { w: Math.max(envW, cmdbW + envPad*2), h: Math.max(envH, envTitleH + 120) };
     }
   
     // ---------- 3) posicionar DCs empilhados verticalmente ----------
+    let cursorY = pad;
     const canvasWMin = 1400;
     let canvasW = canvasWMin;
   
@@ -2108,8 +2158,9 @@
       let dcMaxY = innerY;
   
       for(const env of envs){
-        const list = envMap.get(env);
+        const nsMap = envMap.get(env);
   
+        // base env position
         let envX = dcX + dcPad;
         let envY = innerY;
   
@@ -2118,7 +2169,7 @@
         envX += offEnv.dx;
         envY += offEnv.dy;
   
-        const { w: envW, h: envH } = computeEnvBox(dc, env, list, envX, envY);
+        const { w: envW, h: envH } = computeEnvBox(dc, env, nsMap, envX, envY);
   
         envPos.set(dc + "||" + env, { x: envX, y: envY, w: envW, h: envH });
   
@@ -2143,6 +2194,7 @@
     // ---------- camadas ----------
     const dcLayer   = svgEl("g");
     const envLayer  = svgEl("g");
+    const nsLayer   = svgEl("g");
     const cmdbLayer = svgEl("g");
     const edgeLayer = svgEl("g");
     const labelLayer= svgEl("g");
@@ -2150,6 +2202,7 @@
   
     svg.appendChild(dcLayer);
     svg.appendChild(envLayer);
+    svg.appendChild(nsLayer);
     svg.appendChild(cmdbLayer);
     svg.appendChild(edgeLayer);
     svg.appendChild(labelLayer);
@@ -2172,7 +2225,6 @@
       if(!p) continue;
   
       const dcKey = "dc:" + dc;
-  
       const dcG = svgEl("g", { "data-dragkey": dcKey, style:"cursor:move" });
       dcLayer.appendChild(dcG);
   
@@ -2194,14 +2246,12 @@
       t.textContent = `DATACENTER: ${dc}`;
       dcG.appendChild(t);
   
-      // ENVs dentro
       const envMap = dcMap.get(dc);
-      for(const [env] of envMap.entries()){
+      for(const [env, nsMap] of envMap.entries()){
         const epos = envPos.get(dc + "||" + env);
         if(!epos) continue;
   
         const envKey = "env:" + dc + "||" + env;
-  
         const envG = svgEl("g", { "data-dragkey": envKey, style:"cursor:move" });
         envLayer.appendChild(envG);
   
@@ -2221,6 +2271,33 @@
         });
         et.textContent = `AMBIENTE: ${env}`;
         envG.appendChild(et);
+  
+        // ---------- 4.1) desenha NAMESPACE dentro do ENV ----------
+        for(const ns of Array.from(nsMap.keys())){
+          const npos = nsPos.get(dc + "||" + env + "||" + ns);
+          if(!npos) continue;
+  
+          const nsKey = "ns:" + dc + "||" + env + "||" + ns;
+          const nsG = svgEl("g", { "data-dragkey": nsKey, style:"cursor:move" });
+          nsLayer.appendChild(nsG);
+  
+          nsG.appendChild(svgEl("rect", {
+            x:npos.x, y:npos.y, width:npos.w, height:npos.h, rx:"16", ry:"16",
+            fill:"rgba(255,255,255,0.028)",
+            stroke:"rgba(255,255,255,0.085)",
+            "stroke-width":"1.0"
+          }));
+  
+          const nt = svgEl("text", {
+            x:npos.x+14, y:npos.y+18,
+            fill:"rgba(255,255,255,0.62)",
+            "font-family":"var(--mono)",
+            "font-size":"12.0",
+            "pointer-events":"none"
+          });
+          nt.textContent = `NAMESPACE: ${ns}`;
+          nsG.appendChild(nt);
+        }
       }
     }
   
@@ -2248,7 +2325,6 @@
         fill, stroke, "stroke-width":"1.2"
       }));
   
-      // título CLIPADO (não estoura)
       const clipId = addClip("cmdbTitleClip_" + c.id, p.x+10, p.y+10, p.w-20, 20);
       const titleG = svgEl("g", { "clip-path": `url(#${clipId})` });
   
@@ -2282,16 +2358,38 @@
       }
   
       list.forEach((a, i)=>{
+        // base (no offset)
         const ay0 = baseY + 18 + i*appH;
         const ax0 = p.x + 18;
   
-        // apply APP offset (relative inside CMDB)
-        const offA = getOffset("app:" + a.id);
-        const ay = ay0 + offA.dy;
-        const ax = ax0 + offA.dx;
-  
         const boxW = Math.min(286, p.w - 36);
         const boxH = 18;
+  
+        // bounds so the app never leaves the CMDB box
+        // (we clamp the OFFSET itself)
+        const minX = p.x + 18;
+        const maxX = p.x + p.w - 18 - boxW;
+  
+        // top/bottom based on app boxY = ay-10 and boxH=18
+        const topBoxY    = p.y + headerH + 6;
+        const bottomBoxY = p.y + p.h - 12 - boxH;
+  
+        const minAy = topBoxY + 10;                 // since boxY = ay-10
+        const maxAy = bottomBoxY + 10;              // keep box fully inside
+  
+        const minDx = minX - ax0;
+        const maxDx = maxX - ax0;
+        const minDy = minAy - ay0;
+        const maxDy = maxAy - ay0;
+  
+        const offA = getOffset("app:" + a.id);
+        // clamp and persist so dragging can't "escape"
+        offA.dx = clamp(offA.dx, minDx, maxDx);
+        offA.dy = clamp(offA.dy, minDy, maxDy);
+  
+        const ax = ax0 + offA.dx;
+        const ay = ay0 + offA.dy;
+  
         const boxX = ax;
         const boxY = ay - 10;
   
@@ -2300,7 +2398,6 @@
         const appKey = "app:" + a.id;
         const g = svgEl("g", { "data-appid": a.id, "data-dragkey": appKey, style:"cursor:move" });
   
-        // bloquinho
         const box = svgEl("rect", {
           x: boxX, y: boxY, width: boxW, height: boxH, rx:"8", ry:"8",
           fill: appIsolated ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.06)",
@@ -2310,7 +2407,6 @@
         });
         g.appendChild(box); remember(a.id, box);
   
-        // conectores in/out
         const inX  = boxX + 6;
         const outX = boxX + boxW - 6;
         const cy   = ay;
@@ -2330,7 +2426,6 @@
         g.appendChild(inDot); g.appendChild(outDot);
         remember(a.id, inDot); remember(a.id, outDot);
   
-        // texto (hover tem que funcionar aqui também)
         const label = svgEl("text", {
           x: boxX + 14, y: ay + 4,
           fill: appIsolated ? "rgba(0,0,0,0.82)" : "var(--text)",
@@ -2341,7 +2436,6 @@
         label.textContent = `${a.name}:${a.port}`;
         g.appendChild(label); remember(a.id, label);
   
-        // salva posições (respeita IN/OUT)
         p.appPos.set(a.id, {
           mid:{ x: boxX + boxW/2, y: ay },
           in: { x: inX,  y: cy },
@@ -2387,7 +2481,6 @@
       const distX = Math.abs(x2 - x1);
       const dist  = Math.hypot(distX, Math.abs(y2-y1));
   
-      // perto = quase reto
       const dx = (dist < 140) ? Math.max(10, distX * 0.08)
                : (dist < 320) ? Math.max(22, distX * 0.18)
                :               Math.max(70, distX * 0.38);
@@ -2895,6 +2988,21 @@
     };
   }
 
+  function appScopeHint(app){
+    const cmdb = app?.cmdbId ? nodeById(app.cmdbId) : null;
+  
+    const dc  = ((cmdb?.datacenter || cmdb?.dc) || "(sem dc)").trim();
+    const env = ((cmdb?.ambiente   || cmdb?.env) || "(sem env)").trim();
+  
+    // namespace é atributo da instância (cmdb)
+    const ns  = ((cmdb?.namespace) || "(sem ns)").trim();
+  
+    // “instância” = o próprio CMDB/host (use o melhor campo que você tiver)
+    const inst = (cmdb?.name || cmdb?.hostname || cmdb?.id || "(sem instância)").toString().trim();
+  
+    return `${dc} › ${env} › ${ns} › ${inst}`;
+  }
+
   // ---------------- Autocomplete ----------------
   function getKnownScoped(){
     const items = itemsInScope(state.cwdId);
@@ -2903,7 +3011,7 @@
     const types = Array.from(new Set(items.filter(isTask).map(t=>(t.taskType||"").trim()).filter(Boolean))).sort((a,b)=>a.localeCompare(b));
     const dues  = Array.from(new Set(items.filter(n => isTask(n) || isUrl(n)).map(t=>(t.due||"").trim()).filter(Boolean))).sort((a,b)=>a.localeCompare(b));
 
-    const apps = allApps().slice().sort((a,b)=>a.name.localeCompare(b.name)).map(a=>a.name);
+    const apps = allApps().slice().sort((a,b)=>a.name.localeCompare(b.name)); // <- mantém objeto
 
     return {
       resps, types, dues,
@@ -3028,12 +3136,33 @@
         return;
       }
 
-      if(activeTag==="@from" || activeTag==="@to"){
-        const list = known.apps;
-        const items = list.filter(v=>v.toLowerCase().includes(q)).map(v=>({label:v, insert:`"${v}"`, hint:"application"}));
-        showAC(items.length ? items : list.map(v=>({label:v, insert:`"${v}"`, hint:"application"})));
-        return;
-      }
+if(activeTag==="@from" || activeTag==="@to"){
+  const list = known.apps; // agora é array de objetos app
+  const ql = (q || "").toLowerCase();
+
+  const filtered = list.filter(a=>{
+    const name = (a?.name || "").toLowerCase();
+    // se quiser também buscar pelo caminho, descomente:
+    // const hint = appScopeHint(a).toLowerCase();
+    // return name.includes(ql) || hint.includes(ql);
+    return name.includes(ql);
+  });
+
+  const base = (filtered.length ? filtered : list).slice(0, 120);
+
+  const items = base.map(a=>{
+    const name = a?.name || "(sem nome)";
+    const port = a?.port ? `:${a.port}` : "";
+    return {
+      label: `${name}${port}`,
+      insert: `"${name}"`,
+      hint: appScopeHint(a)
+    };
+  });
+
+  showAC(items);
+  return;
+}
       if(activeTag==="@port"){
         hideAC(); return;
       }
