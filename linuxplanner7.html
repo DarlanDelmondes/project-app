@@ -1,0 +1,3533 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CLI Projects — LocalStorage (v9 CMDB)</title>
+  <style>
+    :root{
+      --bg:#0b0f19; --panel:#0f1627; --panel2:#111a2e; --text:#e8eefc; --muted:#9db0d1;
+      --line:#243252; --accent:#7aa2ff; --ok:#55e6a5; --warn:#ffd36b; --danger:#ff6b6b; --blue:#65a8ff;
+      --shadow: 0 14px 40px rgba(0,0,0,.45); --radius:14px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    }
+    [data-theme="light"]{
+      --bg:#f6f7fb; --panel:#ffffff; --panel2:#f3f5fb; --text:#0b1220; --muted:#4b5b78;
+      --line:#d7deee; --accent:#2f6bff; --ok:#1a9b66; --warn:#b27b00; --danger:#d83a3a; --blue:#1e64ff;
+      --shadow: 0 14px 40px rgba(9,20,45,.12);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
+    .wrap{max-width:1250px;margin:18px auto;padding:0 14px;display:grid;gap:12px}
+    .topbar{
+      display:flex;align-items:center;justify-content:space-between;gap:10px;
+      padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius);
+      background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      box-shadow:var(--shadow);
+    }
+    .brand{display:flex;flex-direction:column;gap:2px}
+    .brand .t{font-weight:900;letter-spacing:.2px}
+    .brand .s{color:var(--muted);font-size:12px}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}
+    button{
+      border:1px solid var(--line);background:var(--panel2);color:var(--text);
+      padding:8px 10px;border-radius:12px;cursor:pointer;font-weight:750
+    }
+    button:hover{border-color:rgba(122,162,255,.6)}
+    .danger{border-color:rgba(255,107,107,.55); color:var(--danger)}
+    .ghost{background:transparent}
+    .mini{padding:6px 8px;border-radius:10px;font-size:12px}
+
+    .grid{display:grid;grid-template-columns: 0.52fr 1.48fr; gap:12px}
+    @media (max-width: 980px){ .grid{grid-template-columns:1fr} }
+
+    .card{
+      border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);
+      box-shadow:var(--shadow);overflow:hidden;
+    }
+    .card .hd{
+      padding:12px 14px;border-bottom:1px solid var(--line);
+      display:flex;align-items:center;justify-content:space-between;gap:10px
+    }
+    .card .hd .left{display:flex;flex-direction:column;gap:2px}
+    .card .hd .left .k{font-weight:900}
+    .card .hd .left .v{color:var(--muted);font-size:12px}
+    .card .bd{padding:12px 14px}
+
+    .pill{
+      font-family:var(--mono); font-size:12px; padding:2px 8px; border-radius:999px;
+      border:1px solid var(--line); color:var(--muted); background:rgba(255,255,255,.03)
+    }
+
+    .terminal{
+      font-family:var(--mono); font-size:13px; line-height:1.5;
+      height: 830px; overflow:auto; padding:12px; border-radius:12px;
+      background: radial-gradient(900px 420px at 10% 0%, rgba(122,162,255,.10), transparent 60%),
+                  radial-gradient(900px 420px at 90% 0%, rgba(85,230,165,.08), transparent 55%),
+                  rgba(0,0,0,.08);
+      border:1px solid var(--line);
+    }
+    .line{white-space:pre-wrap; word-break:break-word; margin:0 0 6px 0}
+    .cmd{color:var(--text)}
+    .out{color:var(--text)}
+    .muted{color:var(--muted)}
+    .err{color:var(--danger)}
+    .ok{color:var(--ok)}
+    .warn{color:var(--warn)}
+
+    .c-red{color:var(--danger)}
+    .c-yellow{color:var(--warn)}
+    .c-blue{color:var(--blue)}
+    .c-green{color:var(--ok)}
+
+    .seqBadge{
+      background:#ffffff;
+      color:#000000 !important;
+      font-weight:900;
+      padding:1px 6px;
+      border-radius:8px;
+    }
+
+    .clickable{cursor:pointer; text-decoration:underline; text-decoration-color:rgba(122,162,255,.45)}
+    .clickable:hover{text-decoration-color:rgba(122,162,255,.9)}
+
+    .inputrow{position:relative; display:flex; gap:10px; align-items:center; margin-top:10px}
+    .cli{
+      width:100%; padding:12px 12px; border-radius:12px; border:1px solid var(--line);
+      background:var(--panel2); color:var(--text); font-family:var(--mono); font-size:13px;
+      outline:none;
+    }
+    .cli:focus{border-color:rgba(122,162,255,.7); box-shadow:0 0 0 4px rgba(122,162,255,.12)}
+
+    .ac{
+      position:absolute; left:0; right:0; bottom:46px; z-index:20;
+      background:var(--panel); border:1px solid var(--line); border-radius:12px;
+      box-shadow:var(--shadow); overflow:hidden; display:none; max-height:280px; overflow:auto;
+    }
+    .ac .item{
+      padding:10px 10px; display:flex; justify-content:space-between; gap:10px; cursor:pointer;
+      border-bottom:1px solid rgba(255,255,255,.06)
+    }
+    [data-theme="light"] .ac .item{border-bottom:1px solid rgba(10,10,10,.06)}
+    .ac .item:last-child{border-bottom:none}
+    .ac .item:hover{background:rgba(122,162,255,.08)}
+    .ac .a{font-family:var(--mono)}
+    .ac .b{color:var(--muted); font-size:12px}
+
+    .treeWrap{
+      font-family:var(--mono); font-size:12.5px; line-height:1.45;
+      height: 830px; overflow:auto; padding-right:6px;
+    }
+    .node{display:flex; gap:8px; align-items:center; padding:6px 8px; border-radius:10px; cursor:pointer; position:relative}
+    .node:hover{background:rgba(122,162,255,.08)}
+    .node .name{flex:1}
+    .indent{padding-left:16px}
+    .node.dragging{opacity:.55}
+
+    .node.dropTarget{
+      outline:2px dashed rgba(122,162,255,.7);
+      background:rgba(122,162,255,.10);
+      padding-bottom:18px;
+    }
+    .node.dropTarget::after{
+      content:"Solte aqui para mover";
+      position:absolute;
+      left:44px;
+      bottom:4px;
+      font-size:11px;
+      color:var(--muted);
+      font-family:var(--mono);
+    }
+
+    .drawerOverlay{position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:flex-end; justify-content:center; padding:16px; z-index:60}
+    .drawer{
+      width:min(980px, 100%); background:var(--panel); border:1px solid var(--line);
+      border-radius:18px; box-shadow:var(--shadow); overflow:hidden;
+    }
+    .drawer .dh{padding:12px 14px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; gap:10px}
+    .drawer .db{padding:12px 14px}
+    .kv{display:grid; gap:10px}
+    .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+    label{display:grid; gap:6px; font-size:12px; color:var(--muted)}
+    input, select, textarea{
+      width:100%; padding:10px 10px; border-radius:12px; border:1px solid var(--line);
+      background:var(--panel2); color:var(--text); outline:none; font-family:var(--sans);
+    }
+    textarea{min-height:92px; resize:vertical}
+    .sep{height:1px;background:var(--line);margin:12px 0}
+    .aliasItem{display:grid; grid-template-columns:1fr 1fr auto; gap:8px; align-items:center}
+
+    .modalOverlay{position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; padding:18px; z-index:80}
+    .modal{width:min(980px, 100%); background:var(--panel); border:1px solid var(--line); border-radius:18px; box-shadow:var(--shadow); overflow:hidden}
+    .modal .mh{padding:12px 14px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; gap:10px}
+    .modal .mh .title{font-weight:950}
+    .modal .mb{padding:12px 14px}
+    .modal .mf{padding:12px 14px; border-top:1px solid var(--line); display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap}
+    .row3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px}
+    .badge{font-family:var(--mono);font-size:12px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.03)}
+    .hint{font-size:12px;color:var(--muted);margin-top:6px}
+  </style>
+</head>
+
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand">
+      <div class="t">CLI Projects — LocalStorage</div>
+      <div class="s">Terminal + Árvore • <span class="pill" id="cwdPill">/</span></div>
+    </div>
+    <div class="actions">
+      <button id="btnCopy">Copiar saída</button>
+      <button id="btnExport">Exportar</button>
+      <button id="btnImport">Importar</button>
+      <button id="btnConfig">Config</button>
+      <button id="btnTheme">Tema</button>
+      <button class="danger" id="btnReset">Reset</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="hd">
+        <div class="left">
+          <div class="k">Árvore</div>
+          <div class="v">Rolável • Clique pasta = cd • ▶/▼ expande • Arraste e solte na pasta</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button class="mini" id="btnCollapseAll">Colapsar tudo</button>
+          <button class="mini" id="btnExpandAll">Expandir tudo</button>
+        </div>
+      </div>
+      <div class="bd">
+        <div class="treeWrap" id="sidebarTree"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="hd">
+        <div class="left">
+          <div class="k">Terminal</div>
+          <div class="v">
+            <span class="pill">help</span>
+            <span class="pill">mkcmdb</span>
+            <span class="pill">app</span>
+            <span class="pill">conn</span>
+            <span class="pill">cmdb rel</span>
+            <span class="pill">focus</span>
+            <span class="pill">resumo</span>
+          </div>
+        </div>
+        <div class="left" style="text-align:right">
+          <div class="k">Atalhos</div>
+          <div class="v">↑/↓ histórico • Tab completa • Esc fecha</div>
+        </div>
+      </div>
+      <div class="bd">
+        <div class="terminal" id="term"></div>
+        <div class="inputrow">
+          <input class="cli" id="cli" autocomplete="off" spellcheck="false" placeholder="Digite um comando (ex: help)" />
+          <div class="ac" id="ac"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Drawer config -->
+  <div class="drawerOverlay" id="drawerOverlay">
+    <div class="drawer">
+      <div class="dh">
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <div style="font-weight:950">Configurações</div>
+          <div style="font-size:12px;color:var(--muted)">Aliases e defaults</div>
+        </div>
+        <button class="ghost" id="btnCloseConfig">Fechar</button>
+      </div>
+      <div class="db">
+        <div class="kv">
+          <div class="row2">
+            <label>Prioridade padrão (1 alta, 5 baixa)
+              <select id="defPriority">
+                <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+              </select>
+            </label>
+            <label>Status padrão
+              <select id="defStatus">
+                <option value="todo">todo</option>
+                <option value="doing">doing</option>
+                <option value="blocked">blocked</option>
+                <option value="sequenciado">sequenciado</option>
+                <option value="done">done</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="sep"></div>
+
+          <div style="font-size:12px;color:var(--muted)"><b>Aliases</b> (comando → execução)</div>
+          <div id="aliases"></div>
+          <button id="btnAddAlias">Adicionar alias</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal editor -->
+  <div class="modalOverlay" id="modalOverlay">
+    <div class="modal">
+      <div class="mh">
+        <div class="title" id="mTitle">Editar</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="badge" id="mPath"></span>
+          <button class="ghost" id="mClose">Fechar</button>
+        </div>
+      </div>
+      <div class="mb">
+        <!-- Common -->
+        <div class="row2">
+          <label>Nome
+            <input id="mName" />
+          </label>
+          <label>Pasta (caminho)
+            <input id="mFolder" placeholder="/projetos/x" />
+          </label>
+        </div>
+
+        <!-- TASK fields -->
+        <div id="taskFields">
+          <div class="row3" style="margin-top:10px">
+            <label>Responsável
+              <input id="mResp" />
+            </label>
+            <label>Data (due)
+              <input id="mDue" type="date" />
+            </label>
+            <label>Tipo
+              <input id="mType" />
+            </label>
+          </div>
+
+          <div class="row3" style="margin-top:10px">
+            <label>Status
+              <select id="mStatus">
+                <option value="todo">todo</option>
+                <option value="doing">doing</option>
+                <option value="blocked">blocked</option>
+                <option value="sequenciado">sequenciado</option>
+                <option value="done">done</option>
+              </select>
+            </label>
+            <label>Prioridade (1..5)
+              <select id="mPrio">
+                <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+              </select>
+            </label>
+            <label>Atualizado em
+              <input id="mUpdated" disabled />
+            </label>
+          </div>
+
+          <label style="margin-top:10px">Anotações
+            <textarea id="mNotes"></textarea>
+          </label>
+        </div>
+
+        <!-- URL fields -->
+        <div id="urlFields" style="display:none;margin-top:10px">
+          <label>URL
+            <input id="mUrl" placeholder="https://..." />
+          </label>
+          <div class="hint">Duplo clique no item abre em nova aba.</div>
+        </div>
+
+        <!-- CMDB fields -->
+        <div id="cmdbFields" style="display:none;margin-top:10px">
+          <div class="row2">
+            <label>Hostname
+              <input id="mHost" />
+            </label>
+            <label>IP
+              <input id="mIp" placeholder="10.0.0.10" />
+            </label>
+          </div>
+        
+          <div class="row2" style="margin-top:10px">
+            <label>Datacenter
+              <input id="mDc" placeholder="DC1" />
+            </label>
+            <label>Ambiente
+              <input id="mEnv" placeholder="prod|hml|dev" />
+            </label>
+          </div>
+        
+          <div class="row2" style="margin-top:10px">
+            <label>Namespace
+              <input id="mNs" placeholder="payments|core|shared" />
+            </label>
+            <div></div>
+          </div>
+        
+          <div class="hint">Esta pasta é do tipo <b>cmdb</b> e representa um host/servidor.</div>
+        </div>
+
+        <!-- APP fields -->
+        <div id="appFields" style="display:none;margin-top:10px">
+          <div class="row2">
+            <label>Porta
+              <input id="mAppPort" type="number" min="1" max="65535" />
+            </label>
+            <label>Ligado ao CMDB (somente leitura)
+              <input id="mAppCmdb" disabled />
+            </label>
+          </div>
+        </div>
+
+        <!-- CONN fields -->
+        <div id="connFields" style="display:none;margin-top:10px">
+          <div class="row3">
+            <label>Origem (application)
+              <select id="mFrom"></select>
+            </label>
+            <label>Destino (application)
+              <select id="mTo"></select>
+            </label>
+            <label>Porta
+              <input id="mConnPort" type="number" min="1" max="65535" />
+            </label>
+          </div>
+          <div class="row2" style="margin-top:10px">
+            <label>Status conectividade
+              <select id="mConnStatus">
+                <option value="nao-testada">nao-testada</option>
+                <option value="testada">testada</option>
+                <option value="bloqueada">bloqueada</option>
+              </select>
+            </label>
+            <label>Atualizado em
+              <input id="mConnUpdated" disabled />
+            </label>
+          </div>
+          <div class="hint">A origem/destino são applications existentes (podem estar em qualquer CMDB).</div>
+        </div>
+      </div>
+
+      <div class="mf">
+        <button class="danger" id="mDelete">Excluir</button>
+        <button id="mSave">Salvar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const LS_KEY = "cli_projects_v9_state";
+  const SET_KEY = "cli_projects_v9_settings";
+  const $ = (id) => document.getElementById(id);
+
+  const term = $("term");
+  const cli = $("cli");
+  const ac = $("ac");
+  const cwdPill = $("cwdPill");
+  const sidebarTree = $("sidebarTree");
+
+  const drawerOverlay = $("drawerOverlay");
+  const defPriority = $("defPriority");
+  const defStatus = $("defStatus");
+  const aliasesBox = $("aliases");
+
+  const modalOverlay = $("modalOverlay");
+  const mTitle = $("mTitle");
+  const mPath = $("mPath");
+  const mClose = $("mClose");
+  const mName = $("mName");
+  const mFolder = $("mFolder");
+
+  // Task fields
+  const taskFields = $("taskFields");
+  const mResp = $("mResp");
+  const mDue = $("mDue");
+  const mType = $("mType");
+  const mStatus = $("mStatus");
+  const mPrio = $("mPrio");
+  const mNotes = $("mNotes");
+  const mUpdated = $("mUpdated");
+
+  // URL fields
+  const urlFields = $("urlFields");
+  const mUrl = $("mUrl");
+
+  // CMDB fields
+  const cmdbFields = $("cmdbFields");
+  const mHost = $("mHost");
+  const mIp = $("mIp");
+  const mNs = $("mNs");
+  const mDc = $("mDc");
+  const mEnv = $("mEnv");
+
+  // APP fields
+  const appFields = $("appFields");
+  const mAppPort = $("mAppPort");
+  const mAppCmdb = $("mAppCmdb");
+
+  // CONN fields
+  const connFields = $("connFields");
+  const mFrom = $("mFrom");
+  const mTo = $("mTo");
+  const mConnPort = $("mConnPort");
+  const mConnStatus = $("mConnStatus");
+  const mConnUpdated = $("mConnUpdated");
+
+  const mDelete = $("mDelete");
+  const mSave = $("mSave");
+
+  const btnCollapseAll = $("btnCollapseAll");
+  const btnExpandAll = $("btnExpandAll");
+
+  let editingId = null;
+  let lastOutputText = "";
+  let inputHistory = [];
+  let histIdx = -1;
+
+  // Tags gerais (tarefas)
+  const TAGS = ["@resp","@due","@status","@type","@prio","@note"];
+
+  // Tags CMDB
+  const CMDB_TAGS = ["@hostname","@ip","@dc","@env"];
+
+  // Tags app/conn
+  const APP_TAGS = ["@port"];
+  const CONN_TAGS = ["@from","@to","@port","@status"];
+
+  function nowISO(){ return new Date().toISOString(); }
+  function rid(){ return Math.random().toString(16).slice(2) + Math.random().toString(16).slice(2); }
+  function pad(n){ return String(n).padStart(2,"0"); }
+  function todayISODate(){
+    const d = new Date();
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  }
+  function parseDateTS(dateStr){
+    if(!dateStr) return null;
+    const t = Date.parse(dateStr + "T00:00:00");
+    return isNaN(t) ? null : t;
+  }
+  function isoToDateOnly(iso){ return (iso||"").slice(0,10); }
+  function daysBetween(tsA, tsB){
+    return Math.floor((tsA - tsB) / (24*3600*1000));
+  }
+
+  function escapeHtml(s){
+    return String(s)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  function defaultState(){
+    return {
+      nodes: [
+        { id:"root", type:"dir", name:"/", parentId:null, createdAt: nowISO(), updatedAt: nowISO() },
+        { id: rid(), type:"dir", name:"projetos", parentId:"root", createdAt: nowISO(), updatedAt: nowISO() },
+        { id: rid(), type:"dir", name:"infra", parentId:"root", createdAt: nowISO(), updatedAt: nowISO() },
+      ],
+      cwdId:"root"
+    };
+  }
+
+  function defaultSettings(){
+    return {
+      theme:"dark",
+      defPriority: 3,
+      defStatus: "todo",
+      sidebarExpanded: { "root": true },
+      aliases: {
+        "hoje": "q hoje",
+        "atrasadas": "q atrasadas",
+        "por-pessoa": "q por-pessoa",
+        "sem-data": "q sem-data",
+        "sem-resp": "q sem-resp",
+        "sem-att": "q sem-att",
+        "por-projeto": "q por-projeto",
+        "sem-tipo": "q sem-tipo",
+        "por-tipo": "q por-tipo",
+        "agora": "focus",
+        "r": "resumo",
+        "cm": "cmdb",
+        "rel": "cmdb rel"
+      }
+    };
+  }
+
+  function loadJSON(key, fallback){
+    const raw = localStorage.getItem(key);
+    if(!raw) return fallback;
+    try{ return JSON.parse(raw); } catch { return fallback; }
+  }
+  function saveState(){ localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+  function saveSettings(){ localStorage.setItem(SET_KEY, JSON.stringify(settings)); }
+
+  let state = loadJSON(LS_KEY, defaultState());
+  let settings = loadJSON(SET_KEY, defaultSettings());
+  settings.aliases = { ...defaultSettings().aliases, ...(settings.aliases||{}) };
+  settings.sidebarExpanded = settings.sidebarExpanded || { "root": true };
+
+  function setTheme(){
+    document.documentElement.setAttribute("data-theme", settings.theme === "light" ? "light" : "dark");
+  }
+
+  function printLine(text, cls="out"){
+    const div = document.createElement("div");
+    div.className = "line " + cls;
+    div.textContent = text;
+    term.appendChild(div);
+    term.scrollTop = term.scrollHeight;
+    lastOutputText += text + "\n";
+  }
+  function printHTMLLine(html, cls="out"){
+    const div = document.createElement("div");
+    div.className = "line " + cls;
+    div.innerHTML = html;
+    term.appendChild(div);
+    term.scrollTop = term.scrollHeight;
+    const tmp = document.createElement("div");
+    tmp.innerHTML = html;
+    lastOutputText += (tmp.textContent || "") + "\n";
+  }
+  function clearOutBuf(){ lastOutputText = ""; }
+
+  function nodeById(id){ return state.nodes.find(n=>n.id===id) || null; }
+  function childrenOf(pid){ return state.nodes.filter(n=>n.parentId===pid); }
+
+  function isDir(n){ return n && n.type==="dir"; }
+  function isCMDBDir(n){ return n && n.type==="cmdbdir"; }
+  function isTask(n){ return n && n.type==="file"; }
+  function isUrl(n){ return n && n.type==="url"; }
+  function isApp(n){ return n && n.type==="app"; }
+  function isConnRef(n){ return n && n.type==="connref"; }
+  function isConn(n){ return n && n.type==="conn"; }
+
+  function isAnyItem(n){ return isTask(n) || isUrl(n) || isApp(n) || isConn(n) || isConnRef(n); }
+
+  function cwdPath(){
+    let cur = nodeById(state.cwdId) || nodeById("root");
+    if(!cur){ state = defaultState(); saveState(); cur = nodeById("root"); }
+    if(cur.id==="root") return "/";
+    const parts = [];
+    while(cur && cur.id!=="root"){
+      parts.push(cur.name);
+      cur = nodeById(cur.parentId);
+    }
+    return "/" + parts.reverse().join("/");
+  }
+  function updateCwd(){ cwdPill.textContent = cwdPath(); }
+
+  function fullPathOf(id){
+    const n = nodeById(id);
+    if(!n) return "";
+    if(n.id==="root") return "/";
+    const parts = [];
+    let cur = n;
+    while(cur && cur.id!=="root"){
+      parts.push(cur.name);
+      cur = nodeById(cur.parentId);
+    }
+    return "/" + parts.reverse().join("/");
+  }
+
+  function resolvePath(pathStr){
+    if(!pathStr || pathStr === ".") return state.cwdId;
+    let curId = pathStr.startsWith("/") ? "root" : state.cwdId;
+    const parts = (pathStr.startsWith("/") ? pathStr.slice(1) : pathStr).split("/").filter(Boolean);
+
+    for(const part of parts){
+      if(part === ".") continue;
+      if(part === ".."){
+        const cur = nodeById(curId);
+        if(cur && cur.parentId) curId = cur.parentId;
+        continue;
+      }
+      const next = childrenOf(curId).find(n=>n.name===part);
+      if(!next) return null;
+      curId = next.id;
+    }
+    return curId;
+  }
+
+  function splitParentAndName(pathStr){
+    const abs = pathStr.startsWith("/");
+    const cleaned = pathStr.replace(/\/+$/,"");
+    const parts = cleaned.split("/").filter(Boolean);
+    const name = parts.pop() || "";
+    const parentPath = (abs?"/":"") + parts.join("/");
+    return { parentPath: parentPath || (abs?"/":"."), name };
+  }
+
+  function touch(id){
+    const n = nodeById(id);
+    if(n) n.updatedAt = nowISO();
+  }
+
+  function createDir(name, parentId){
+    if(!name || name.includes("/")) return {ok:false, err:"Nome inválido."};
+    if(childrenOf(parentId).some(n=>n.name===name)) return {ok:false, err:"Já existe."};
+    const n = { id: rid(), type:"dir", name, parentId, createdAt: nowISO(), updatedAt: nowISO() };
+    state.nodes.push(n);
+    touch(parentId);
+    saveState();
+    return {ok:true, node:n};
+  }
+
+  function createCMDBDir(name, parentId, meta){
+    if(!name || name.includes("/")) return {ok:false, err:"Nome inválido."};
+    if(childrenOf(parentId).some(n=>n.name===name)) return {ok:false, err:"Já existe."};
+    const n = {
+      id: rid(), type:"cmdbdir", name, parentId,
+      createdAt: nowISO(), updatedAt: nowISO(),
+      hostname: meta.hostname || "",
+      ip: meta.ip || "",
+      datacenter: meta.dc || "",
+      ambiente: meta.env || ""
+    };
+    state.nodes.push(n);
+    touch(parentId);
+    saveState();
+    return {ok:true, node:n};
+  }
+
+  function createTaskFile(name, parentId, meta){
+    if(!name || name.includes("/")) return {ok:false, err:"Nome inválido."};
+    if(childrenOf(parentId).some(n=>n.name===name)) return {ok:false, err:"Já existe."};
+    const f = {
+      id: rid(), type:"file", name, parentId,
+      createdAt: nowISO(), updatedAt: nowISO(),
+      resp: meta.resp || "",
+      due: meta.due || "",
+      status: meta.status || settings.defStatus,
+      taskType: meta.type || "",
+      prio: Number(meta.prio || settings.defPriority),
+      notes: meta.note || ""
+    };
+    state.nodes.push(f);
+    touch(parentId);
+    saveState();
+    return {ok:true, node:f};
+  }
+
+  function createUrl(name, link, parentId, meta){
+    if(!name || name.includes("/")) return {ok:false, err:"Nome inválido."};
+    if(!link || !/^https?:\/\//i.test(link)) return {ok:false, err:"URL inválida (use http/https)."};
+    if(childrenOf(parentId).some(n=>n.name===name)) return {ok:false, err:"Já existe."};
+
+    const u = {
+      id: rid(), type:"url", name, parentId,
+      createdAt: nowISO(), updatedAt: nowISO(),
+      url: link,
+      resp: meta.resp || "",
+      due: meta.due || "",
+      status: meta.status || settings.defStatus,
+      taskType: meta.type || "",
+      prio: Number(meta.prio || settings.defPriority),
+      notes: meta.note || ""
+    };
+    state.nodes.push(u);
+    touch(parentId);
+    saveState();
+    return {ok:true, node:u};
+  }
+
+  function nearestCMDBDirId(fromDirId){
+    let cur = nodeById(fromDirId);
+    while(cur){
+      if(isCMDBDir(cur)) return cur.id;
+      if(!cur.parentId) break;
+      cur = nodeById(cur.parentId);
+    }
+    return null;
+  }
+
+  function createApp(name, parentId, meta){
+    if(!name || name.includes("/")) return {ok:false, err:"Nome inválido."};
+    if(childrenOf(parentId).some(n=>n.name===name)) return {ok:false, err:"Já existe."};
+
+    const cmdbId = nearestCMDBDirId(parentId);
+    if(!cmdbId) return {ok:false, err:"Crie applications dentro de uma pasta cmdb (mkcmdb ... e entre nela)."};
+    const port = Number(meta.port || "");
+    if(!(port>=1 && port<=65535)) return {ok:false, err:"@port inválida (1..65535)."};
+
+    const a = {
+      id: rid(), type:"app", name, parentId,
+      createdAt: nowISO(), updatedAt: nowISO(),
+      port,
+      cmdbId
+    };
+    state.nodes.push(a);
+    touch(parentId);
+    saveState();
+    return {ok:true, node:a};
+  }
+
+  function allApps(){
+    return state.nodes.filter(isApp);
+  }
+
+  function findAppByName(name){
+    const n = (name||"").trim().toLowerCase();
+    if(!n) return null;
+    // tenta match exato primeiro
+    const exact = allApps().find(a => (a.name||"").trim().toLowerCase() === n);
+    if(exact) return exact;
+    // fallback: contains único
+    const hits = allApps().filter(a => (a.name||"").trim().toLowerCase().includes(n));
+    if(hits.length===1) return hits[0];
+    return null;
+  }
+
+  function createConn(parentId, meta){
+    const cmdbId = nearestCMDBDirId(parentId);
+    if(!cmdbId) return {ok:false, err:"Crie conectividades dentro de uma pasta cmdb."};
+
+    const fromName = meta.from || "";
+    const toName = meta.to || "";
+    const fromApp = findAppByName(fromName) || nodeById(fromName); // também aceita id
+    const toApp = findAppByName(toName) || nodeById(toName);
+
+    if(!fromApp || !isApp(fromApp)) return {ok:false, err:"@from precisa ser um application existente (nome ou id)."};
+    if(!toApp || !isApp(toApp)) return {ok:false, err:"@to precisa ser um application existente (nome ou id)."};
+    const port = Number(meta.port || "");
+    if(!(port>=1 && port<=65535)) return {ok:false, err:"@port inválida (1..65535)."};
+
+    const st = (meta.status||"nao-testada").toLowerCase();
+    if(st !== "nao-testada" && st !== "testada" && st !== "bloqueada")
+    return {ok:false, err:"@status deve ser nao-testada, testada ou bloqueada."};
+
+    const name = `${fromApp.name} -> ${toApp.name}:${port}`;
+    if(childrenOf(parentId).some(n=>n.name===name)) return {ok:false, err:"Já existe conectividade com esse nome na pasta."};
+
+    const c = {
+      id: rid(), type:"conn", name, parentId,
+      createdAt: nowISO(), updatedAt: nowISO(),
+      fromAppId: fromApp.id,
+      toAppId: toApp.id,
+      port,
+      connStatus: st,
+      cmdbId
+    };
+    state.nodes.push(c);
+    touch(parentId);
+    saveState();
+    createCrossRefForConn(c, cmdbId);
+    return {ok:true, node:c};
+  }
+
+  function connRefName(conn, fromApp, toApp){
+    // Nome estável: não inclui status para não “ficar desatualizado”
+    return `[ref] ${fromApp.name} -> ${toApp.name}:${conn.port}`;
+  }
+  
+  function existingConnRef(targetDirId, connId){
+    return childrenOf(targetDirId).find(n => isConnRef(n) && n.refConnId === connId) || null;
+  }
+  
+  function createConnRef(targetDirId, conn){
+    const fromApp = nodeById(conn.fromAppId);
+    const toApp = nodeById(conn.toAppId);
+    if(!fromApp || !toApp) return {ok:false, err:"apps não encontrados"};
+  
+    if(existingConnRef(targetDirId, conn.id)) return {ok:true, noop:true};
+  
+    const name = connRefName(conn, fromApp, toApp);
+    // evita colisão por nome
+    if(childrenOf(targetDirId).some(n => n.name === name)){
+      // se colidir, só cria com sufixo curto
+      const name2 = name + " #" + conn.id.slice(0,4);
+      if(childrenOf(targetDirId).some(n => n.name === name2)) return {ok:true, noop:true};
+      return createConnRefNode(targetDirId, conn, name2);
+    }
+    return createConnRefNode(targetDirId, conn, name);
+  }
+  
+  function createConnRefNode(targetDirId, conn, name){
+    const ref = {
+      id: rid(),
+      type: "connref",
+      name,
+      parentId: targetDirId,
+      createdAt: nowISO(),
+      updatedAt: nowISO(),
+      refConnId: conn.id
+    };
+    state.nodes.push(ref);
+    touch(targetDirId);
+    saveState();
+    return {ok:true, node:ref};
+  }
+  
+  /**
+   * Regra que você pediu:
+   * - Se a conectividade foi criada no cmdb da ORIGEM, cria ref no cmdb do DESTINO
+   * - Se foi criada no cmdb do DESTINO, cria ref no cmdb da ORIGEM
+   * - Se foi criada em outro cmdb (ou fora), cria refs em ambos (fallback seguro)
+   */
+  function createCrossRefForConn(conn, createdInCmdbId){
+    const fromApp = nodeById(conn.fromAppId);
+    const toApp = nodeById(conn.toAppId);
+    if(!fromApp || !toApp) return;
+  
+    const fromCmdbId = fromApp.cmdbId;
+    const toCmdbId = toApp.cmdbId;
+  
+    if(!fromCmdbId || !toCmdbId) return;
+  
+    if(createdInCmdbId === fromCmdbId && toCmdbId !== fromCmdbId){
+      createConnRef(toCmdbId, conn);
+      return;
+    }
+    if(createdInCmdbId === toCmdbId && fromCmdbId !== toCmdbId){
+      createConnRef(fromCmdbId, conn);
+      return;
+    }
+  
+    // fallback: cria nos dois lados quando não dá pra inferir “lado onde criou”
+    if(fromCmdbId !== toCmdbId){
+      createConnRef(fromCmdbId, conn);
+      createConnRef(toCmdbId, conn);
+    }
+  }
+
+  function removeNode(id){
+    const n = nodeById(id);
+    if(!n || id==="root") return {ok:false, err:"Não pode."};
+
+    if((isDir(n) || isCMDBDir(n)) && childrenOf(id).length) return {ok:false, err:"Pasta não vazia (use rm -r)."};
+
+    // se remover app, previne se tiver conn referenciando
+    if(isApp(n)){
+      const used = state.nodes.filter(isConn).some(c => c.fromAppId===n.id || c.toAppId===n.id);
+      if(used) return {ok:false, err:"Esse application está referenciado em conectividades. Remova/ajuste as conectividades antes."};
+    }
+
+    const p = n.parentId;
+    state.nodes = state.nodes.filter(x=>x.id!==id);
+    touch(p);
+    if(state.cwdId===id) state.cwdId = p || "root";
+    saveState();
+    return {ok:true};
+  }
+
+  function removeTree(id){
+    const n = nodeById(id);
+    if(!n || id==="root") return {ok:false, err:"Não pode."};
+
+    // bloqueia remover árvore se ela contém app referenciado fora? (simplificação: bloqueia se qualquer app dentro tem conn em qualquer lugar)
+    const del = new Set();
+    (function dfs(x){
+      del.add(x);
+      for(const c of childrenOf(x)) dfs(c.id);
+    })(id);
+
+    const appsToDel = state.nodes.filter(isApp).filter(a => del.has(a.id));
+    for(const a of appsToDel){
+      const used = state.nodes.filter(isConn).some(c => c.fromAppId===a.id || c.toAppId===a.id);
+      if(used) return {ok:false, err:`Árvore contém application referenciado em conectividade (${a.name}). Remova/ajuste conectividades antes.`};
+    }
+
+    const p = n.parentId;
+    state.nodes = state.nodes.filter(x=>!del.has(x.id));
+    touch(p);
+    if(del.has(state.cwdId)) state.cwdId = p || "root";
+    saveState();
+    return {ok:true, count: del.size};
+  }
+
+  function moveNode(srcId, dstParentId, newName=null){
+    const src = nodeById(srcId);
+    if(!src || srcId==="root") return {ok:false, err:"Origem inválida."};
+    const nm = newName || src.name;
+    if(childrenOf(dstParentId).some(n=>n.name===nm && n.id!==srcId)) return {ok:false, err:"Destino já tem esse nome."};
+    const oldP = src.parentId;
+    src.parentId = dstParentId;
+    src.name = nm;
+    src.updatedAt = nowISO();
+    touch(oldP); touch(dstParentId);
+    saveState();
+    return {ok:true, node:src};
+  }
+
+  function isDescendantDir(targetDirId, maybeAncestorDirId){
+    if(targetDirId === maybeAncestorDirId) return true;
+    let cur = nodeById(targetDirId);
+    while(cur && cur.parentId){
+      if(cur.parentId === maybeAncestorDirId) return true;
+      cur = nodeById(cur.parentId);
+    }
+    return false;
+  }
+  function canMove(srcId, dstDirId){
+    if(!srcId || !dstDirId) return { ok:false, err:"Move inválido." };
+    if(srcId === "root") return { ok:false, err:"Não pode mover root." };
+
+    const src = nodeById(srcId);
+    const dst = nodeById(dstDirId);
+    if(!src) return { ok:false, err:"Origem não existe." };
+    if(!(isDir(dst) || isCMDBDir(dst))) return { ok:false, err:"Destino não é pasta." };
+
+    if(src.parentId === dstDirId) return { ok:true, noop:true };
+
+    if((isDir(src) || isCMDBDir(src)) && isDescendantDir(dstDirId, srcId)){
+      return { ok:false, err:"Não pode mover uma pasta para dentro dela mesma." };
+    }
+
+    if(childrenOf(dstDirId).some(n => n.name === src.name && n.id !== src.id)){
+      return { ok:false, err:"Já existe um item com esse nome na pasta destino." };
+    }
+
+    return { ok:true, noop:false };
+  }
+  function moveNodeToDir(srcId, dstDirId){
+    const chk = canMove(srcId, dstDirId);
+    if(!chk.ok) return chk;
+    if(chk.noop) return chk;
+
+    const src = nodeById(srcId);
+    const oldP = src.parentId;
+
+    src.parentId = dstDirId;
+    src.updatedAt = nowISO();
+
+    // se app muda de cmdb, atualiza cmdbId
+    if(isApp(src)){
+      const newCmdb = nearestCMDBDirId(dstDirId);
+      if(newCmdb) src.cmdbId = newCmdb;
+    }
+    // se conn muda de cmdb, atualiza cmdbId
+    if(isConn(src)){
+      const newCmdb = nearestCMDBDirId(dstDirId);
+      if(newCmdb) src.cmdbId = newCmdb;
+    }
+
+    touch(oldP);
+    touch(dstDirId);
+
+    saveState();
+    return { ok:true };
+  }
+
+  function tokenize(s){
+    const out=[]; let cur=""; let inQ=false;
+    for(let i=0;i<s.length;i++){
+      const c=s[i];
+      if(c === '"'){ inQ=!inQ; continue; }
+      if(!inQ && /\s/.test(c)){ if(cur){ out.push(cur); cur=""; } }
+      else cur+=c;
+    }
+    if(cur) out.push(cur);
+    return out;
+  }
+
+  function promptPrefix(){ return `${cwdPath()} $`; }
+  function echoCmd(cmd){ printLine(`${promptPrefix()} ${cmd}`, "cmd"); }
+
+  function isDescendantOrSelf(nodeId, rootId){
+    if(nodeId === rootId) return true;
+    let cur = nodeById(nodeId);
+    while(cur && cur.parentId){
+      if(cur.parentId === rootId) return true;
+      cur = nodeById(cur.parentId);
+      if(cur && cur.id === rootId) return true;
+    }
+    return false;
+  }
+  function itemsInScope(scopeDirId){
+    return state.nodes.filter(isAnyItem).filter(f => isDescendantOrSelf(f.parentId, scopeDirId));
+  }
+
+  function sortByImportance(a,b){
+    const pa = Number(a.prio||3), pb = Number(b.prio||3);
+    if(pa !== pb) return pa - pb;
+    const ta = Date.parse(a.updatedAt||a.createdAt||nowISO());
+    const tb = Date.parse(b.updatedAt||b.createdAt||nowISO());
+    if(ta !== tb) return ta - tb;
+    return a.name.localeCompare(b.name);
+  }
+  function groupBy(arr, keyFn){
+    const m=new Map();
+    for(const x of arr){
+      const k=keyFn(x);
+      if(!m.has(k)) m.set(k, []);
+      m.get(k).push(x);
+    }
+    return m;
+  }
+
+  function taskColorClass(t){
+    const today = todayISODate();
+    if((t.status||"") === "sequenciado") return "seqBadge";
+    if((t.status||"") === "done") return "c-blue";
+    if(t.due){
+      if(t.due < today) return "c-red";
+      if(t.due === today) return "c-yellow";
+    }
+    return "c-green";
+  }
+
+  function connColorClass(c){
+    if(c.connStatus === "bloqueada") return "c-red";
+    return (c.connStatus === "testada") ? "c-blue" : "c-yellow";
+  }
+
+  function renderClickableName(node){
+    if(isUrl(node)){
+      return `<span class="clickable" data-url="${escapeHtml(node.url||"")}">${escapeHtml(node.name)}</span>`;
+    }
+    if(isTask(node)){
+      const cls = taskColorClass(node);
+      return `<span class="clickable ${cls}" data-open="${node.id}">${escapeHtml(node.name)}</span>`;
+    }
+    if(isCMDBDir(node) || isApp(node) || isConn(node)){
+      return `<span class="clickable" data-open="${node.id}">${escapeHtml(node.name)}</span>`;
+    }
+    return escapeHtml(node.name);
+  }
+
+  function attachDblClickHandlers(){
+    term.querySelectorAll("[data-open]").forEach(elm=>{
+      elm.ondblclick = () => openModal(elm.getAttribute("data-open"));
+    });
+    term.querySelectorAll("[data-url]").forEach(elm=>{
+      elm.ondblclick = () => {
+        const u = elm.getAttribute("data-url");
+        if(u) window.open(u, "_blank", "noopener,noreferrer");
+      };
+    });
+  }
+
+  function focusScore(t){
+    if((t.status||"") === "done") return { score: -99999, reason:["done"] };
+
+    const today = todayISODate();
+    const todayTS = parseDateTS(today);
+    const dueTS = t.due ? parseDateTS(t.due) : null;
+
+    let score = 0;
+    const reason = [];
+
+    const pr = Number(t.prio || 3);
+    score += (6 - pr) * 25;
+    reason.push(`prio p${pr} → +${(6-pr)*25}`);
+
+    const st = t.status || "todo";
+    if(st === "doing"){ score += 20; reason.push("doing → +20"); }
+    if(st === "blocked"){ score -= 30; reason.push("blocked → -30"); }
+    if(st === "sequenciado"){ score += 35; reason.push("sequenciado → +35"); }
+
+    if(dueTS !== null){
+      const daysLate = Math.max(0, daysBetween(todayTS, dueTS));
+      const daysAhead = Math.max(0, daysBetween(dueTS, todayTS));
+      if(t.due < today){
+        const add = 140 + Math.min(200, daysLate * 18);
+        score += add;
+        reason.push(`atrasado ${daysLate}d → +${add}`);
+      } else if(t.due === today){
+        score += 90;
+        reason.push("vence hoje → +90");
+      } else {
+        const boost = Math.max(0, 60 - daysAhead * 12);
+        score += boost;
+        reason.push(`vence em ${daysAhead}d → +${boost}`);
+      }
+    } else {
+      score -= 15;
+      reason.push("sem due → -15");
+    }
+
+    const upd = Date.parse(t.updatedAt || t.createdAt || nowISO());
+    const ageDays = Math.max(0, Math.floor((Date.now() - upd) / (24*3600*1000)));
+    const staleBoost = Math.min(40, ageDays * 3);
+    score += staleBoost;
+    if(staleBoost) reason.push(`sem update ${ageDays}d → +${staleBoost}`);
+
+    if(!(t.resp||"").trim()){
+      score -= 10;
+      reason.push("sem resp → -10");
+    }
+
+    return { score, reason };
+  }
+
+  function cmd_focus(){
+    const tasks = itemsInScope(state.cwdId).filter(isTask).filter(t => (t.status||"") !== "done");
+    if(!tasks.length){
+      printLine("focus: nenhum item (task) pendente no escopo atual.", "muted");
+      return;
+    }
+    let best = null;
+    let bestS = -1e9;
+    let bestR = [];
+    for(const t of tasks){
+      const {score, reason} = focusScore(t);
+      if(score > bestS){
+        bestS = score; best = t; bestR = reason;
+      }
+    }
+    printLine("Seu foco agora (tarefas, escopo atual, recursivo):", "out");
+    printHTMLLine("  " + fmtTaskLine(best) + ` <span class="muted">[score ${bestS}]</span>`, "out");
+    printLine("Motivo:", "muted");
+    bestR.slice(0,8).forEach(r=>printLine("  - " + r, "muted"));
+    attachDblClickHandlers();
+  }
+
+  function cmd_help(){
+    printLine("Comandos:", "out");
+    printLine("  ls | ls -ltra", "muted");
+    printLine("  mkdir <pasta>        (cria e entra)", "muted");
+    printLine("  cd <pasta|/caminho|..>", "muted");
+    printLine("  rm <caminho> | rm -r <pasta>", "muted");
+    printLine("  mv <origem> <destino>", "muted");
+    printLine("  tree [--depth N]", "muted");
+    printLine("  add <nome> @resp <x> @due <YYYY-MM-DD> @status <todo|doing|blocked|sequenciado|done> @type <...> @prio <1-5> @note <...>", "muted");
+    printLine('  url "Nome" https://site.com', "muted");
+    printLine("  mkcmdb <nome> @hostname X @ip 10.0.0.1 @dc DC1 @env prod   (cria pasta cmdb e entra)", "muted");
+    printLine('  app "NomeApp" @port 8080   (cria application dentro de cmdb)', "muted");
+    printLine('  conn @from "AppA" @to "AppB" @port 443 @status nao-testada|testada', "muted");
+    printLine("  cmdb | cmdb rel", "muted");
+    printLine("  q hoje | atrasadas | por-pessoa | sem-data | sem-resp | sem-att | por-projeto | sem-tipo | por-tipo | tipo <X>", "muted");
+    printLine("  resumo  (tarefas)", "muted");
+    printLine("  @resp   (lista responsáveis)", "muted");
+    printLine("  focus", "muted");
+    printLine("  aliases | pwd | clear", "muted");
+    printLine("  conn pendentes | conn testadas | conn status <nao-testada|testada>", "muted");
+    printLine("  cmdb graph [errors|nao-testada]  (grafo DC/ENV/CMDB; portas IN/OUT; no modo normal, hover na app destaca conexões)", "muted");
+    printLine("  cmdb find <trecho>   (busca sem case-sensitive em CMDB, apps e conectividades)", "muted");
+  }
+
+  function cmd_pwd(){ printLine(cwdPath(), "out"); }
+  function cmd_clear(){ term.innerHTML=""; }
+
+  function cmd_ls(args){
+    const flags = args.filter(a=>a.startsWith("-")).join("");
+    const longFmt = flags.includes("l");
+    const sortTime = flags.includes("t");
+    const reverse = flags.includes("r");
+    const showAll = flags.includes("a");
+  
+    let list = childrenOf(state.cwdId);
+    if(!showAll) list = list.filter(n=>!n.name.startsWith("."));
+  
+    list.sort((a,b)=>{
+      if(sortTime) return Date.parse(a.updatedAt||a.createdAt||nowISO()) - Date.parse(b.updatedAt||b.createdAt||nowISO());
+      return a.name.localeCompare(b.name);
+    });
+    if(reverse) list.reverse();
+  
+    if(!list.length){ printLine("(vazio)", "muted"); return; }
+  
+    // curto
+    if(!longFmt){
+      printLine(list.map(n=>{
+        if(isDir(n)) return `${n.name}/`;
+        if(isCMDBDir(n)) return `${n.name}{cmdb}/`;
+        if(isUrl(n)) return `${n.name}@`;
+        if(isApp(n)) return `${n.name}{app}`;
+        if(isConn(n)) return `${n.name}{conn}`;
+        if(isConnRef(n)) return `${n.name}{ref}`;
+        return n.name;
+      }).join("  "), "out");
+      return;
+    }
+  
+    // longo
+    for(const n of list){
+      if(isDir(n)){
+        printLine(`d   ${isoToDateOnly(n.updatedAt)}  ${n.name}/`, "out");
+        continue;
+      }
+  
+      if(isCMDBDir(n)){
+        const meta = `host=${n.hostname||"-"} ip=${n.ip||"-"} dc=${n.datacenter||"-"} env=${n.ambiente||"-"}`;
+        printHTMLLine(`C   ${escapeHtml(isoToDateOnly(n.updatedAt))}  ${renderClickableName(n)} <span class="muted">${escapeHtml("{cmdb} "+meta)}</span>`, "out");
+        continue;
+      }
+  
+      if(isUrl(n)){
+        printHTMLLine(`@   ${escapeHtml(isoToDateOnly(n.updatedAt))}  🔗 ${renderClickableName(n)} <span class="muted">${escapeHtml("("+(n.url||"")+")")}</span>`, "out");
+        continue;
+      }
+  
+      if(isApp(n)){
+        const cm = nodeById(n.cmdbId);
+        const cmName = cm ? cm.name : "-";
+        printHTMLLine(`A   ${escapeHtml(isoToDateOnly(n.updatedAt))}  ${renderClickableName(n)} <span class="muted">${escapeHtml("{app} port="+(n.port||"-")+" cmdb="+cmName)}</span>`, "out");
+        continue;
+      }
+  
+      if(isConn(n)){
+        const fa = nodeById(n.fromAppId);
+        const ta = nodeById(n.toAppId);
+        const stCls = connColorClass(n);
+        const st = n.connStatus || "nao-testada";
+        printHTMLLine(
+          `N   ${escapeHtml(isoToDateOnly(n.updatedAt))}  <span class="${stCls}">${escapeHtml(st)}</span>  ${renderClickableName(n)} ` +
+          `<span class="muted">${escapeHtml("{conn} "+(fa?fa.name:"-")+" -> "+(ta?ta.name:"-")+":"+(n.port||"-"))}</span>`,
+          "out"
+        );
+        continue;
+      }
+  
+      // ✅ connref “igualzinha” à conn (status/cor/texto), puxando do alvo
+      if(isConnRef(n)){
+        const target = nodeById(n.refConnId);
+        if(!target || !isConn(target)){
+          printHTMLLine(
+            `R   ${escapeHtml(isoToDateOnly(n.updatedAt))}  🔗 <span class="c-red">ref quebrada</span> ` +
+            `<span class="muted">{connref}</span> <span class="muted">id=${escapeHtml(n.id)}</span>`,
+            "out"
+          );
+        } else {
+          printHTMLLine(
+            `R   ${escapeHtml(isoToDateOnly(n.updatedAt))}  ` +
+            fmtConnLine(target).replace("🔌","🔗") +
+            ` <span class="muted">{connref}</span> <span class="muted">id=${escapeHtml(n.id)}</span>`,
+            "out"
+          );
+        }
+      
+        continue;
+      }
+  
+      // fallback
+      printHTMLLine(`-   ${escapeHtml(isoToDateOnly(n.updatedAt))}  ${renderClickableName(n)}`, "out");
+    }
+  
+    attachDblClickHandlers();
+  }
+
+  function cmd_tree(args){
+    const maxDepth = (() => {
+      const i = args.findIndex(a=>a==="--depth");
+      if(i>=0 && args[i+1]) return Math.max(1, parseInt(args[i+1],10)||10);
+      return 50;
+    })();
+
+    printLine(cwdPath(), "out");
+
+    const lines = [];
+    function walk(dirId, prefix, depth){
+      if(depth > maxDepth) return;
+      const kids = childrenOf(dirId).slice().sort((a,b)=>{
+        const aDir = isDir(a)||isCMDBDir(a);
+        const bDir = isDir(b)||isCMDBDir(b);
+        if(aDir!==bDir) return aDir ? -1 : 1;
+        return a.name.localeCompare(b.name);
+      });
+      kids.forEach((n, idx)=>{
+        const last = idx === kids.length-1;
+        const branch = last ? "└── " : "├── ";
+        const nextPrefix = prefix + (last ? "    " : "│   ");
+        if(isDir(n) || isCMDBDir(n)){
+          const suffix = isCMDBDir(n) ? "{cmdb}/" : "/";
+          lines.push(`${escapeHtml(prefix + branch)}${renderClickableName(n)} <span class="muted">${escapeHtml(suffix)}</span>`);
+          walk(n.id, nextPrefix, depth+1);
+        } else if(isUrl(n)) {
+          lines.push(`${escapeHtml(prefix + branch)}🔗 ${renderClickableName(n)} <span class="muted">${escapeHtml("("+(n.url||"")+")")}</span>`);
+        } else if(isApp(n)) {
+          lines.push(`${escapeHtml(prefix + branch)}🧩 ${renderClickableName(n)} <span class="muted">${escapeHtml("{app}:"+ (n.port||"-"))}</span>`);
+        } else if(isConn(n)) {
+          const stCls = connColorClass(n);
+          lines.push(`${escapeHtml(prefix + branch)}🔌 <span class="${stCls}">${escapeHtml(n.connStatus||"nao-testada")}</span> ${renderClickableName(n)}`);
+        } 
+        else if(isConnRef(n)){
+          const target = nodeById(n.refConnId);
+          if(!target || !isConn(target)){
+            lines.push(`${escapeHtml(prefix + branch)}🔗 <span class="c-red">ref quebrada</span> <span class="muted">{connref}</span>`);
+          } else {
+            lines.push(`${escapeHtml(prefix + branch)}${renderConnAsHTML(target, "🔗")} <span class="muted">{connref}</span>`);
+          }
+        }
+        else {
+          lines.push(`${escapeHtml(prefix + branch)}${renderClickableName(n)}`);
+        }
+      });
+    }
+    walk(state.cwdId, "", 1);
+    if(!lines.length) printLine("(vazio)", "muted");
+    else lines.forEach(l=>printHTMLLine(l,"out"));
+    attachDblClickHandlers();
+  }
+
+  function cmd_cd(args){
+    const target = args[0] || "/";
+    const id = resolvePath(target);
+    if(!id){ printLine(`cd: não encontrado: ${target}`, "err"); return; }
+    const n = nodeById(id);
+    if(!(isDir(n) || isCMDBDir(n))){ printLine(`cd: não é pasta: ${target}`, "err"); return; }
+    state.cwdId = id;
+    saveState();
+    updateCwd();
+    renderSidebar();
+  }
+
+  function cmd_mkdir(args){
+    if(!args[0]){ printLine("mkdir: faltou nome", "err"); return; }
+    const pathStr = args[0];
+    const { parentPath, name } = splitParentAndName(pathStr);
+    const parentId = resolvePath(parentPath);
+    if(!parentId){ printLine(`mkdir: caminho inválido: ${parentPath}`, "err"); return; }
+    const p = nodeById(parentId);
+    if(!(isDir(p) || isCMDBDir(p))){ printLine(`mkdir: não é pasta: ${parentPath}`, "err"); return; }
+
+    const r = createDir(name, parentId);
+    if(!r.ok){ printLine("mkdir: " + r.err, "err"); return; }
+
+    state.cwdId = r.node.id; // entra automaticamente
+    saveState();
+    updateCwd();
+    renderSidebar();
+    printLine(`Agora em: ${cwdPath()}`, "muted");
+  }
+
+  function cmd_rm(args){
+    if(!args.length){ printLine("rm: uso: rm [-r] <caminho>", "err"); return; }
+    const recursive = args.includes("-r") || args.includes("-rf") || args.includes("-fr");
+    const pathArg = args.find(a=>!a.startsWith("-"));
+    if(!pathArg){ printLine("rm: faltou caminho", "err"); return; }
+
+    const id = resolvePath(pathArg);
+    if(!id){ printLine(`rm: não encontrado: ${pathArg}`, "err"); return; }
+
+    const n = nodeById(id);
+    if((isDir(n) || isCMDBDir(n)) && recursive){
+      const r = removeTree(id);
+      if(!r.ok) printLine("rm: " + r.err, "err");
+      else printLine(`Removido (recursivo): ${r.count} nós`, "ok");
+    } else {
+      const r = removeNode(id);
+      if(!r.ok) printLine("rm: " + r.err, "err");
+      else printLine("Removido.", "ok");
+    }
+
+    updateCwd();
+    renderSidebar();
+  }
+
+  function cmd_mv(args){
+    if(args.length < 2){ printLine("mv: uso: mv <origem> <destino>", "err"); return; }
+    const srcId = resolvePath(args[0]);
+    if(!srcId){ printLine(`mv: origem não encontrada: ${args[0]}`, "err"); return; }
+
+    const dstId = resolvePath(args[1]);
+    if(dstId){
+      const dst = nodeById(dstId);
+      if(!(isDir(dst) || isCMDBDir(dst))){ printLine("mv: destino existe e não é pasta", "err"); return; }
+      const src = nodeById(srcId);
+      if((isDir(src) || isCMDBDir(src)) && isDescendantDir(dstId, srcId)){
+        printLine("mv: não pode mover pasta para dentro dela mesma.", "err");
+        return;
+      }
+      const r = moveNode(srcId, dstId, null);
+      if(!r.ok) printLine("mv: " + r.err, "err");
+      updateCwd(); renderSidebar();
+      return;
+    }
+
+    const { parentPath, name } = splitParentAndName(args[1]);
+    const parentId = resolvePath(parentPath);
+    if(!parentId){ printLine(`mv: destino inválido: ${parentPath}`, "err"); return; }
+    const p = nodeById(parentId);
+    if(!(isDir(p) || isCMDBDir(p))){ printLine(`mv: destino não é pasta: ${parentPath}`, "err"); return; }
+
+    const r = moveNode(srcId, parentId, name);
+    if(!r.ok) printLine("mv: " + r.err, "err");
+    updateCwd(); renderSidebar();
+  }
+
+  function parseMetaFromTokens(tokens, startIndex, mapping){
+    // mapping: { "@tag": "fieldName" }
+    const meta = {};
+    let i = startIndex;
+    while(i < tokens.length){
+      const tk = tokens[i];
+      if(tk && tk.startsWith("@")){
+        const tag=tk;
+        const val = (tokens[i+1] && !tokens[i+1].startsWith("@")) ? tokens[i+1] : "";
+        if(mapping[tag]) meta[mapping[tag]] = val;
+        i += val ? 2 : 1;
+      } else {
+        i++;
+      }
+    }
+    return meta;
+  }
+
+  function parseAdd(raw){
+    const tokens = tokenize(raw);
+    let i=1;
+    const nameParts=[];
+    const meta={};
+    while(i < tokens.length){
+      const tk=tokens[i];
+      if(tk.startsWith("@")){
+        const tag=tk;
+        const val = (tokens[i+1] && !tokens[i+1].startsWith("@")) ? tokens[i+1] : "";
+        if(tag==="@resp") meta.resp=val;
+        else if(tag==="@due") meta.due=val;
+        else if(tag==="@status") meta.status=val;
+        else if(tag==="@type") meta.type=val;
+        else if(tag==="@prio") meta.prio=val;
+        else if(tag==="@note") meta.note=val;
+        i += val ? 2 : 1;
+      } else {
+        nameParts.push(tk);
+        i++;
+      }
+    }
+    return { name: nameParts.join(" ").trim(), meta };
+  }
+
+  function cmd_add(raw){
+    const { name, meta } = parseAdd(raw);
+    if(!name){
+      printLine("add: uso: add <nome> @resp <pessoa> @due <YYYY-MM-DD> @status <...> @type <...> @prio <1-5> @note <...>", "muted");
+      return;
+    }
+    if(meta.due && !/^\d{4}-\d{2}-\d{2}$/.test(meta.due)){
+      printLine("add: @due deve ser YYYY-MM-DD", "err"); return;
+    }
+    if(meta.prio && !(Number(meta.prio)>=1 && Number(meta.prio)<=5)){
+      printLine("add: @prio deve ser 1..5", "err"); return;
+    }
+    const r = createTaskFile(name, state.cwdId, meta);
+    if(!r.ok) printLine("add: " + r.err, "err");
+    else printLine(`Criado: ${name}`, "ok");
+    renderSidebar();
+  }
+
+  function cmd_url(raw){
+    const tokens = tokenize(raw);
+    const name = tokens[1] || "";
+    const link = tokens[2] || "";
+    if(!name || !link){
+      printLine('url: uso: url "Nome" https://site.com', "muted");
+      return;
+    }
+    const meta = parseMetaFromTokens(tokens, 3, {
+      "@resp":"resp","@due":"due","@status":"status","@type":"type","@prio":"prio","@note":"note"
+    });
+    if(meta.due && !/^\d{4}-\d{2}-\d{2}$/.test(meta.due)){
+      printLine("url: @due deve ser YYYY-MM-DD", "err"); return;
+    }
+    if(meta.prio && !(Number(meta.prio)>=1 && Number(meta.prio)<=5)){
+      printLine("url: @prio deve ser 1..5", "err"); return;
+    }
+    const r = createUrl(name, link, state.cwdId, meta);
+    if(!r.ok) printLine("url: " + r.err, "err");
+    else printLine(`Criado favorito: ${name}`, "ok");
+    renderSidebar();
+  }
+
+  function cmd_mkcmdb(raw){
+    const tokens = tokenize(raw);
+    const name = tokens[1] || "";
+    if(!name){
+      printLine("mkcmdb: uso: mkcmdb <nome> @hostname X @ip 10.0.0.1 @dc DC1 @env prod", "muted");
+      return;
+    }
+    const meta = parseMetaFromTokens(tokens, 2, {
+      "@hostname":"hostname","@ip":"ip","@dc":"dc","@env":"env"
+    });
+    const r = createCMDBDir(name, state.cwdId, meta);
+    if(!r.ok){ printLine("mkcmdb: " + r.err, "err"); return; }
+
+    // entra automaticamente
+    state.cwdId = r.node.id;
+    saveState();
+    updateCwd();
+    renderSidebar();
+    printLine(`CMDB criado e entrou: ${cwdPath()}`, "ok");
+  }
+
+  function cmd_app(raw){
+    const tokens = tokenize(raw);
+    const name = tokens[1] || "";
+    if(!name){
+      printLine('app: uso: app "NomeApp" @port 8080', "muted");
+      return;
+    }
+    const meta = parseMetaFromTokens(tokens, 2, { "@port":"port" });
+    const r = createApp(name, state.cwdId, meta);
+    if(!r.ok) printLine("app: " + r.err, "err");
+    else printLine(`Application criado: ${name}`, "ok");
+    renderSidebar();
+  }
+
+  function cmd_conn(raw){
+    const tokens = tokenize(raw);
+    const meta = parseMetaFromTokens(tokens, 1, { "@from":"from","@to":"to","@port":"port","@status":"status" });
+    const r = createConn(state.cwdId, meta);
+    if(!r.ok) printLine("conn: " + r.err, "err");
+    else printLine(`Conectividade criada: ${r.node.name}`, "ok");
+    renderSidebar();
+  }
+
+  function cmd_at_resp(){
+    const items = itemsInScope(state.cwdId).filter(n => isTask(n) || isUrl(n));
+    const resps = Array.from(new Set(items.map(t => (t.resp||"").trim()).filter(Boolean))).sort((a,b)=>a.localeCompare(b));
+    printLine("Responsáveis (tarefas/urls, escopo atual, recursivo):", "out");
+    if(!resps.length){ printLine("(nenhum)", "muted"); return; }
+    resps.forEach(r=>printLine("  - " + r, "out"));
+  }
+
+  function fmtTaskLine(t){
+    const due = t.due || "-";
+    const resp = t.resp || "-";
+    const st = t.status || "todo";
+    const pr = t.prio || 3;
+    const type = (t.taskType||"-");
+    const base = `[p${pr}] [${st}] [${due}] [${resp}] [type:${type}] `;
+    return `${escapeHtml(base)}${renderClickableName(t)} <span class="muted">${escapeHtml("(" + fullPathOf(t.id) + ")")}</span>`;
+  }
+
+  function cmd_q(args){
+    const mode = args[0] || "";
+    const items = itemsInScope(state.cwdId);
+    const today = todayISODate();
+
+    const tasks = items.filter(isTask);
+
+    if(mode==="hoje"){
+      const t = tasks.filter(x=>x.due===today && x.status!=="done").sort(sortByImportance);
+      printLine("Atividades de hoje (recursivo):", "out");
+      if(!t.length){ printLine("(nenhuma)", "muted"); return; }
+      t.forEach(x=>printHTMLLine("  " + fmtTaskLine(x), "out"));
+      attachDblClickHandlers();
+      return;
+    }
+
+    if(mode==="atrasadas"){
+      const t = tasks.filter(x=>x.due && x.due < today && x.status!=="done").sort(sortByImportance);
+      const g = groupBy(t, x=> fullPathOf(x.parentId));
+      const keys = Array.from(g.keys()).sort((a,b)=>a.localeCompare(b));
+      printLine("Atrasadas por projeto (recursivo):", "out");
+      if(!keys.length){ printLine("(nenhuma)", "muted"); return; }
+      for(const k of keys){
+        printLine("• " + k, "warn");
+        g.get(k).slice().sort(sortByImportance).forEach(x=>printHTMLLine("  " + fmtTaskLine(x), "out"));
+      }
+      attachDblClickHandlers();
+      return;
+    }
+
+    if(mode==="por-pessoa"){
+      const t = tasks.filter(x=>(x.resp||"").trim()).sort(sortByImportance);
+      const g = groupBy(t, x=>x.resp.trim());
+      const people = Array.from(g.keys()).sort((a,b)=>a.localeCompare(b));
+      printLine("Atividades por pessoa (recursivo):", "out");
+      if(!people.length){ printLine("(nenhuma)", "muted"); return; }
+      for(const p of people){
+        printLine("• " + p, "out");
+        g.get(p).slice().sort(sortByImportance).forEach(x=>printHTMLLine("  " + fmtTaskLine(x), "out"));
+      }
+      attachDblClickHandlers();
+      return;
+    }
+
+    if(mode==="sem-data"){
+      const t = tasks.filter(x=>!x.due).sort(sortByImportance);
+      printLine("Sem data (recursivo):", "out");
+      if(!t.length){ printLine("(nenhuma)", "muted"); return; }
+      t.forEach(x=>printHTMLLine("  " + fmtTaskLine(x), "out"));
+      attachDblClickHandlers();
+      return;
+    }
+
+    if(mode==="sem-resp"){
+      const t = tasks.filter(x=>!(x.resp||"").trim()).sort(sortByImportance);
+      printLine("Sem responsável (recursivo):", "out");
+      if(!t.length){ printLine("(nenhuma)", "muted"); return; }
+      t.forEach(x=>printHTMLLine("  " + fmtTaskLine(x), "out"));
+      attachDblClickHandlers();
+      return;
+    }
+
+    if(mode==="sem-att"){
+      const t = tasks.filter(x=>x.status!=="done").slice().sort((a,b)=>{
+        const ta = Date.parse(a.updatedAt||a.createdAt||nowISO());
+        const tb = Date.parse(b.updatedAt||b.createdAt||nowISO());
+        return ta - tb;
+      }).slice(0,30);
+      printLine("Mais antigas sem atualização (top 30, recursivo):", "out");
+      if(!t.length){ printLine("(nenhuma)", "muted"); return; }
+      t.forEach(x=>printHTMLLine("  " + fmtTaskLine(x) + ` <span class="muted">(upd ${escapeHtml(isoToDateOnly(x.updatedAt))})</span>`, "out"));
+      attachDblClickHandlers();
+      return;
+    }
+
+    if(mode==="por-projeto"){
+      const t = tasks.slice().sort(sortByImportance);
+      const g = groupBy(t, x=> fullPathOf(x.parentId));
+      const keys = Array.from(g.keys()).sort((a,b)=>a.localeCompare(b));
+      printLine("Atividades por projeto (recursivo):", "out");
+      if(!keys.length){ printLine("(nenhuma)", "muted"); return; }
+      for(const k of keys){
+        printLine("• " + k, "out");
+        g.get(k).slice().sort(sortByImportance).forEach(x=>printHTMLLine("  " + fmtTaskLine(x), "out"));
+      }
+      attachDblClickHandlers();
+      return;
+    }
+
+    if(mode==="sem-tipo"){
+      const t = tasks.filter(x=>!(x.taskType||"").trim()).sort(sortByImportance);
+      printLine("Sem tipo (recursivo):", "out");
+      if(!t.length){ printLine("(nenhuma)", "muted"); return; }
+      t.forEach(x=>printHTMLLine("  " + fmtTaskLine(x), "out"));
+      attachDblClickHandlers();
+      return;
+    }
+
+    if(mode==="por-tipo"){
+      const t = tasks.slice().sort(sortByImportance);
+      const g = groupBy(t, x=> (x.taskType||"").trim() || "(sem tipo)");
+      const keys = Array.from(g.keys()).sort((a,b)=>a.localeCompare(b));
+      printLine("Atividades por tipo (recursivo):", "out");
+      if(!keys.length){ printLine("(nenhuma)", "muted"); return; }
+      for(const k of keys){
+        printLine("• " + k, "out");
+        g.get(k).slice().sort(sortByImportance).forEach(x=>printHTMLLine("  " + fmtTaskLine(x), "out"));
+      }
+      attachDblClickHandlers();
+      return;
+    }
+
+    if(mode==="tipo"){
+      const wanted = (args.slice(1).join(" ")||"").trim().toLowerCase();
+      if(!wanted){
+        printLine("q tipo: uso: q tipo <nome-do-tipo>", "muted");
+        return;
+      }
+      const t = tasks.filter(x => ((x.taskType||"").trim().toLowerCase() === wanted)).sort(sortByImportance);
+      printLine(`Atividades do tipo "${wanted}" (recursivo):`, "out");
+      if(!t.length){ printLine("(nenhuma)", "muted"); return; }
+      t.forEach(x=>printHTMLLine("  " + fmtTaskLine(x), "out"));
+      attachDblClickHandlers();
+      return;
+    }
+
+    printLine("q: modos: hoje | atrasadas | por-pessoa | sem-data | sem-resp | sem-att | por-projeto | sem-tipo | por-tipo | tipo <X>", "muted");
+  }
+
+  function cmd_resumo(){
+    printLine("Resumo (tarefas, escopo atual, recursivo):", "out");
+    const sections = [
+      { title: "Hoje", run: () => cmd_q(["hoje"]) },
+      { title: "Atrasadas (por projeto)", run: () => cmd_q(["atrasadas"]) },
+      { title: "Por pessoa", run: () => cmd_q(["por-pessoa"]) },
+      { title: "Sem data", run: () => cmd_q(["sem-data"]) },
+      { title: "Sem responsável", run: () => cmd_q(["sem-resp"]) },
+      { title: "Mais antigas sem atualização", run: () => cmd_q(["sem-att"]) },
+      { title: "Por projeto", run: () => cmd_q(["por-projeto"]) },
+      { title: "Sem tipo", run: () => cmd_q(["sem-tipo"]) },
+      { title: "Por tipo", run: () => cmd_q(["por-tipo"]) },
+    ];
+    for(const s of sections){
+      printLine("", "out");
+      printLine("==== " + s.title + " ====", "muted");
+      s.run();
+    }
+  }
+
+  function cmd_aliases(){
+    printLine("Aliases:", "out");
+    Object.entries(settings.aliases).sort((a,b)=>a[0].localeCompare(b[0]))
+      .forEach(([k,v])=>printLine(`  ${k} → ${v}`, "muted"));
+  }
+
+  // --------- CMDB Views ----------
+  function cmdbSummary(){
+    const cmdbs = state.nodes.filter(isCMDBDir).slice().sort((a,b)=>a.name.localeCompare(b.name));
+    const apps = state.nodes.filter(isApp);
+    const conns = state.nodes.filter(isConn);
+
+    printLine("CMDB — Visão geral:", "out");
+    printLine(`  CMDBs: ${cmdbs.length} | Apps: ${apps.length} | Conectividades: ${conns.length}`, "muted");
+
+    if(!cmdbs.length){
+      printLine("  (nenhum cmdb ainda — use: mkcmdb srv01 @hostname ...)", "muted");
+      return;
+    }
+
+    for(const c of cmdbs){
+      const meta = `host=${c.hostname||"-"} ip=${c.ip||"-"} dc=${c.datacenter||"-"} env=${c.ambiente||"-"}`;
+      printHTMLLine(`• ${renderClickableName(c)} <span class="muted">${escapeHtml(meta)}</span>`, "out");
+
+      const appsIn = apps.filter(a => a.cmdbId === c.id).slice().sort((a,b)=>a.name.localeCompare(b.name));
+      if(appsIn.length){
+        appsIn.forEach(a=>{
+          printHTMLLine(`   - 🧩 ${renderClickableName(a)} <span class="muted">${escapeHtml("port="+a.port)}</span>`, "out");
+        });
+      } else {
+        printLine("   - (sem apps)", "muted");
+      }
+
+      const connsRelated = conns.filter(n => {
+        const fa = nodeById(n.fromAppId);
+        const ta = nodeById(n.toAppId);
+        return (fa && fa.cmdbId===c.id) || (ta && ta.cmdbId===c.id) || (n.cmdbId===c.id);
+      });
+
+      if(connsRelated.length){
+        connsRelated.slice().sort((x,y)=>x.name.localeCompare(y.name)).forEach(n=>{
+          const fa = nodeById(n.fromAppId);
+          const ta = nodeById(n.toAppId);
+          const stCls = connColorClass(n);
+          printHTMLLine(`   - 🔌 <span class="${stCls}">${escapeHtml(n.connStatus||"nao-testada")}</span> <span class="muted">${escapeHtml((fa?fa.name:"-")+" → "+(ta?ta.name:"-")+":"+n.port)}</span>`, "out");
+        });
+      } else {
+        printLine("   - (sem conectividades)", "muted");
+      }
+    }
+    attachDblClickHandlers();
+  }
+
+  function cmdbRelations(){
+    const cmdbs = state.nodes.filter(isCMDBDir).slice().sort((a,b)=>a.name.localeCompare(b.name));
+    const conns = state.nodes.filter(isConn);
+
+    printLine("CMDB — Relações (grafo):", "out");
+    if(!cmdbs.length){
+      printLine("(nenhum cmdb)", "muted");
+      return;
+    }
+    if(!conns.length){
+      printLine("(nenhuma conectividade)", "muted");
+      return;
+    }
+
+    // agrupa por cmdb (pelo cmdbId do conn)
+    const g = groupBy(conns, c => c.cmdbId || "(sem-cmdb)");
+    const keys = Array.from(g.keys()).sort((a,b)=>String(a).localeCompare(String(b)));
+
+    for(const k of keys){
+      const cm = nodeById(k);
+      printLine("• " + (cm ? cm.name : k), "out");
+      g.get(k).forEach(c=>{
+        const fa = nodeById(c.fromAppId);
+        const ta = nodeById(c.toAppId);
+        const stCls = connColorClass(c);
+        const fromCm = fa ? nodeById(fa.cmdbId) : null;
+        const toCm = ta ? nodeById(ta.cmdbId) : null;
+        const fromLabel = `${fromCm?fromCm.name:"-"}:${fa?fa.name:"-"}`;
+        const toLabel   = `${toCm?toCm.name:"-"}:${ta?ta.name:"-"}`;
+
+        printHTMLLine(`   - 🔌 <span class="${stCls}">${escapeHtml(c.connStatus||"nao-testada")}</span> <span class="muted">${escapeHtml(fromLabel)} → ${escapeHtml(toLabel)}:${escapeHtml(String(c.port||"-"))}</span>`, "out");
+      });
+    }
+    attachDblClickHandlers();
+  }
+
+  function cmd_cmdb(args){
+    const sub = (args[0]||"").toLowerCase();
+  
+    if(sub === "rel") return cmdbRelations();
+  
+    if(sub === "graph"){
+      const mode = (args[1]||"").toLowerCase();
+      if(mode === "errors") return openGraph("errors");
+      if(mode === "nao-testada") return openGraph("nao-testada");
+      return openGraph("hover");
+    }
+  
+    if(sub === "find"){
+      const q = (args.slice(1).join(" ")||"").trim();
+      return cmdbFind(q);
+    }
+  
+    return cmdbSummary();
+  }
+
+  function openGraph(mode="hover"){
+    const overlay = document.getElementById("graphOverlay");
+    const svg = document.getElementById("graphSvg");
+    const close = document.getElementById("graphClose");
+  
+    overlay.style.display = "flex";
+  
+    close.onclick = () => overlay.style.display = "none";
+    overlay.onclick = (e) => { if(e.target === overlay) overlay.style.display = "none"; };
+  
+    renderGraph(svg, mode);
+  }
+  
+  function svgEl(tag, attrs={}){
+    const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    for(const [k,v] of Object.entries(attrs)) el.setAttribute(k, v);
+    return el;
+  }
+  
+  function renderGraph(svg, mode="hover"){
+    svg.innerHTML = "";
+  
+    // =========================
+    // Drag infra (self-contained)
+    // =========================
+    state.ui = state.ui || {};
+    state.ui.graphOffsets = state.ui.graphOffsets || {}; // key -> {dx,dy}
+  
+    const getOffset = (key)=>{
+      if(!state.ui.graphOffsets[key]) state.ui.graphOffsets[key] = { dx:0, dy:0 };
+      return state.ui.graphOffsets[key];
+    };
+  
+    const clientToSvg = (clientX, clientY)=>{
+      const r = svg.getBoundingClientRect();
+      const w = Number(svg.getAttribute("width")  || r.width  || 1);
+      const h = Number(svg.getAttribute("height") || r.height || 1);
+      return {
+        x: (clientX - r.left) * (w / (r.width  || 1)),
+        y: (clientY - r.top ) * (h / (r.height || 1))
+      };
+    };
+  
+    // init drag handlers once per svg
+    if(!svg.__cmdbDragInit){
+      svg.__cmdbDragInit = true;
+      svg.__cmdbDragState = null;
+  
+      svg.addEventListener("pointerdown", (ev)=>{
+        const target = ev.target;
+        if(!target) return;
+  
+        // find draggable group
+        const g = target.closest && target.closest("[data-dragkey]");
+        if(!g) return;
+  
+        // don't start drag when it's the hover-only mode and user is just hovering edges (edges are pointer-events none)
+        const key = g.getAttribute("data-dragkey");
+        if(!key) return;
+  
+        ev.preventDefault();
+  
+        const pt = clientToSvg(ev.clientX, ev.clientY);
+        const off = getOffset(key);
+  
+        svg.__cmdbDragState = {
+          key,
+          startPt: pt,
+          startOff: { dx: off.dx, dy: off.dy },
+          modeAtStart: mode
+        };
+  
+        if(target.setPointerCapture) target.setPointerCapture(ev.pointerId);
+      });
+  
+      svg.addEventListener("pointermove", (ev)=>{
+        const ds = svg.__cmdbDragState;
+        if(!ds) return;
+  
+        const pt = clientToSvg(ev.clientX, ev.clientY);
+        const off = getOffset(ds.key);
+  
+        off.dx = ds.startOff.dx + (pt.x - ds.startPt.x);
+        off.dy = ds.startOff.dy + (pt.y - ds.startPt.y);
+  
+        // rerender with the mode that started the drag (prevents switching mid-drag)
+        renderGraph(svg, ds.modeAtStart || mode);
+      });
+  
+      const end = ()=>{ svg.__cmdbDragState = null; };
+      svg.addEventListener("pointerup", end);
+      svg.addEventListener("pointercancel", end);
+      svg.addEventListener("pointerleave", end);
+    }
+  
+    // =========================
+    // Data
+    // =========================
+    const cmdbs = state.nodes.filter(isCMDBDir).slice().sort((a,b)=>a.name.localeCompare(b.name));
+    const apps  = state.nodes.filter(isApp);
+    const conns = state.nodes.filter(isConn);
+  
+    // ---------- helpers ----------
+    const esc = (s)=> String(s ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+    const getDc  = (c)=> (c.datacenter || c.dc || "").trim() || "(sem dc)";
+    const getEnv = (c)=> (c.ambiente || c.env || "").trim() || "(sem env)";
+  
+    // filtro de modo
+    function allowConnByMode(c){
+      const st = (c.connStatus || "nao-testada");
+      if(mode === "errors") return st === "bloqueada";
+      if(mode === "nao-testada") return st === "nao-testada";
+      return true; // hover
+    }
+  
+    function strokeForConn(c){
+      const st = (c.connStatus || "nao-testada");
+      if(st === "bloqueada") return { color:"rgba(255,107,107,0.95)", w:2.6, dash:"7 6" }; // vermelha pontilhada
+      if(st === "testada")   return { color:"rgba(101,168,255,0.9)",  w:2.4, dash:"" };
+      return { color:"rgba(255,211,107,0.95)", w:2.0, dash:"" };
+    }
+  
+    // graus (isolados)
+    const appDegree = new Map();
+    const cmdbDegree = new Map();
+    const inc = (m,k)=>m.set(k,(m.get(k)||0)+1);
+  
+    apps.forEach(a=>appDegree.set(a.id,0));
+    cmdbs.forEach(c=>cmdbDegree.set(c.id,0));
+  
+    for(const c of conns){
+      inc(appDegree, c.fromAppId);
+      inc(appDegree, c.toAppId);
+      const fa = nodeById(c.fromAppId);
+      const ta = nodeById(c.toAppId);
+      if(fa?.cmdbId) inc(cmdbDegree, fa.cmdbId);
+      if(ta?.cmdbId) inc(cmdbDegree, ta.cmdbId);
+    }
+    const isIsolatedApp  = (id)=> (appDegree.get(id)||0)===0;
+    const isIsolatedCmdb = (id)=> (cmdbDegree.get(id)||0)===0;
+  
+    // apps por cmdb
+    const appsByCmdb = new Map();
+    for(const c of cmdbs) appsByCmdb.set(c.id, []);
+    for(const a of apps){
+      if(!appsByCmdb.has(a.cmdbId)) appsByCmdb.set(a.cmdbId, []);
+      appsByCmdb.get(a.cmdbId).push(a);
+    }
+    for(const [k,v] of appsByCmdb.entries()) v.sort((x,y)=>x.name.localeCompare(y.name));
+  
+    // ---------- layout params ----------
+    const pad = 18;
+    const dcPad = 18;
+    const envPad = 16;
+  
+    const cmdbW = 330;
+    const cmdbColGap = 22;
+    const cmdbRowGap = 22;
+  
+    const headerH = 34;
+    const appH = 24;
+  
+    const envTitleH = 30;
+    const dcTitleH  = 30;
+  
+    const perRow = 3; // cmdb por linha dentro do ambiente
+  
+    // ---------- 1) agrupar: DC -> ENV -> CMDB ----------
+    const dcMap = new Map(); // dc -> envMap
+    for(const c of cmdbs){
+      const dc  = getDc(c);
+      const env = getEnv(c);
+  
+      if(!dcMap.has(dc)) dcMap.set(dc, new Map());
+      const envMap = dcMap.get(dc);
+      if(!envMap.has(env)) envMap.set(env, []);
+      envMap.get(env).push(c);
+    }
+  
+    // sort em cada nível
+    const dcs = Array.from(dcMap.keys()).sort((a,b)=>a.localeCompare(b));
+    for(const dc of dcs){
+      const envMap = dcMap.get(dc);
+      const envs = Array.from(envMap.keys()).sort((a,b)=>a.localeCompare(b));
+      const newEnvMap = new Map();
+      for(const env of envs){
+        const list = envMap.get(env).slice().sort((a,b)=>a.name.localeCompare(b.name));
+        newEnvMap.set(env, list);
+      }
+      dcMap.set(dc, newEnvMap);
+    }
+  
+    // ---------- 2) calcular tamanhos/posições: CMDB dentro de ENV ----------
+    const cmdbPos = new Map(); // cmdbId -> {x,y,w,h, appPos:Map(appId->{in,out,mid})}
+    const envPos = new Map();  // key "dc||env" -> {x,y,w,h}
+    const dcPos  = new Map();  // dc -> {x,y,w,h}
+  
+    let cursorY = pad;
+  
+    function computeEnvBox(dc, env, cmdbList, startX, startY){
+      let x = startX + envPad;
+      let y = startY + envTitleH + envPad;
+  
+      let colMaxH = 0;
+      let maxX = x, maxY = y;
+  
+      cmdbList.forEach((c, idx)=>{
+        const appsIn = appsByCmdb.get(c.id) || [];
+        const cmdbH = headerH + Math.max(1, appsIn.length)*appH + 22;
+  
+        if(idx>0 && idx % perRow === 0){
+          x = startX + envPad;
+          y = y + colMaxH + cmdbRowGap;
+          colMaxH = 0;
+        }
+  
+        // base position
+        let cx = x;
+        let cy = y;
+  
+        // apply CMDB offset
+        const offC = getOffset("cmdb:" + c.id);
+        cx += offC.dx; cy += offC.dy;
+  
+        cmdbPos.set(c.id, { x: cx, y: cy, w: cmdbW, h: cmdbH, appPos:new Map() });
+  
+        colMaxH = Math.max(colMaxH, cmdbH);
+        maxX = Math.max(maxX, cx + cmdbW);
+        maxY = Math.max(maxY, cy + cmdbH);
+  
+        x = x + cmdbW + cmdbColGap;
+      });
+  
+      const envW = (maxX - startX) + envPad;
+      const envH = (maxY - startY) + envPad;
+  
+      return { w: Math.max(envW, cmdbW + envPad*2), h: Math.max(envH, envTitleH + 80) };
+    }
+  
+    // ---------- 3) posicionar DCs empilhados verticalmente ----------
+    const canvasWMin = 1400;
+    let canvasW = canvasWMin;
+  
+    for(const dc of dcs){
+      const envMap = dcMap.get(dc);
+      const envs = Array.from(envMap.keys());
+  
+      // base dc position
+      let dcX = pad;
+      let dcY = cursorY;
+  
+      // apply DC offset
+      const offDc = getOffset("dc:" + dc);
+      dcX += offDc.dx;
+      dcY += offDc.dy;
+  
+      let innerY = dcY + dcTitleH + dcPad;
+  
+      let dcMaxW = 0;
+      let dcMaxY = innerY;
+  
+      for(const env of envs){
+        const list = envMap.get(env);
+  
+        let envX = dcX + dcPad;
+        let envY = innerY;
+  
+        // apply ENV offset
+        const offEnv = getOffset("env:" + dc + "||" + env);
+        envX += offEnv.dx;
+        envY += offEnv.dy;
+  
+        const { w: envW, h: envH } = computeEnvBox(dc, env, list, envX, envY);
+  
+        envPos.set(dc + "||" + env, { x: envX, y: envY, w: envW, h: envH });
+  
+        innerY = envY + envH + 16;
+        dcMaxW = Math.max(dcMaxW, envX + envW - dcX);
+        dcMaxY = Math.max(dcMaxY, envY + envH);
+      }
+  
+      const dcW = dcMaxW + dcPad;
+      const dcH = (dcMaxY - dcY) + dcPad;
+  
+      dcPos.set(dc, { x: dcX, y: dcY, w: dcW, h: dcH });
+  
+      cursorY = dcY + dcH + 18;
+      canvasW = Math.max(canvasW, dcX + dcW + pad);
+    }
+  
+    const canvasH = Math.max(900, cursorY + pad);
+    svg.setAttribute("width", String(canvasW));
+    svg.setAttribute("height", String(canvasH));
+  
+    // ---------- camadas ----------
+    const dcLayer   = svgEl("g");
+    const envLayer  = svgEl("g");
+    const cmdbLayer = svgEl("g");
+    const edgeLayer = svgEl("g");
+    const labelLayer= svgEl("g");
+    const appLayer  = svgEl("g");
+  
+    svg.appendChild(dcLayer);
+    svg.appendChild(envLayer);
+    svg.appendChild(cmdbLayer);
+    svg.appendChild(edgeLayer);
+    svg.appendChild(labelLayer);
+    svg.appendChild(appLayer);
+  
+    // ---------- defs: clipPath para título do CMDB ----------
+    const defs = svgEl("defs");
+    svg.appendChild(defs);
+  
+    function addClip(id, x,y,w,h){
+      const cp = svgEl("clipPath", { id });
+      cp.appendChild(svgEl("rect", { x, y, width:w, height:h, rx:"10", ry:"10" }));
+      defs.appendChild(cp);
+      return id;
+    }
+  
+    // ---------- 4) desenha DC e ENV ----------
+    for(const dc of dcs){
+      const p = dcPos.get(dc);
+      if(!p) continue;
+  
+      const dcKey = "dc:" + dc;
+  
+      const dcG = svgEl("g", { "data-dragkey": dcKey, style:"cursor:move" });
+      dcLayer.appendChild(dcG);
+  
+      dcG.appendChild(svgEl("rect", {
+        x:p.x, y:p.y, width:p.w, height:p.h, rx:"20", ry:"20",
+        fill:"rgba(255,255,255,0.02)",
+        stroke:"rgba(122,162,255,0.22)",
+        "stroke-width":"1.2"
+      }));
+  
+      const t = svgEl("text", {
+        x:p.x+14, y:p.y+21,
+        fill:"var(--text)",
+        "font-family":"var(--mono)",
+        "font-size":"12.8",
+        "opacity":"0.9",
+        "pointer-events":"none"
+      });
+      t.textContent = `DATACENTER: ${dc}`;
+      dcG.appendChild(t);
+  
+      // ENVs dentro
+      const envMap = dcMap.get(dc);
+      for(const [env] of envMap.entries()){
+        const epos = envPos.get(dc + "||" + env);
+        if(!epos) continue;
+  
+        const envKey = "env:" + dc + "||" + env;
+  
+        const envG = svgEl("g", { "data-dragkey": envKey, style:"cursor:move" });
+        envLayer.appendChild(envG);
+  
+        envG.appendChild(svgEl("rect", {
+          x:epos.x, y:epos.y, width:epos.w, height:epos.h, rx:"18", ry:"18",
+          fill:"rgba(255,255,255,0.03)",
+          stroke:"rgba(255,255,255,0.08)",
+          "stroke-width":"1.0"
+        }));
+  
+        const et = svgEl("text", {
+          x:epos.x+14, y:epos.y+20,
+          fill:"var(--muted)",
+          "font-family":"var(--mono)",
+          "font-size":"12.2",
+          "pointer-events":"none"
+        });
+        et.textContent = `AMBIENTE: ${env}`;
+        envG.appendChild(et);
+      }
+    }
+  
+    // ---------- 5) desenha CMDBs + apps ----------
+    const appElsById = new Map(); // appId -> [elements]
+    const remember = (appId, el)=>{
+      if(!appElsById.has(appId)) appElsById.set(appId, []);
+      appElsById.get(appId).push(el);
+    };
+  
+    for(const c of cmdbs){
+      const p = cmdbPos.get(c.id);
+      if(!p) continue;
+  
+      const cmdbIsolated = isIsolatedCmdb(c.id);
+      const fill   = cmdbIsolated ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.04)";
+      const stroke = cmdbIsolated ? "rgba(0,0,0,0.25)" : "rgba(122,162,255,0.35)";
+  
+      const cmdbKey = "cmdb:" + c.id;
+      const cmdbG = svgEl("g", { "data-dragkey": cmdbKey, style:"cursor:move" });
+      cmdbLayer.appendChild(cmdbG);
+  
+      cmdbG.appendChild(svgEl("rect", {
+        x:p.x, y:p.y, width:p.w, height:p.h, rx:"16", ry:"16",
+        fill, stroke, "stroke-width":"1.2"
+      }));
+  
+      // título CLIPADO (não estoura)
+      const clipId = addClip("cmdbTitleClip_" + c.id, p.x+10, p.y+10, p.w-20, 20);
+      const titleG = svgEl("g", { "clip-path": `url(#${clipId})` });
+  
+      const titleText = `${c.name} • ${c.hostname||"-"} • ${c.ip||"-"}`;
+      const tt = svgEl("text", {
+        x:p.x+14, y:p.y+22,
+        fill: cmdbIsolated ? "rgba(0,0,0,0.78)" : "var(--text)",
+        "font-family":"var(--mono)",
+        "font-size":"12",
+        "opacity": cmdbIsolated ? "1" : "0.80",
+        "pointer-events":"none"
+      });
+      tt.textContent = titleText;
+  
+      titleG.appendChild(tt);
+      cmdbG.appendChild(titleG);
+  
+      // apps
+      const list = (appsByCmdb.get(c.id)||[]);
+      const baseY = p.y + headerH;
+  
+      if(!list.length){
+        const cx = p.x + p.w/2;
+        const cy = baseY + 18;
+        p.appPos.set("__none__", { mid:{x:cx,y:cy}, in:{x:cx-10,y:cy}, out:{x:cx+10,y:cy} });
+        cmdbG.appendChild(svgEl("circle", {
+          cx, cy, r:"4.5",
+          fill: cmdbIsolated ? "rgba(0,0,0,0.25)" : "rgba(255,255,255,0.35)"
+        }));
+        continue;
+      }
+  
+      list.forEach((a, i)=>{
+        const ay0 = baseY + 18 + i*appH;
+        const ax0 = p.x + 18;
+  
+        // apply APP offset (relative inside CMDB)
+        const offA = getOffset("app:" + a.id);
+        const ay = ay0 + offA.dy;
+        const ax = ax0 + offA.dx;
+  
+        const boxW = Math.min(286, p.w - 36);
+        const boxH = 18;
+        const boxX = ax;
+        const boxY = ay - 10;
+  
+        const appIsolated = isIsolatedApp(a.id);
+  
+        const appKey = "app:" + a.id;
+        const g = svgEl("g", { "data-appid": a.id, "data-dragkey": appKey, style:"cursor:move" });
+  
+        // bloquinho
+        const box = svgEl("rect", {
+          x: boxX, y: boxY, width: boxW, height: boxH, rx:"8", ry:"8",
+          fill: appIsolated ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.06)",
+          stroke: appIsolated ? "rgba(0,0,0,0.20)" : "rgba(85,230,165,0.28)",
+          "stroke-width":"1.1",
+          "pointer-events":"all"
+        });
+        g.appendChild(box); remember(a.id, box);
+  
+        // conectores in/out
+        const inX  = boxX + 6;
+        const outX = boxX + boxW - 6;
+        const cy   = ay;
+  
+        const inDot = svgEl("circle", {
+          cx: inX, cy, r:"3.2",
+          fill: appIsolated ? "rgba(0,0,0,0.35)" : "rgba(122,162,255,0.55)",
+          stroke:"rgba(0,0,0,0.18)", "stroke-width":"0.6",
+          "pointer-events":"all"
+        });
+        const outDot = svgEl("circle", {
+          cx: outX, cy, r:"3.2",
+          fill: appIsolated ? "rgba(0,0,0,0.35)" : "rgba(85,230,165,0.55)",
+          stroke:"rgba(0,0,0,0.18)", "stroke-width":"0.6",
+          "pointer-events":"all"
+        });
+        g.appendChild(inDot); g.appendChild(outDot);
+        remember(a.id, inDot); remember(a.id, outDot);
+  
+        // texto (hover tem que funcionar aqui também)
+        const label = svgEl("text", {
+          x: boxX + 14, y: ay + 4,
+          fill: appIsolated ? "rgba(0,0,0,0.82)" : "var(--text)",
+          "font-family":"var(--mono)",
+          "font-size":"12",
+          "pointer-events":"all"
+        });
+        label.textContent = `${a.name}:${a.port}`;
+        g.appendChild(label); remember(a.id, label);
+  
+        // salva posições (respeita IN/OUT)
+        p.appPos.set(a.id, {
+          mid:{ x: boxX + boxW/2, y: ay },
+          in: { x: inX,  y: cy },
+          out:{ x: outX, y: cy }
+        });
+  
+        appLayer.appendChild(g);
+      });
+    }
+  
+    // ---------- 6) desenha edges (com hover: escondidas) ----------
+    const edgeEls = []; // {el,labelEl,fromAppId,toAppId}
+  
+    function setEdgeVisible(edge, on){
+      edge.el.style.opacity = on ? "1" : "0";
+      if(edge.labelEl) edge.labelEl.style.opacity = on ? "1" : "0";
+    }
+  
+    function setEdgeEmphasis(edge, strong){
+      const baseW = Number(edge.el.getAttribute("data-basew") || "2.0");
+      edge.el.setAttribute("stroke-width", String(strong ? (baseW + 1.2) : baseW));
+      edge.el.style.filter = strong ? "drop-shadow(0 0 1px rgba(255,255,255,0.35))" : "none";
+    }
+  
+    for(const c of conns){
+      if(!allowConnByMode(c)) continue;
+  
+      const fa = nodeById(c.fromAppId);
+      const ta = nodeById(c.toAppId);
+      if(!fa || !ta) continue;
+  
+      const fp = cmdbPos.get(fa.cmdbId);
+      const tp = cmdbPos.get(ta.cmdbId);
+      if(!fp || !tp) continue;
+  
+      const fpt = fp.appPos.get(fa.id) || fp.appPos.get("__none__");
+      const tpt = tp.appPos.get(ta.id) || tp.appPos.get("__none__");
+      if(!fpt || !tpt) continue;
+  
+      const x1 = (fpt.out?.x ?? fpt.mid.x), y1 = (fpt.out?.y ?? fpt.mid.y);
+      const x2 = (tpt.in?.x  ?? tpt.mid.x), y2 = (tpt.in?.y  ?? tpt.mid.y);
+  
+      const distX = Math.abs(x2 - x1);
+      const dist  = Math.hypot(distX, Math.abs(y2-y1));
+  
+      // perto = quase reto
+      const dx = (dist < 140) ? Math.max(10, distX * 0.08)
+               : (dist < 320) ? Math.max(22, distX * 0.18)
+               :               Math.max(70, distX * 0.38);
+  
+      const { color, w, dash } = strokeForConn(c);
+  
+      const path = svgEl("path", {
+        d:`M ${x1} ${y1} C ${x1+dx} ${y1}, ${x2-dx} ${y2}, ${x2} ${y2}`,
+        fill:"none",
+        stroke: color,
+        "stroke-width": String(w),
+        "stroke-linecap":"round",
+        "data-from": fa.id,
+        "data-to": ta.id,
+        "data-basew": String(w),
+        "pointer-events":"none"
+      });
+      if(dash) path.setAttribute("stroke-dasharray", dash);
+  
+      if(mode === "hover") path.style.opacity = "0";
+      else path.style.opacity = "1";
+  
+      edgeLayer.appendChild(path);
+  
+      const mx = (x1+x2)/2, my = (y1+y2)/2;
+      const label = svgEl("text", {
+        x: mx + 6, y: my - 6,
+        fill:"var(--muted)",
+        "font-family":"var(--mono)",
+        "font-size":"11.5",
+        "pointer-events":"none"
+      });
+      label.textContent = `${c.port} • ${c.connStatus}`;
+      if(mode === "hover") label.style.opacity = "0";
+      else label.style.opacity = "1";
+      labelLayer.appendChild(label);
+  
+      edgeEls.push({ el:path, labelEl:label, fromAppId:fa.id, toAppId:ta.id });
+    }
+  
+    // ---------- 7) hover REAL: só aparece quando passar no bloquinho OU texto ----------
+    if(mode === "hover"){
+      function showForApp(appId){
+        for(const e of edgeEls){
+          const rel = (e.fromAppId === appId || e.toAppId === appId);
+          setEdgeVisible(e, rel);
+          setEdgeEmphasis(e, rel);
+        }
+      }
+      function clearAll(){
+        for(const e of edgeEls){
+          setEdgeVisible(e, false);
+          setEdgeEmphasis(e, false);
+        }
+      }
+  
+      let hoverTimer = null;
+  
+      function enter(appId){
+        if(hoverTimer){ clearTimeout(hoverTimer); hoverTimer = null; }
+        showForApp(appId);
+      }
+      function leave(){
+        if(hoverTimer) clearTimeout(hoverTimer);
+        hoverTimer = setTimeout(()=> clearAll(), 60);
+      }
+  
+      for(const [appId, els] of appElsById.entries()){
+        for(const el of els){
+          el.addEventListener("mouseenter", ()=> enter(appId));
+          el.addEventListener("mouseleave", leave);
+        }
+      }
+  
+      clearAll();
+    }
+  }
+
+  
+
+  // ---------------- Modal (multi-type) ----------------
+  function fillAppDropdowns(selectedId){
+    const apps = allApps().slice().sort((a,b)=>a.name.localeCompare(b.name));
+    const opt = (a) => `<option value="${a.id}">${escapeHtml(a.name)} (port ${escapeHtml(String(a.port||"-"))}) • cmdb:${escapeHtml(nodeById(a.cmdbId)?.name || "-")}</option>`;
+    mFrom.innerHTML = apps.map(opt).join("");
+    mTo.innerHTML = apps.map(opt).join("");
+    if(selectedId && apps.some(a=>a.id===selectedId)) return;
+  }
+
+  function openModal(id){
+    const n = nodeById(id);
+    if(!n) return;
+    editingId = id;
+
+    // reset sections
+    taskFields.style.display = "none";
+    urlFields.style.display = "none";
+    cmdbFields.style.display = "none";
+    appFields.style.display = "none";
+    connFields.style.display = "none";
+
+    mName.value = n.name || "";
+    mFolder.value = fullPathOf(n.parentId || "root");
+    mPath.textContent = fullPathOf(id);
+
+    if(isTask(n)){
+      mTitle.textContent = "Editar atividade (task)";
+      taskFields.style.display = "";
+      mResp.value = n.resp || "";
+      mDue.value = n.due || "";
+      mType.value = n.taskType || "";
+      mStatus.value = n.status || "todo";
+      mPrio.value = String(n.prio || 3);
+      mNotes.value = n.notes || "";
+      mUpdated.value = (n.updatedAt||"").replace("T"," ").slice(0,19);
+    } else if(isUrl(n)){
+      mTitle.textContent = "Editar favorito (url)";
+      urlFields.style.display = "";
+      mUrl.value = n.url || "";
+    } else if(isCMDBDir(n)){
+      mTitle.textContent = "Editar pasta CMDB";
+      cmdbFields.style.display = "";
+      mHost.value = n.hostname || "";
+      mIp.value = n.ip || "";
+      mDc.value = n.datacenter || "";
+      mEnv.value = n.ambiente || "";
+      mNs.value = n.namespace || "";
+    } else if(isApp(n)){
+      mTitle.textContent = "Editar application";
+      appFields.style.display = "";
+      mAppPort.value = String(n.port || "");
+      mAppCmdb.value = nodeById(n.cmdbId)?.name || "-";
+    } else if(isConn(n)){
+      mTitle.textContent = "Editar conectividade";
+      connFields.style.display = "";
+      fillAppDropdowns();
+      mFrom.value = n.fromAppId || "";
+      mTo.value = n.toAppId || "";
+      mConnPort.value = String(n.port || "");
+      mConnStatus.value = n.connStatus || "nao-testada";
+      mConnUpdated.value = (n.updatedAt||"").replace("T"," ").slice(0,19);
+    } else {
+      mTitle.textContent = "Editar";
+    }
+
+    modalOverlay.style.display = "flex";
+  }
+
+  function closeModal(){ modalOverlay.style.display="none"; editingId=null; }
+  modalOverlay.addEventListener("click", (e)=>{ if(e.target===modalOverlay) closeModal(); });
+  mClose.addEventListener("click", closeModal);
+
+  mSave.addEventListener("click", ()=>{
+    const n = nodeById(editingId);
+    if(!n) return;
+
+    const newName = (mName.value||"").trim();
+    if(!newName){ alert("Nome inválido."); return; }
+
+    const folderPath = (mFolder.value||"").trim() || "/";
+    const folderId = resolvePath(folderPath);
+    if(!folderId){ alert("Pasta inválida."); return; }
+    const folderNode = nodeById(folderId);
+    if(!(isDir(folderNode) || isCMDBDir(folderNode))){ alert("Destino não é pasta."); return; }
+
+    // CMDB dir pode ir para dentro de dir/cmdb
+    if(childrenOf(folderId).some(x=>x.name===newName && x.id!==n.id)){
+      alert("Já existe item com esse nome na pasta destino.");
+      return;
+    }
+
+    const oldParent = n.parentId;
+
+    // update common
+    n.name = newName;
+    n.parentId = folderId;
+    n.updatedAt = nowISO();
+
+    if(isTask(n)){
+      n.resp = (mResp.value||"").trim();
+      n.due = (mDue.value||"").trim();
+      n.taskType = (mType.value||"").trim();
+      n.status = mStatus.value;
+      n.prio = Number(mPrio.value||3);
+      n.notes = mNotes.value || "";
+    } else if(isUrl(n)){
+      const u = (mUrl.value||"").trim();
+      if(u && !/^https?:\/\//i.test(u)){ alert("URL inválida (use http/https)."); return; }
+      n.url = u;
+    } else if(isCMDBDir(n)){
+      n.hostname = (mHost.value||"").trim();
+      n.ip = (mIp.value||"").trim();
+      n.datacenter = (mDc.value||"").trim();
+      n.ambiente = (mEnv.value||"").trim();
+      n.namespace = (mNs.value||"").trim();
+    } else if(isApp(n)){
+      const port = Number(mAppPort.value||"");
+      if(!(port>=1 && port<=65535)){ alert("Porta inválida (1..65535)"); return; }
+      n.port = port;
+      // cmdbId ajusta conforme novo local
+      const newCmdb = nearestCMDBDirId(folderId);
+      if(newCmdb) n.cmdbId = newCmdb;
+    } else if(isConn(n)){
+      const fromId = mFrom.value;
+      const toId = mTo.value;
+      const port = Number(mConnPort.value||"");
+      if(!(port>=1 && port<=65535)){ alert("Porta inválida (1..65535)"); return; }
+      const st = mConnStatus.value;
+      if(st!=="nao-testada" && st!=="testada" && st!=="bloqueada" ){ alert("Status inválido"); return; }
+
+      const fromApp = nodeById(fromId);
+      const toApp = nodeById(toId);
+      if(!fromApp || !isApp(fromApp)){ alert("Origem inválida"); return; }
+      if(!toApp || !isApp(toApp)){ alert("Destino inválido"); return; }
+
+      n.fromAppId = fromId;
+      n.toAppId = toId;
+      n.port = port;
+      n.connStatus = st;
+      n.name = `${fromApp.name} -> ${toApp.name}:${port}`;
+      // cmdbId ajusta pelo local
+      const newCmdb = nearestCMDBDirId(folderId);
+      if(newCmdb) n.cmdbId = newCmdb;
+    }
+
+    touch(oldParent);
+    touch(folderId);
+    saveState();
+
+    closeModal();
+    printLine("Salvo.", "ok");
+    updateCwd();
+    renderSidebar();
+  });
+
+  mDelete.addEventListener("click", ()=>{
+    const n = nodeById(editingId);
+    if(!n) return;
+    if(!confirm("Excluir este item?")) return;
+    const r = removeNode(n.id);
+    if(!r.ok){ alert(r.err); return; }
+    closeModal();
+    printLine("Excluído.", "ok");
+    updateCwd();
+    renderSidebar();
+  });
+
+  // ---------------- Config drawer ----------------
+  $("btnConfig").addEventListener("click", ()=> drawerOverlay.style.display="flex");
+  $("btnCloseConfig").addEventListener("click", ()=> drawerOverlay.style.display="none");
+  drawerOverlay.addEventListener("click", (e)=>{ if(e.target===drawerOverlay) drawerOverlay.style.display="none"; });
+
+  defPriority.value = String(settings.defPriority || 3);
+  defStatus.value = settings.defStatus || "todo";
+
+  defPriority.addEventListener("change", ()=>{
+    settings.defPriority = Number(defPriority.value||3);
+    saveSettings();
+  });
+  defStatus.addEventListener("change", ()=>{
+    settings.defStatus = defStatus.value;
+    saveSettings();
+  });
+
+  function renderAliasesUI(){
+    aliasesBox.innerHTML="";
+    const entries = Object.entries(settings.aliases).sort((a,b)=>a[0].localeCompare(b[0]));
+    for(const [k,v] of entries){
+      const row = document.createElement("div");
+      row.className = "aliasItem";
+
+      const inK = document.createElement("input");
+      inK.value = k;
+
+      const inV = document.createElement("input");
+      inV.value = v;
+
+      const btn = document.createElement("button");
+      btn.textContent = "Salvar";
+      btn.onclick = ()=>{
+        const nk=(inK.value||"").trim();
+        const nv=(inV.value||"").trim();
+        if(!nk || !nv) return;
+        if(nk !== k) delete settings.aliases[k];
+        settings.aliases[nk]=nv;
+        saveSettings();
+        renderAliasesUI();
+        printLine(`Alias salvo: ${nk} → ${nv}`, "ok");
+      };
+
+      row.appendChild(inK);
+      row.appendChild(inV);
+      row.appendChild(btn);
+      aliasesBox.appendChild(row);
+    }
+  }
+  renderAliasesUI();
+
+  $("btnAddAlias").addEventListener("click", ()=>{
+    const k = prompt("Nome do alias:");
+    if(!k) return;
+    const v = prompt("Comando alvo:");
+    if(!v) return;
+    settings.aliases[k.trim()] = v.trim();
+    saveSettings();
+    renderAliasesUI();
+    printLine(`Alias criado: ${k.trim()} → ${v.trim()}`, "ok");
+  });
+
+  // ---------------- Sidebar ----------------
+  function isExpanded(id){ return !!settings.sidebarExpanded[id]; }
+  function toggleExpanded(id){
+    settings.sidebarExpanded[id] = !isExpanded(id);
+    saveSettings();
+    renderSidebar();
+  }
+
+  const hoverExpandTimers = new Map();
+  function scheduleExpand(dirId){
+    if(isExpanded(dirId)) return;
+    if(hoverExpandTimers.has(dirId)) return;
+    const t = setTimeout(()=>{
+      settings.sidebarExpanded[dirId] = true;
+      saveSettings();
+      renderSidebar();
+      hoverExpandTimers.delete(dirId);
+    }, 550);
+    hoverExpandTimers.set(dirId, t);
+  }
+  function cancelExpand(dirId){
+    const t = hoverExpandTimers.get(dirId);
+    if(t){ clearTimeout(t); hoverExpandTimers.delete(dirId); }
+  }
+
+  function collapseAll(){
+    settings.sidebarExpanded = { "root": false };
+    saveSettings();
+    renderSidebar();
+  }
+  function expandAll(){
+    const map = {};
+    state.nodes.filter(n => isDir(n) || isCMDBDir(n)).forEach(d => map[d.id] = true);
+    settings.sidebarExpanded = map;
+    saveSettings();
+    renderSidebar();
+  }
+  btnCollapseAll.addEventListener("click", collapseAll);
+  btnExpandAll.addEventListener("click", expandAll);
+
+  function renderSidebar(){
+    sidebarTree.innerHTML = "";
+    const root = nodeById("root");
+    if(!root) return;
+
+    function sortKids(kids){
+      return kids.slice().sort((a,b)=>{
+        const aDir = isDir(a) || isCMDBDir(a);
+        const bDir = isDir(b) || isCMDBDir(b);
+        if(aDir!==bDir) return aDir ? -1 : 1;
+        return a.name.localeCompare(b.name);
+      });
+    }
+
+    function addRow(node, depth){
+      const row = document.createElement("div");
+      row.className = "node" + (depth>0 ? " indent" : "");
+      row.style.marginLeft = (depth*10) + "px";
+      row.dataset.nodeId = node.id;
+
+      row.draggable = (node.id !== "root");
+      row.addEventListener("dragstart", (e)=>{
+        row.classList.add("dragging");
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", node.id);
+      });
+      row.addEventListener("dragend", ()=>{
+        row.classList.remove("dragging");
+        sidebarTree.querySelectorAll(".dropTarget").forEach(x=>x.classList.remove("dropTarget"));
+      });
+
+      if(isDir(node) || isCMDBDir(node)){
+        row.addEventListener("dragover", (e)=>{
+          e.preventDefault();
+          e.stopPropagation();
+          e.dataTransfer.dropEffect = "move";
+          row.classList.add("dropTarget");
+          scheduleExpand(node.id);
+        });
+
+        row.addEventListener("dragleave", (e)=>{
+          if(!row.contains(e.relatedTarget)){
+            row.classList.remove("dropTarget");
+            cancelExpand(node.id);
+          }
+        });
+
+        row.addEventListener("drop", (e)=>{
+          e.preventDefault();
+          e.stopPropagation();
+          row.classList.remove("dropTarget");
+          cancelExpand(node.id);
+
+          const srcId = e.dataTransfer.getData("text/plain");
+          if(!srcId) return;
+
+          const r = moveNodeToDir(srcId, node.id);
+          if(!r.ok){
+            printLine("drag/drop: " + r.err, "err");
+            return;
+          }
+          printLine(`Movido para: ${fullPathOf(node.id)}`, "ok");
+          renderSidebar();
+        });
+      }
+
+      const caret = document.createElement("span");
+      if(isDir(node) || isCMDBDir(node)){
+        caret.textContent = isExpanded(node.id) ? "▼" : "▶";
+        caret.style.width = "18px";
+        caret.style.userSelect = "none";
+        caret.onclick = (e) => { e.stopPropagation(); toggleExpanded(node.id); };
+      } else {
+        caret.textContent = " ";
+        caret.style.width = "18px";
+      }
+
+      const icon = document.createElement("span");
+      if(isCMDBDir(node)) icon.textContent = "🗄️";
+      else if(isDir(node)) icon.textContent = "📁";
+      else if(isUrl(node)) icon.textContent = "🔗";
+      else if(isApp(node)) icon.textContent = "🧩";
+      else if(isConn(node)) icon.textContent = "🔌";
+      else if(isConnRef(node)) icon.textContent = "🔗";
+      else icon.textContent = "📄";
+
+      const name = document.createElement("span");
+      name.className = "name";
+      name.textContent = (isDir(node)||isCMDBDir(node)) ? (node.name + "/") : node.name;
+
+      if(isTask(node)){
+        name.classList.add(taskColorClass(node));
+      }
+      if(isConn(node)){
+        name.classList.add(connColorClass(node));
+      }
+
+      if(isConnRef(node)){
+        const target = nodeById(node.refConnId);
+        if(target && isConn(target)) name.classList.add(connColorClass(target));
+        else name.classList.add("c-red");
+      }
+
+      row.appendChild(caret);
+      row.appendChild(icon);
+      row.appendChild(name);
+
+      if(isDir(node) || isCMDBDir(node)){
+        row.onclick = () => {
+          state.cwdId = node.id;
+          saveState();
+          updateCwd();
+          renderSidebar();
+          printLine(`${cwdPath()} $ cd ${fullPathOf(node.id)}`, "cmd");
+          printLine(`Agora em: ${cwdPath()}`, "muted");
+        };
+        row.ondblclick = (e) => { e.stopPropagation(); toggleExpanded(node.id); };
+      } else if(isUrl(node)){
+        row.ondblclick = () => {
+          if(node.url) window.open(node.url, "_blank", "noopener,noreferrer");
+        };
+      } 
+        else if(isConnRef(node)) {
+            row.ondblclick = () => openModal(node.refConnId);
+        } else {
+            row.ondblclick = () => openModal(node.id);
+        }
+        sidebarTree.appendChild(row);
+        }
+
+    function walk(dirId, depth){
+      const kids = sortKids(childrenOf(dirId));
+      for(const k of kids){
+        addRow(k, depth);
+        if((isDir(k) || isCMDBDir(k)) && isExpanded(k.id)){
+          walk(k.id, depth+1);
+        }
+      }
+    }
+
+    if(settings.sidebarExpanded["root"] === undefined) settings.sidebarExpanded["root"] = true;
+
+    addRow(root, 0);
+    if(isExpanded("root")) walk("root", 1);
+
+    sidebarTree.ondragover = (e)=> e.preventDefault();
+    sidebarTree.ondrop = (e)=>{
+      if(e.target && e.target.closest && e.target.closest(".node")) return;
+
+      const srcId = e.dataTransfer.getData("text/plain");
+      if(!srcId) return;
+
+      const r = moveNodeToDir(srcId, "root");
+      if(!r.ok) printLine("drag/drop: " + r.err, "err");
+      else { printLine("Movido para: /", "ok"); renderSidebar(); }
+    };
+  }
+
+  // ---------------- Autocomplete ----------------
+  function getKnownScoped(){
+    const items = itemsInScope(state.cwdId);
+
+    const resps = Array.from(new Set(items.filter(n => isTask(n) || isUrl(n)).map(t=>(t.resp||"").trim()).filter(Boolean))).sort((a,b)=>a.localeCompare(b));
+    const types = Array.from(new Set(items.filter(isTask).map(t=>(t.taskType||"").trim()).filter(Boolean))).sort((a,b)=>a.localeCompare(b));
+    const dues  = Array.from(new Set(items.filter(n => isTask(n) || isUrl(n)).map(t=>(t.due||"").trim()).filter(Boolean))).sort((a,b)=>a.localeCompare(b));
+
+    const apps = allApps().slice().sort((a,b)=>a.name.localeCompare(b.name)).map(a=>a.name);
+
+    return {
+      resps, types, dues,
+      statuses:["todo","doing","blocked","sequenciado","done"],
+      prios:["1","2","3","4","5"],
+      cmdbTags: CMDB_TAGS,
+      appTags: APP_TAGS,
+      connTags: CONN_TAGS,
+      apps
+    };
+  }
+
+  function currentToken(text, caret){
+    const left = text.slice(0, caret);
+    const m = left.match(/(^|[\s"])([^\s"]*)$/);
+    return m ? m[2] : "";
+  }
+
+  function detectActiveTag(text, caret){
+    const left = text.slice(0, caret);
+
+    // detect any @tag from known pools
+    const ALL = [...TAGS, ...CMDB_TAGS, ...APP_TAGS, ...CONN_TAGS];
+    let best = { tag:null, idx:-1 };
+    for(const t of ALL){
+      const i = left.lastIndexOf(t);
+      if(i > best.idx) best = { tag:t, idx:i };
+    }
+    if(best.idx < 0) return null;
+    const after = left.slice(best.idx + best.tag.length);
+    if(after.length && !/^\s/.test(after)) return null;
+    return best.tag;
+  }
+
+  function showAC(items){
+    ac.innerHTML="";
+    if(!items.length){ ac.style.display="none"; return; }
+    for(const it of items.slice(0,60)){
+      const div = document.createElement("div");
+      div.className="item";
+      div.innerHTML = `<span class="a">${escapeHtml(it.label)}</span><span class="b">${escapeHtml(it.hint||"")}</span>`;
+      div.onclick = ()=> applyAC(it.insert);
+      ac.appendChild(div);
+    }
+    ac.style.display="block";
+  }
+  function hideAC(){ ac.style.display="none"; }
+
+  function applyAC(insert){
+    const text = cli.value;
+    const caret = cli.selectionStart || 0;
+
+    const left = text.slice(0, caret);
+    const right = text.slice(caret);
+    const m = left.match(/(^|[\s"])([^\s"]*)$/);
+    const tokenStart = m ? (left.length - m[2].length) : caret;
+
+    const before = text.slice(0, tokenStart);
+    const after = right;
+    const space = (after.startsWith(" ") || after==="") ? "" : " ";
+    cli.value = before + insert + space + after;
+
+    const newCaret = (before + insert + space).length;
+    cli.setSelectionRange(newCaret, newCaret);
+    hideAC();
+    cli.focus();
+  }
+
+  function refreshAC(){
+    const text = cli.value;
+    const caret = cli.selectionStart || 0;
+    const tok = currentToken(text, caret);
+    const activeTag = detectActiveTag(text, caret);
+    const known = getKnownScoped();
+
+    if(tok.startsWith("@")){
+      const q = tok.toLowerCase();
+      const ALL = [...TAGS, ...CMDB_TAGS, ...APP_TAGS, ...CONN_TAGS];
+      const items = ALL.filter(t=>t.toLowerCase().startsWith(q)).map(t=>({label:t, insert:t, hint:"tag"}));
+      showAC(items);
+      return;
+    }
+
+    if(activeTag){
+      const q = (tok||"").toLowerCase();
+
+      if(activeTag==="@resp"){
+        const list = known.resps;
+        const items = list.filter(v=>v.toLowerCase().includes(q)).map(v=>({label:v, insert:v, hint:"responsável"}));
+        showAC(items.length ? items : list.map(v=>({label:v, insert:v, hint:"responsável"})));
+        return;
+      }
+      if(activeTag==="@type"){
+        const list = known.types;
+        const items = list.filter(v=>v.toLowerCase().includes(q)).map(v=>({label:v, insert:v, hint:"tipo"}));
+        showAC(items.length ? items : list.map(v=>({label:v, insert:v, hint:"tipo"})));
+        return;
+      }
+      if(activeTag==="@due"){
+        const list = known.dues;
+        const items = list.filter(v=>v.toLowerCase().includes(q)).map(v=>({label:v, insert:v, hint:"due"}));
+        if(items.length){ showAC(items); return; }
+        showAC([{label:todayISODate(), insert:todayISODate(), hint:"hoje"}]);
+        return;
+      }
+      if(activeTag==="@status"){
+        const list = known.statuses;
+        const items = list.filter(v=>v.toLowerCase().includes(q)).map(v=>({label:v, insert:v, hint:"status"}));
+        showAC(items);
+        return;
+      }
+      if(activeTag==="@prio"){
+        const list = known.prios;
+        const items = list.filter(v=>v.includes(q)).map(v=>({label:v, insert:v, hint:"prioridade"}));
+        showAC(items);
+        return;
+      }
+
+      // CMDB tags values: no auto list (livre)
+      if(activeTag==="@hostname" || activeTag==="@ip" || activeTag==="@dc" || activeTag==="@env"){
+        hideAC();
+        return;
+      }
+
+      if(activeTag==="@from" || activeTag==="@to"){
+        const list = known.apps;
+        const items = list.filter(v=>v.toLowerCase().includes(q)).map(v=>({label:v, insert:`"${v}"`, hint:"application"}));
+        showAC(items.length ? items : list.map(v=>({label:v, insert:`"${v}"`, hint:"application"})));
+        return;
+      }
+      if(activeTag==="@port"){
+        hideAC(); return;
+      }
+    }
+
+    hideAC();
+  }
+
+  cli.addEventListener("input", refreshAC);
+  cli.addEventListener("blur", ()=> setTimeout(hideAC, 120));
+  cli.addEventListener("keydown", (e)=>{
+    if(e.key==="Tab" && ac.style.display==="block"){
+      e.preventDefault();
+      const first = ac.querySelector(".item");
+      if(first) first.click();
+      return;
+    }
+    if(e.key==="Escape"){ hideAC(); return; }
+
+    if(e.key==="ArrowUp"){
+      if(inputHistory.length){
+        e.preventDefault();
+        if(histIdx < 0) histIdx = inputHistory.length;
+        histIdx = Math.max(0, histIdx-1);
+        cli.value = inputHistory[histIdx] || "";
+        cli.setSelectionRange(cli.value.length, cli.value.length);
+        hideAC();
+      }
+      return;
+    }
+    if(e.key==="ArrowDown"){
+      if(inputHistory.length){
+        e.preventDefault();
+        if(histIdx < 0) return;
+        histIdx = Math.min(inputHistory.length, histIdx+1);
+        cli.value = inputHistory[histIdx] || "";
+        cli.setSelectionRange(cli.value.length, cli.value.length);
+        hideAC();
+      }
+      return;
+    }
+    if(e.key==="Enter"){
+      const cmd = cli.value;
+      cli.value = "";
+      hideAC();
+      inputHistory.push(cmd);
+      histIdx = -1;
+      runCommand(cmd);
+      return;
+    }
+    setTimeout(refreshAC, 0);
+  });
+
+  // ---------------- Top buttons ----------------
+  $("btnCopy").addEventListener("click", async ()=>{
+    try{
+      await navigator.clipboard.writeText(lastOutputText.trim());
+      printLine("Copiado.", "ok");
+    }catch{
+      printLine("Falha ao copiar (permissão do navegador).", "err");
+    }
+  });
+
+  $("btnExport").addEventListener("click", ()=>{
+    const payload = { state, settings };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type:"application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "cli-projects-v9-export.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+    printLine("Exportado.", "ok");
+  });
+
+  $("btnImport").addEventListener("click", ()=>{
+    const inp = document.createElement("input");
+    inp.type="file";
+    inp.accept="application/json";
+    inp.onchange = async ()=>{
+      const file = inp.files && inp.files[0];
+      if(!file) return;
+      const txt = await file.text();
+      try{
+        const obj = JSON.parse(txt);
+        if(obj.state && obj.state.nodes) state = obj.state;
+        if(obj.settings) settings = obj.settings;
+        settings.aliases = { ...defaultSettings().aliases, ...(settings.aliases||{}) };
+        settings.sidebarExpanded = settings.sidebarExpanded || { "root": true };
+        saveState(); saveSettings();
+        setTheme();
+        defPriority.value = String(settings.defPriority || 3);
+        defStatus.value = settings.defStatus || "todo";
+        renderAliasesUI();
+        updateCwd();
+        renderSidebar();
+        printLine("Importado.", "ok");
+      }catch{
+        printLine("JSON inválido.", "err");
+      }
+    };
+    inp.click();
+  });
+
+  $("btnTheme").addEventListener("click", ()=>{
+    settings.theme = (settings.theme==="light") ? "dark" : "light";
+    saveSettings();
+    setTheme();
+  });
+
+  $("btnReset").addEventListener("click", ()=>{
+    if(!confirm("Resetar tudo?")) return;
+    localStorage.removeItem(LS_KEY);
+    localStorage.removeItem(SET_KEY);
+    state = defaultState();
+    settings = defaultSettings();
+    saveState(); saveSettings();
+    setTheme();
+    defPriority.value = String(settings.defPriority);
+    defStatus.value = settings.defStatus;
+    renderAliasesUI();
+    term.innerHTML = "";
+    boot();
+    renderSidebar();
+  });
+
+  // ---------------- Command runner ----------------
+  function runCommand(raw){
+    const trimmed = (raw||"").trim();
+    if(!trimmed) return;
+
+    clearOutBuf();
+    echoCmd(trimmed);
+
+    const head = tokenize(trimmed)[0];
+    if(settings.aliases[head] && head !== "aliases"){
+      const replaced = settings.aliases[head] + trimmed.slice(head.length);
+      return runCommand(replaced);
+    }
+
+    const parts = tokenize(trimmed);
+    const cmd = parts[0];
+    const args = parts.slice(1);
+
+    switch(cmd){
+      case "help": cmd_help(); break;
+      case "ls": cmd_ls(args); break;
+      case "tree": cmd_tree(args); break;
+      case "mkdir": cmd_mkdir(args); break;
+      case "cd": cmd_cd(args); break;
+      case "rm": cmd_rm(args); break;
+      case "mv": cmd_mv(args); break;
+      case "add": cmd_add(trimmed); break;
+      case "url": cmd_url(trimmed); break;
+      case "mkcmdb": cmd_mkcmdb(trimmed); break;
+      case "app": cmd_app(trimmed); break;
+      case "conn":
+      if(args[0] === "pendentes" || args[0] === "testadas" || args[0] === "status"){
+        cmd_conn_query(args);
+      } else {
+        cmd_conn(trimmed); // continua criando conectividade via @from/@to/@port
+      }
+      break;
+      case "cmdb": cmd_cmdb(args); break;
+      case "q": cmd_q(args); break;
+      case "resumo": cmd_resumo(); break;
+      case "@resp": cmd_at_resp(); break;
+      case "focus": cmd_focus(); break;
+      case "aliases": cmd_aliases(); break;
+      case "pwd": cmd_pwd(); break;
+      case "clear": cmd_clear(); break;
+      default: printLine(`Comando não reconhecido: ${cmd} (digite help)`, "err");
+    }
+
+    updateCwd();
+    renderSidebar();
+  }
+
+// ======== CONSULTAS DE CONECTIVIDADE (recursivo no escopo atual) ========
+function connsInScope(scopeDirId){
+    return state.nodes
+      .filter(isConn)
+      .filter(c => isDescendantOrSelf(c.parentId, scopeDirId));
+  }
+  
+  function fmtConnLine(c){
+    const fa = nodeById(c.fromAppId);
+    const ta = nodeById(c.toAppId);
+    const stCls = connColorClass(c);
+    const fromCm = fa ? nodeById(fa.cmdbId) : null;
+    const toCm = ta ? nodeById(ta.cmdbId) : null;
+  
+    const fromLabel = `${fromCm?fromCm.name:"-"}:${fa?fa.name:"-"}`;
+    const toLabel   = `${toCm?toCm.name:"-"}:${ta?ta.name:"-"}`;
+  
+    return `🔌 <span class="${stCls}">${escapeHtml(c.connStatus||"nao-testada")}</span> ` +
+           `<span class="muted">${escapeHtml(fromLabel)} → ${escapeHtml(toLabel)}:${escapeHtml(String(c.port||"-"))}</span>` +
+           ` <span class="muted">${escapeHtml("(" + fullPathOf(c.id) + ")")}</span>`;
+  }
+
+  function renderConnAsHTML(c, icon="🔌"){
+    const fa = nodeById(c.fromAppId);
+    const ta = nodeById(c.toAppId);
+    const stCls = connColorClass(c);
+  
+    const fromCm = fa ? nodeById(fa.cmdbId) : null;
+    const toCm   = ta ? nodeById(ta.cmdbId) : null;
+  
+    const fromLabel = `${fromCm?fromCm.name:"-"}:${fa?fa.name:"-"}`;
+    const toLabel   = `${toCm?toCm.name:"-"}:${ta?ta.name:"-"}`;
+  
+    // ✅ mesma estética sempre (status + “A → B:porta” + path)
+    return `${icon} <span class="${stCls}">${escapeHtml(c.connStatus||"nao-testada")}</span> ` +
+           `<span class="clickable" data-open="${c.id}">${escapeHtml(fromLabel)} → ${escapeHtml(toLabel)}:${escapeHtml(String(c.port||"-"))}</span>` +
+           ` <span class="muted">${escapeHtml("(" + fullPathOf(c.id) + ")")}</span>`;
+  }
+  
+  function cmd_conn_query(args){
+    const mode = (args[0]||"").toLowerCase();
+  
+    let wanted = null;
+    if(mode === "pendentes") wanted = "nao-testada";
+    else if(mode === "testadas") wanted = "testada";
+    else if(mode === "status") wanted = (args[1]||"").toLowerCase();
+  
+    if(!wanted || (wanted!=="nao-testada" && wanted!=="testada")){
+      printLine("conn: uso: conn pendentes | conn testadas | conn status <nao-testada|testada>", "muted");
+      return;
+    }
+  
+    const all = connsInScope(state.cwdId);
+    const list = all.filter(c => (c.connStatus||"nao-testada") === wanted)
+                    .slice()
+                    .sort((a,b)=>a.name.localeCompare(b.name));
+  
+    const title = wanted === "nao-testada"
+      ? "Conectividades pendentes (não-testadas)"
+      : "Conectividades testadas";
+  
+    printLine(`${title} — escopo atual, recursivo:`, "out");
+    if(!list.length){ printLine("(nenhuma)", "muted"); return; }
+  
+    list.forEach(c => printHTMLLine("  " + fmtConnLine(c), "out"));
+    attachDblClickHandlers();
+  }
+
+  function norm(s){
+    return (s||"").toString().trim().toLowerCase();
+  }
+  
+  function includesCI(hay, needle){
+    const h = norm(hay);
+    const n = norm(needle);
+    if(!n) return false;
+    return h.includes(n);
+  }
+  
+  function cmdbFind(query){
+    const q = (query||"").trim();
+    if(!q){
+      printLine("cmdb find: uso: cmdb find <trecho>", "muted");
+      return;
+    }
+  
+    // fontes
+    const cmdbs = state.nodes.filter(isCMDBDir);
+    const apps  = state.nodes.filter(isApp);
+    const conns = state.nodes.filter(isConn);
+  
+    // match em campos relevantes (inclui namespace)
+    const cmdbHits = cmdbs.filter(c =>
+      includesCI(c.name, q) ||
+      includesCI(c.hostname, q) ||
+      includesCI(c.ip, q) ||
+      includesCI(c.datacenter, q) ||
+      includesCI(c.ambiente, q) ||
+      includesCI(c.namespace, q)
+    );
+  
+    const appHits = apps.filter(a => {
+      const cm = nodeById(a.cmdbId);
+      return (
+        includesCI(a.name, q) ||
+        includesCI(String(a.port||""), q) ||
+        (cm && (
+          includesCI(cm.name, q) ||
+          includesCI(cm.datacenter, q) ||
+          includesCI(cm.ambiente, q) ||
+          includesCI(cm.namespace, q)
+        ))
+      );
+    });
+  
+    const connHits = conns.filter(c => {
+      const fa = nodeById(c.fromAppId);
+      const ta = nodeById(c.toAppId);
+      const fromCm = fa ? nodeById(fa.cmdbId) : null;
+      const toCm   = ta ? nodeById(ta.cmdbId) : null;
+  
+      return (
+        includesCI(c.name, q) ||
+        includesCI(c.connStatus, q) ||
+        includesCI(String(c.port||""), q) ||
+        (fa && includesCI(fa.name, q)) ||
+        (ta && includesCI(ta.name, q)) ||
+        (fromCm && (
+          includesCI(fromCm.name, q) ||
+          includesCI(fromCm.datacenter, q) ||
+          includesCI(fromCm.ambiente, q) ||
+          includesCI(fromCm.namespace, q)
+        )) ||
+        (toCm && (
+          includesCI(toCm.name, q) ||
+          includesCI(toCm.datacenter, q) ||
+          includesCI(toCm.ambiente, q) ||
+          includesCI(toCm.namespace, q)
+        ))
+      );
+    });
+  
+    // Agrupar por Datacenter > Ambiente > Namespace > Instância(CMDB)
+    const tree = new Map(); // dc -> env -> ns -> cmdbId -> {cmdb, apps[], conns[]}
+  
+    function ensure(dc, env, ns, cmdb){
+      const kdc  = dc || "(sem dc)";
+      const kenv = env || "(sem ambiente)";
+      const kns  = ns || "(sem namespace)";
+  
+      if(!tree.has(kdc)) tree.set(kdc, new Map());
+      const envMap = tree.get(kdc);
+  
+      if(!envMap.has(kenv)) envMap.set(kenv, new Map());
+      const nsMap = envMap.get(kenv);
+  
+      if(!nsMap.has(kns)) nsMap.set(kns, new Map());
+      const instMap = nsMap.get(kns);
+  
+      if(!instMap.has(cmdb.id)) instMap.set(cmdb.id, { cmdb, apps: [], conns: [] });
+      return instMap.get(cmdb.id);
+    }
+  
+    // CMDB hits diretos
+    for(const c of cmdbHits){
+      ensure(c.datacenter, c.ambiente, c.namespace, c);
+    }
+  
+    // apps hit (garante cmdb pai)
+    for(const a of appHits){
+      const cm = nodeById(a.cmdbId);
+      if(!cm || !isCMDBDir(cm)) continue;
+      const bucket = ensure(cm.datacenter, cm.ambiente, cm.namespace, cm);
+      bucket.apps.push(a);
+    }
+  
+    // conns hit (associa aos cmdbs de origem/destino e ao cmdbId do conn)
+    for(const c of connHits){
+      const fa = nodeById(c.fromAppId);
+      const ta = nodeById(c.toAppId);
+      const fromCm = fa ? nodeById(fa.cmdbId) : null;
+      const toCm   = ta ? nodeById(ta.cmdbId) : null;
+      const ownCm  = c.cmdbId ? nodeById(c.cmdbId) : null;
+  
+      const targets = [fromCm, toCm, ownCm].filter(x => x && isCMDBDir(x));
+      const seen = new Set();
+      for(const cm of targets){
+        if(seen.has(cm.id)) continue;
+        seen.add(cm.id);
+        const bucket = ensure(cm.datacenter, cm.ambiente, cm.namespace, cm);
+        bucket.conns.push(c);
+      }
+    }
+  
+    // render
+    const dcs = Array.from(tree.keys()).sort((a,b)=>a.localeCompare(b));
+    printLine(`CMDB find: "${q}"`, "out");
+    if(!dcs.length){
+      printLine("(nenhum resultado)", "muted");
+      return;
+    }
+  
+    for(const dc of dcs){
+      printLine(`\n== Datacenter: ${dc} ==`, "muted");
+  
+      const envMap = tree.get(dc);
+      const envs = Array.from(envMap.keys()).sort((a,b)=>a.localeCompare(b));
+  
+      for(const env of envs){
+        printLine(`-- Ambiente: ${env}`, "muted");
+  
+        const nsMap = envMap.get(env);
+        const nss = Array.from(nsMap.keys()).sort((a,b)=>a.localeCompare(b));
+  
+        for(const ns of nss){
+          printLine(`   Namespace: ${ns}`, "muted");
+  
+          const instMap = nsMap.get(ns);
+          const insts = Array.from(instMap.values()).sort((a,b)=> (a.cmdb.name||"").localeCompare(b.cmdb.name||""));
+  
+          for(const inst of insts){
+            const c = inst.cmdb;
+  
+            // INSTÂNCIA
+            const meta = `host=${c.hostname||"-"} ip=${c.ip||"-"}`;
+            printHTMLLine(
+              `• 🗄️ ${renderClickableName(c)} <span class="muted">${escapeHtml("{inst} " + meta + " ("+fullPathOf(c.id)+")")}</span>`,
+              "out"
+            );
+  
+            // APPS
+            const appsList = inst.apps.slice().sort((x,y)=> (x.name||"").localeCompare(y.name||""));
+            if(appsList.length){
+              printLine("   Apps:", "muted");
+              for(const a of appsList){
+                printHTMLLine(
+                  `     - 🧩 ${renderClickableName(a)} <span class="muted">${escapeHtml("{app} port="+(a.port||"-")+" ("+fullPathOf(a.id)+")")}</span>`,
+                  "out"
+                );
+              }
+            }
+  
+            // CONNS
+            const uniqConn = (() => {
+              const m = new Map();
+              for(const x of inst.conns) m.set(x.id, x);
+              return Array.from(m.values());
+            })().sort((x,y)=> (x.name||"").localeCompare(y.name||""));
+  
+            if(uniqConn.length){
+              printLine("   Conectividades:", "muted");
+              for(const cn of uniqConn){
+                printHTMLLine(`     - ${fmtConnLine(cn)}`, "out");
+              }
+            }
+          }
+        }
+      }
+    }
+  
+    attachDblClickHandlers();
+  }
+
+  // ---------------- Boot ----------------
+  function boot(){
+    updateCwd();
+    printLine("Bem-vindo. Digite 'help' para ver comandos.", "muted");
+    printLine("Exemplos CMDB:", "muted");
+    printLine(`  mkcmdb srv01 @hostname srv01.local @ip 10.0.0.10 @dc DC1 @env prod`, "muted");
+    printLine(`  app "orders-api" @port 8080`, "muted");
+    printLine(`  cd ..`, "muted");
+    printLine(`  mkcmdb srv02 @hostname srv02.local @ip 10.0.0.11 @dc DC1 @env prod`, "muted");
+    printLine(`  app "db" @port 5432`, "muted");
+    printLine(`  cd /infra/srv01`, "muted");
+    printLine(`  conn @from "orders-api" @to "db" @port 5432 @status nao-testada`, "muted");
+    printLine(`  cmdb rel`, "muted");
+    printLine("", "muted");
+    printLine("Exemplos tarefas:", "muted");
+    printLine(`  mkdir app`, "muted");
+    printLine(`  add "Implementar login" @resp Darlan @due ${todayISODate()} @status todo @type feature @prio 1`, "muted");
+    printLine("  cmdb graph [errors|nao-testada]  (grafo DC/ENV/CMDB; portas IN/OUT; no modo normal, hover na app destaca conexões)", "muted");
+  }
+
+  // init
+  setTheme();
+  defPriority.value = String(settings.defPriority || 3);
+  defStatus.value = settings.defStatus || "todo";
+  saveState(); saveSettings();
+  boot();
+  renderSidebar();
+})();
+</script>
+
+<div class="modalOverlay" id="graphOverlay" style="display:none; align-items:center; justify-content:center;">
+    <div class="modal" style="width:min(1200px, 100%);">
+      <div class="mh">
+        <div class="title">Grafo CMDB (blocos + conectividades)</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="ghost" id="graphClose">Fechar</button>
+        </div>
+      </div>
+      <div class="mb">
+        <div style="
+        border:1px solid var(--line);
+        border-radius:12px;
+        overflow:auto;
+        background:rgba(0,0,0,.06);
+        max-height:75vh;
+        max-width:100%;
+        overscroll-behavior:contain;
+      ">
+        <svg id="graphSvg" style="display:block"></svg>
+      </div>
+        <div class="hint">Dica: o desenho agrupa por CMDB, coloca apps dentro do bloco e conecta por status (amarelo=não-testada, azul=testada).</div>
+      </div>
+    </div>
+  </div>
+  
+</body>
+</html>
