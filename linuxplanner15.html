@@ -4099,54 +4099,66 @@
 
         function renderGraph(svg, mode = "hover") {
           svg.innerHTML = "";
-        
+
           // =========================
           // Drag infra (self-contained)
           // =========================
           state.ui = state.ui || {};
           state.ui.graphOffsets = state.ui.graphOffsets || {}; // key -> {dx,dy}
-        
-          const saved = localStorage.getItem("cmdbGraphLayout");
-if (saved) {
-  try {
-    state.ui.graphOffsets = JSON.parse(saved) || {};
-  } catch (e) {
-    console.warn("Layout do Graph corrompido, ignorando.");
-  }
-}
 
           // =========================
-// Resize infra (self-contained)
-// =========================
-state.ui = state.ui || {};
-state.ui.graphSizes = state.ui.graphSizes || {}; // key -> {dw, dh}
+          // Resize infra (self-contained)
+          // =========================
+          state.ui = state.ui || {};
+          state.ui.graphSizes = state.ui.graphSizes || {}; // key -> {dw, dh}
 
-const getSize = (key) => {
-  if(!state.ui.graphSizes[key]) state.ui.graphSizes[key] = { dw: 0, dh: 0 };
-  return state.ui.graphSizes[key];
-};
+          const getSize = (key) => {
+            if (!state.ui.graphSizes[key])
+              state.ui.graphSizes[key] = { dw: 0, dh: 0 };
+            return state.ui.graphSizes[key];
+          };
 
-// limites mínimos por tipo (pra não “colapsar” a caixa)
-const minSizeFor = (key, baseW, baseH) => {
-  if(key.startsWith("dc:"))  return { minW: Math.max(600, baseW * 0.55), minH: Math.max(240, baseH * 0.55) };
-  if(key.startsWith("env:")) return { minW: Math.max(520, baseW * 0.55), minH: Math.max(220, baseH * 0.55) };
-  if(key.startsWith("ns:"))  return { minW: Math.max(420, baseW * 0.55), minH: Math.max(180, baseH * 0.55) };
-  if(key.startsWith("cmdb:"))return { minW: Math.max(300, baseW * 0.80), minH: Math.max(120, baseH * 0.70) };
-  return { minW: Math.max(160, baseW * 0.6), minH: Math.max(120, baseH * 0.6) };
-};
+          // limites mínimos por tipo (pra não “colapsar” a caixa)
+          const minSizeFor = (key, baseW, baseH) => {
+            if (key.startsWith("dc:"))
+              return {
+                minW: Math.max(600, baseW * 0.55),
+                minH: Math.max(240, baseH * 0.55),
+              };
+            if (key.startsWith("env:"))
+              return {
+                minW: Math.max(520, baseW * 0.55),
+                minH: Math.max(220, baseH * 0.55),
+              };
+            if (key.startsWith("ns:"))
+              return {
+                minW: Math.max(420, baseW * 0.55),
+                minH: Math.max(180, baseH * 0.55),
+              };
+            if (key.startsWith("cmdb:"))
+              return {
+                minW: Math.max(300, baseW * 0.8),
+                minH: Math.max(120, baseH * 0.7),
+              };
+            return {
+              minW: Math.max(160, baseW * 0.6),
+              minH: Math.max(120, baseH * 0.6),
+            };
+          };
 
-const clampSize = (key, baseW, baseH, dw, dh, maxW, maxH) => {
-  const { minW, minH } = minSizeFor(key, baseW, baseH);
-  const w = clamp(baseW + dw, minW, maxW);
-  const h = clamp(baseH + dh, minH, maxH);
-  return { dw: w - baseW, dh: h - baseH };
-};
+          const clampSize = (key, baseW, baseH, dw, dh, maxW, maxH) => {
+            const { minW, minH } = minSizeFor(key, baseW, baseH);
+            const w = clamp(baseW + dw, minW, maxW);
+            const h = clamp(baseH + dh, minH, maxH);
+            return { dw: w - baseW, dh: h - baseH };
+          };
 
           const getOffset = (key) => {
-            if (!state.ui.graphOffsets[key]) state.ui.graphOffsets[key] = { dx: 0, dy: 0 };
+            if (!state.ui.graphOffsets[key])
+              state.ui.graphOffsets[key] = { dx: 0, dy: 0 };
             return state.ui.graphOffsets[key];
           };
-        
+
           const clientToSvg = (clientX, clientY) => {
             const r = svg.getBoundingClientRect();
             const w = Number(svg.getAttribute("width") || r.width || 1);
@@ -4156,39 +4168,44 @@ const clampSize = (key, baseW, baseH, dw, dh, maxW, maxH) => {
               y: (clientY - r.top) * (h / (r.height || 1)),
             };
           };
-        
+
           const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-        
+
           // init drag handlers once per svg
           if (!svg.__cmdbDragInit) {
             svg.__cmdbDragInit = true;
             svg.__cmdbDragState = null;
-        
+
             svg.addEventListener("dblclick", (ev) => {
-              const hit = ev.target && ev.target.closest && ev.target.closest("[data-nodeid],[data-appid]");
+              const hit =
+                ev.target &&
+                ev.target.closest &&
+                ev.target.closest("[data-nodeid],[data-appid]");
               if (!hit) return;
               ev.preventDefault();
               ev.stopPropagation();
-        
-              const nodeId = hit.getAttribute("data-nodeid") || hit.getAttribute("data-appid");
+
+              const nodeId =
+                hit.getAttribute("data-nodeid") ||
+                hit.getAttribute("data-appid");
               if (!nodeId) return;
               openModal(nodeId);
             });
-        
+
             svg.addEventListener("pointerdown", (ev) => {
               const target = ev.target;
               if (!target) return;
-            
+
               // >>> RESIZE HANDLE
               const h = target.closest && target.closest("[data-resizekey]");
-              if(h){
+              if (h) {
                 const key = h.getAttribute("data-resizekey");
-                if(!key) return;
+                if (!key) return;
                 ev.preventDefault();
-            
+
                 const pt = clientToSvg(ev.clientX, ev.clientY);
                 const sz = getSize(key);
-            
+
                 svg.__cmdbDragState = {
                   type: "resize",
                   key,
@@ -4196,23 +4213,24 @@ const clampSize = (key, baseW, baseH, dw, dh, maxW, maxH) => {
                   startSize: { dw: sz.dw, dh: sz.dh },
                   modeAtStart: mode,
                 };
-            
-                if (target.setPointerCapture) target.setPointerCapture(ev.pointerId);
+
+                if (target.setPointerCapture)
+                  target.setPointerCapture(ev.pointerId);
                 return;
               }
-            
+
               // >>> NORMAL DRAG (como você já tinha)
               const g = target.closest && target.closest("[data-dragkey]");
               if (!g) return;
-            
+
               const key = g.getAttribute("data-dragkey");
               if (!key) return;
-            
+
               ev.preventDefault();
-            
+
               const pt = clientToSvg(ev.clientX, ev.clientY);
               const off = getOffset(key);
-            
+
               svg.__cmdbDragState = {
                 type: "drag",
                 key,
@@ -4220,103 +4238,137 @@ const clampSize = (key, baseW, baseH, dw, dh, maxW, maxH) => {
                 startOff: { dx: off.dx, dy: off.dy },
                 modeAtStart: mode,
               };
-            
-              if (target.setPointerCapture) target.setPointerCapture(ev.pointerId);
+
+              if (target.setPointerCapture)
+                target.setPointerCapture(ev.pointerId);
             });
-            
+
             svg.addEventListener("pointermove", (ev) => {
               const ds = svg.__cmdbDragState;
               if (!ds) return;
-            
+
               const pt = clientToSvg(ev.clientX, ev.clientY);
-            
-              if(ds.type === "resize"){
+
+              if (ds.type === "resize") {
                 const key = ds.key;
                 const sz = getSize(key);
-            
+
                 // delta do mouse em coords do SVG
-                const dx = (pt.x - ds.startPt.x);
-                const dy = (pt.y - ds.startPt.y);
-            
+                const dx = pt.x - ds.startPt.x;
+                const dy = pt.y - ds.startPt.y;
+
                 // aplica direto (clamp real é feito dentro de applyRootRect/applyChildRect)
                 sz.dw = ds.startSize.dw + dx;
                 sz.dh = ds.startSize.dh + dy;
-            
+
                 renderGraph(svg, ds.modeAtStart || mode);
                 return;
               }
-            
+
               // drag normal
               const off = getOffset(ds.key);
               off.dx = ds.startOff.dx + (pt.x - ds.startPt.x);
               off.dy = ds.startOff.dy + (pt.y - ds.startPt.y);
-            
+
               renderGraph(svg, ds.modeAtStart || mode);
             });
-        
-            const end = () => { svg.__cmdbDragState = null; };
+
+            const end = () => {
+              svg.__cmdbDragState = null;
+            };
             svg.addEventListener("pointerup", end);
             svg.addEventListener("pointercancel", end);
             svg.addEventListener("pointerleave", end);
           }
-        
+
           // =========================
           // Data
           // =========================
-          const cmdbs = state.nodes.filter(isCMDBDir).slice().sort((a, b) => a.name.localeCompare(b.name));
+          const cmdbs = state.nodes
+            .filter(isCMDBDir)
+            .slice()
+            .sort((a, b) => a.name.localeCompare(b.name));
           const apps = state.nodes.filter(isApp);
           const conns = state.nodes.filter(isConn);
-        
+
           // --------- SUPRIMENTO (entrada/saída) por app ----------
           const hasIn = new Map();
           const hasOut = new Map();
-          apps.forEach((a) => { hasIn.set(a.id, false); hasOut.set(a.id, false); });
-        
+          apps.forEach((a) => {
+            hasIn.set(a.id, false);
+            hasOut.set(a.id, false);
+          });
+
           for (const c of conns) {
             if (c.toAppId && hasIn.has(c.toAppId)) hasIn.set(c.toAppId, true);
-            if (c.fromAppId && hasOut.has(c.fromAppId)) hasOut.set(c.fromAppId, true);
+            if (c.fromAppId && hasOut.has(c.fromAppId))
+              hasOut.set(c.fromAppId, true);
           }
-          const isSuppliedApp = (appId) => !!hasIn.get(appId) && !!hasOut.get(appId);
-        
+          const isSuppliedApp = (appId) =>
+            !!hasIn.get(appId) && !!hasOut.get(appId);
+
           // --------- HEALTH por app (ok/warning/blocked/default) ----------
           function getAppHealth(appId) {
             let hasBlocked = false;
             let hasWarning = false;
-        
+
             for (const c of conns) {
               const rel = c.fromAppId === appId || c.toAppId === appId;
               if (!rel) continue;
-        
+
               const st = c.connStatus || "nao-testada";
-              if (st === "bloqueada") { hasBlocked = true; break; }
+              if (st === "bloqueada") {
+                hasBlocked = true;
+                break;
+              }
               if (st === "nao-testada") hasWarning = true;
             }
-        
+
             if (hasBlocked) return "blocked";
             if (hasWarning) return "warning";
             if (isSuppliedApp(appId)) return "ok";
             return "default";
           }
-        
+
           function colorsForHealth(appHealth, isolated = false) {
-            if (isolated) return { fill: "rgba(255,255,255,0.95)", stroke: "rgba(0,0,0,0.25)" };
-        
+            if (isolated)
+              return {
+                fill: "rgba(255,255,255,0.95)",
+                stroke: "rgba(0,0,0,0.25)",
+              };
+
             if (appHealth === "ok") {
-              return { fill: "rgba(120, 255, 160, 0.55)", stroke: "rgba(70, 255, 150, 0.98)" };
+              return {
+                fill: "rgba(120, 255, 160, 0.55)",
+                stroke: "rgba(70, 255, 150, 0.98)",
+              };
             } else if (appHealth === "warning") {
-              return { fill: "rgba(255, 210, 120, 0.40)", stroke: "rgba(255, 190, 80, 0.95)" };
+              return {
+                fill: "rgba(255, 210, 120, 0.40)",
+                stroke: "rgba(255, 190, 80, 0.95)",
+              };
             } else if (appHealth === "blocked") {
-              return { fill: "rgba(255, 120, 120, 0.42)", stroke: "rgba(255, 80, 80, 0.95)" };
+              return {
+                fill: "rgba(255, 120, 120, 0.42)",
+                stroke: "rgba(255, 80, 80, 0.95)",
+              };
             } else {
-              return { fill: "rgba(255,255,255,0.06)", stroke: "rgba(85,230,165,0.28)" };
+              return {
+                fill: "rgba(255,255,255,0.06)",
+                stroke: "rgba(85,230,165,0.28)",
+              };
             }
           }
-        
+
           // ---------- helpers ----------
-          const getDc = (c) => (c.datacenter || c.dc || "").trim() || "(sem dc)";
-          const getEnv = (c) => (c.ambiente || c.env || "").trim() || "(sem env)";
-          const getNs  = (c) => (c.namespace || c.ns || c.nspace || c.nameSpace || "").trim() || "(sem namespace)";
-        
+          const getDc = (c) =>
+            (c.datacenter || c.dc || "").trim() || "(sem dc)";
+          const getEnv = (c) =>
+            (c.ambiente || c.env || "").trim() || "(sem env)";
+          const getNs = (c) =>
+            (c.namespace || c.ns || c.nspace || c.nameSpace || "").trim() ||
+            "(sem namespace)";
+
           // filtro de modo
           function allowConnByMode(c) {
             const st = c.connStatus || "nao-testada";
@@ -4325,22 +4377,24 @@ const clampSize = (key, baseW, baseH, dw, dh, maxW, maxH) => {
             if (mode === "testada") return st === "testada";
             return true;
           }
-        
+
           function strokeForConn(c) {
             const st = c.connStatus || "nao-testada";
-            if (st === "bloqueada") return { color: "rgba(255,107,107,0.95)", w: 2.6, dash: "7 6" };
-            if (st === "testada")   return { color: "rgba(101,168,255,0.9)",  w: 2.4, dash: "" };
+            if (st === "bloqueada")
+              return { color: "rgba(255,107,107,0.95)", w: 2.6, dash: "7 6" };
+            if (st === "testada")
+              return { color: "rgba(101,168,255,0.9)", w: 2.4, dash: "" };
             return { color: "rgba(255,211,107,0.95)", w: 2.0, dash: "" };
           }
-        
+
           // graus (isolados)
           const appDegree = new Map();
           const cmdbDegree = new Map();
           const inc = (m, k) => m.set(k, (m.get(k) || 0) + 1);
-        
+
           apps.forEach((a) => appDegree.set(a.id, 0));
           cmdbs.forEach((c) => cmdbDegree.set(c.id, 0));
-        
+
           for (const c of conns) {
             inc(appDegree, c.fromAppId);
             inc(appDegree, c.toAppId);
@@ -4349,9 +4403,9 @@ const clampSize = (key, baseW, baseH, dw, dh, maxW, maxH) => {
             if (fa?.cmdbId) inc(cmdbDegree, fa.cmdbId);
             if (ta?.cmdbId) inc(cmdbDegree, ta.cmdbId);
           }
-          const isIsolatedApp  = (id) => (appDegree.get(id) || 0) === 0;
+          const isIsolatedApp = (id) => (appDegree.get(id) || 0) === 0;
           const isIsolatedCmdb = (id) => (cmdbDegree.get(id) || 0) === 0;
-        
+
           // apps por cmdb
           const appsByCmdb = new Map();
           for (const c of cmdbs) appsByCmdb.set(c.id, []);
@@ -4359,36 +4413,37 @@ const clampSize = (key, baseW, baseH, dw, dh, maxW, maxH) => {
             if (!appsByCmdb.has(a.cmdbId)) appsByCmdb.set(a.cmdbId, []);
             appsByCmdb.get(a.cmdbId).push(a);
           }
-          for (const [k, v] of appsByCmdb.entries()) v.sort((x, y) => x.name.localeCompare(y.name));
-        
+          for (const [k, v] of appsByCmdb.entries())
+            v.sort((x, y) => x.name.localeCompare(y.name));
+
           // ---------- layout params ----------
           const pad = 18;
           const dcPad = 18;
           const envPad = 16;
-        
+
           const nsPad = 14;
           const nsTitleH = 26;
           const nsGap = 14;
-        
+
           const cmdbW = 330;
           const cmdbColGap = 22;
           const cmdbRowGap = 22;
-        
+
           const headerH = 34;
           const appH = 24;
-        
+
           const envTitleH = 30;
           const dcTitleH = 30;
-        
+
           const perRow = 3;
-        
+
           // ---------- 1) agrupar: DC -> ENV -> NAMESPACE -> CMDB ----------
           const dcMap = new Map();
           for (const c of cmdbs) {
-            const dc  = getDc(c);
+            const dc = getDc(c);
             const env = getEnv(c);
-            const ns  = getNs(c);
-        
+            const ns = getNs(c);
+
             if (!dcMap.has(dc)) dcMap.set(dc, new Map());
             const envMap = dcMap.get(dc);
             if (!envMap.has(env)) envMap.set(env, new Map());
@@ -4396,228 +4451,292 @@ const clampSize = (key, baseW, baseH, dw, dh, maxW, maxH) => {
             if (!nsMap.has(ns)) nsMap.set(ns, []);
             nsMap.get(ns).push(c);
           }
-        
-          const dcs = Array.from(dcMap.keys()).sort((a, b) => a.localeCompare(b));
+
+          const dcs = Array.from(dcMap.keys()).sort((a, b) =>
+            a.localeCompare(b)
+          );
           for (const dc of dcs) {
             const envMap = dcMap.get(dc);
-            const envs = Array.from(envMap.keys()).sort((a, b) => a.localeCompare(b));
+            const envs = Array.from(envMap.keys()).sort((a, b) =>
+              a.localeCompare(b)
+            );
             const newEnvMap = new Map();
-        
+
             for (const env of envs) {
               const nsMap = envMap.get(env);
-              const nss = Array.from(nsMap.keys()).sort((a, b) => a.localeCompare(b));
+              const nss = Array.from(nsMap.keys()).sort((a, b) =>
+                a.localeCompare(b)
+              );
               const newNsMap = new Map();
               for (const ns of nss) {
-                const list = nsMap.get(ns).slice().sort((a, b) => a.name.localeCompare(b.name));
+                const list = nsMap
+                  .get(ns)
+                  .slice()
+                  .sort((a, b) => a.name.localeCompare(b.name));
                 newNsMap.set(ns, list);
               }
               newEnvMap.set(env, newNsMap);
             }
             dcMap.set(dc, newEnvMap);
           }
-        
+
           // =========================================================
           // BASE LAYOUT (sem offsets)  -> SEM reflow por drag
           // =========================================================
-          const baseDcPos   = new Map(); // dc -> {x,y,w,h}
-          const baseEnvPos  = new Map(); // "dc||env" -> {x,y,w,h}
-          const baseNsPos   = new Map(); // "dc||env||ns" -> {x,y,w,h}
+          const baseDcPos = new Map(); // dc -> {x,y,w,h}
+          const baseEnvPos = new Map(); // "dc||env" -> {x,y,w,h}
+          const baseNsPos = new Map(); // "dc||env||ns" -> {x,y,w,h}
           const baseCmdbPos = new Map(); // cmdbId -> {x,y,w,h}
-        
+
           function computeNsBox_BASE(dc, env, ns, cmdbList, startX, startY) {
             let x = startX + nsPad;
             let y = startY + nsTitleH + nsPad;
-        
+
             let colMaxH = 0;
-            let maxX = x, maxY = y;
-        
+            let maxX = x,
+              maxY = y;
+
             cmdbList.forEach((c, idx) => {
               const appsIn = appsByCmdb.get(c.id) || [];
               const cmdbH = headerH + Math.max(1, appsIn.length) * appH + 22;
-        
+
               if (idx > 0 && idx % perRow === 0) {
                 x = startX + nsPad;
-                y = y + colMaxH + cmdbRowGap;   // <-- usa base Y (não depende offset)
+                y = y + colMaxH + cmdbRowGap; // <-- usa base Y (não depende offset)
                 colMaxH = 0;
               }
-        
+
               const cx = x;
               const cy = y;
-        
+
               baseCmdbPos.set(c.id, { x: cx, y: cy, w: cmdbW, h: cmdbH });
-        
+
               colMaxH = Math.max(colMaxH, cmdbH);
               maxX = Math.max(maxX, cx + cmdbW);
               maxY = Math.max(maxY, cy + cmdbH);
-        
-              x = x + cmdbW + cmdbColGap;      // <-- base X (não depende offset)
+
+              x = x + cmdbW + cmdbColGap; // <-- base X (não depende offset)
             });
-        
-            const nsW = (maxX - startX) + nsPad;
-            const nsH = (maxY - startY) + nsPad;
-        
+
+            const nsW = maxX - startX + nsPad;
+            const nsH = maxY - startY + nsPad;
+
             return {
               w: Math.max(nsW, cmdbW + nsPad * 2),
               h: Math.max(nsH, nsTitleH + 80),
             };
           }
-        
+
           function computeEnvBox_BASE(dc, env, nsMap, startX, startY) {
             let innerY = startY + envTitleH + envPad;
             const envX = startX;
-        
+
             let maxX = envX + envPad;
             let maxY = innerY;
-        
+
             for (const ns of Array.from(nsMap.keys())) {
               const cmdbList = nsMap.get(ns) || [];
-        
+
               const nxBase = envX + envPad;
               const nyBase = innerY;
-        
-              const { w: nsW, h: nsH } = computeNsBox_BASE(dc, env, ns, cmdbList, nxBase, nyBase);
-              baseNsPos.set(dc + "||" + env + "||" + ns, { x: nxBase, y: nyBase, w: nsW, h: nsH });
-        
+
+              const { w: nsW, h: nsH } = computeNsBox_BASE(
+                dc,
+                env,
+                ns,
+                cmdbList,
+                nxBase,
+                nyBase
+              );
+              baseNsPos.set(dc + "||" + env + "||" + ns, {
+                x: nxBase,
+                y: nyBase,
+                w: nsW,
+                h: nsH,
+              });
+
               // IMPORTANTE: avança pelo BASE (sem offset)
               innerY = nyBase + nsH + nsGap;
-        
+
               maxX = Math.max(maxX, nxBase + nsW);
               maxY = Math.max(maxY, nyBase + nsH);
             }
-        
-            const envW = (maxX - startX) + envPad;
-            const envH = (maxY - startY) + envPad;
-        
+
+            const envW = maxX - startX + envPad;
+            const envH = maxY - startY + envPad;
+
             return {
               w: Math.max(envW, cmdbW + envPad * 2),
               h: Math.max(envH, envTitleH + 120),
             };
           }
-        
+
           // DCs empilhados (BASE) — cursor não usa offset
           let cursorY = pad;
           const canvasWMin = 1800;
           let canvasW = canvasWMin;
           let maxBaseY = cursorY;
-        
+
           for (const dc of dcs) {
             const envMap = dcMap.get(dc);
             const envs = Array.from(envMap.keys());
-        
+
             const dcXBase = pad;
             const dcYBase = cursorY;
-        
+
             let innerY = dcYBase + dcTitleH + dcPad;
-        
+
             let dcMaxW = 0;
             let dcMaxY = innerY;
-        
+
             for (const env of envs) {
               const nsMap = envMap.get(env);
-        
+
               const envXBase = dcXBase + dcPad;
               const envYBase = innerY;
-        
-              const { w: envW, h: envH } = computeEnvBox_BASE(dc, env, nsMap, envXBase, envYBase);
-              baseEnvPos.set(dc + "||" + env, { x: envXBase, y: envYBase, w: envW, h: envH });
-        
+
+              const { w: envW, h: envH } = computeEnvBox_BASE(
+                dc,
+                env,
+                nsMap,
+                envXBase,
+                envYBase
+              );
+              baseEnvPos.set(dc + "||" + env, {
+                x: envXBase,
+                y: envYBase,
+                w: envW,
+                h: envH,
+              });
+
               // IMPORTANTE: avança pelo BASE (sem offset)
               innerY = envYBase + envH + 16;
-        
+
               dcMaxW = Math.max(dcMaxW, envXBase + envW - dcXBase);
               dcMaxY = Math.max(dcMaxY, envYBase + envH);
             }
-        
+
             const dcWBase = dcMaxW + dcPad;
-            const dcHBase = (dcMaxY - dcYBase) + dcPad;
-        
-            baseDcPos.set(dc, { x: dcXBase, y: dcYBase, w: dcWBase, h: dcHBase });
-        
+            const dcHBase = dcMaxY - dcYBase + dcPad;
+
+            baseDcPos.set(dc, {
+              x: dcXBase,
+              y: dcYBase,
+              w: dcWBase,
+              h: dcHBase,
+            });
+
             cursorY = dcYBase + dcHBase + 18; // BASE (sem offset)
             canvasW = Math.max(canvasW, dcXBase + dcWBase + pad);
             maxBaseY = Math.max(maxBaseY, cursorY);
           }
-        
+
           // Canvas grande para permitir liberdade
-          const canvasH = Math.max(1200, maxBaseY + 800);
-          svg.setAttribute("width", String(Math.max(canvasW, canvasWMin)));
-          svg.setAttribute("height", String(canvasH));
-        
+          const BIG_W = 12000;
+          const BIG_H = 8000;
+          
+          svg.setAttribute("width", String(BIG_W));
+          svg.setAttribute("height", String(BIG_H));
+
           // =========================================================
           // Aplicar OFFSETS (com clamp por hierarquia)
           // =========================================================
-          const actualDcPos   = new Map();
-          const actualEnvPos  = new Map();
-          const actualNsPos   = new Map();
+          const actualDcPos = new Map();
+          const actualEnvPos = new Map();
+          const actualNsPos = new Map();
           const actualCmdbPos = new Map();
-          const actualAppBox  = new Map(); // appId -> {x,y,w,h, mid,in,out}
-        
+          const actualAppBox = new Map(); // appId -> {x,y,w,h, mid,in,out}
+
           const W = Number(svg.getAttribute("width") || 2000);
           const H = Number(svg.getAttribute("height") || 1200);
-        
+
           function applyRootRect(key, baseRect, margin = pad) {
             const off = getOffset(key);
-            const sz  = getSize(key);
-          
+            const sz = getSize(key);
+
             // tamanho desejado (base + delta)
-            const maxW = W - margin*2;
-            const maxH = H - margin*2;
-            const fixed = clampSize(key, baseRect.w, baseRect.h, sz.dw, sz.dh, maxW, maxH);
-            sz.dw = fixed.dw; sz.dh = fixed.dh;
-          
+            const maxW = W - margin * 2;
+            const maxH = H - margin * 2;
+            const fixed = clampSize(
+              key,
+              baseRect.w,
+              baseRect.h,
+              sz.dw,
+              sz.dh,
+              maxW,
+              maxH
+            );
+            sz.dw = fixed.dw;
+            sz.dh = fixed.dh;
+
             const w = baseRect.w + sz.dw;
             const h = baseRect.h + sz.dh;
-          
+
             const minX = margin;
             const maxX = W - margin - w;
             const minY = margin;
             const maxY = H - margin - h;
-          
+
             off.dx = clamp(off.dx, minX - baseRect.x, maxX - baseRect.x);
             off.dy = clamp(off.dy, minY - baseRect.y, maxY - baseRect.y);
-          
+
             return { x: baseRect.x + off.dx, y: baseRect.y + off.dy, w, h };
           }
-          
-          function applyChildRect(key, baseRect, baseParent, actualParent, padInside) {
+
+          function applyChildRect(
+            key,
+            baseRect,
+            baseParent,
+            actualParent,
+            padInside
+          ) {
             const parentDeltaX = actualParent.x - baseParent.x;
             const parentDeltaY = actualParent.y - baseParent.y;
-          
+
             const desiredX0 = baseRect.x + parentDeltaX;
             const desiredY0 = baseRect.y + parentDeltaY;
-          
+
             const off = getOffset(key);
-            const sz  = getSize(key);
-          
+            const sz = getSize(key);
+
             // clamp do tamanho pelo pai atual
-            const maxW = actualParent.w - padInside*2;
-            const maxH = actualParent.h - padInside*2;
-            const fixed = clampSize(key, baseRect.w, baseRect.h, sz.dw, sz.dh, maxW, maxH);
-            sz.dw = fixed.dw; sz.dh = fixed.dh;
-          
+            const maxW = actualParent.w - padInside * 2;
+            const maxH = actualParent.h - padInside * 2;
+            const fixed = clampSize(
+              key,
+              baseRect.w,
+              baseRect.h,
+              sz.dw,
+              sz.dh,
+              maxW,
+              maxH
+            );
+            sz.dw = fixed.dw;
+            sz.dh = fixed.dh;
+
             const w = baseRect.w + sz.dw;
             const h = baseRect.h + sz.dh;
-          
+
             const minX = actualParent.x + padInside;
             const maxX = actualParent.x + actualParent.w - padInside - w;
             const minY = actualParent.y + padInside;
             const maxY = actualParent.y + actualParent.h - padInside - h;
-          
+
             off.dx = clamp(off.dx, minX - desiredX0, maxX - desiredX0);
             off.dy = clamp(off.dy, minY - desiredY0, maxY - desiredY0);
-          
+
             return { x: desiredX0 + off.dx, y: desiredY0 + off.dy, w, h };
           }
-        
+
           // ---------- camadas ----------
-          const dcLayer   = svgEl("g");
-          const envLayer  = svgEl("g");
-          const nsLayer   = svgEl("g");
+          const dcLayer = svgEl("g");
+          const envLayer = svgEl("g");
+          const nsLayer = svgEl("g");
           const cmdbLayer = svgEl("g");
           const edgeLayer = svgEl("g");
-          const labelLayer= svgEl("g");
-          const appLayer  = svgEl("g");
-        
+          const labelLayer = svgEl("g");
+          const appLayer = svgEl("g");
+
           svg.appendChild(dcLayer);
           svg.appendChild(envLayer);
           svg.appendChild(nsLayer);
@@ -4625,40 +4744,47 @@ const clampSize = (key, baseW, baseH, dw, dh, maxW, maxH) => {
           svg.appendChild(edgeLayer);
           svg.appendChild(labelLayer);
           svg.appendChild(appLayer);
-        
+
           // defs/clip
           const defs = svgEl("defs");
           svg.appendChild(defs);
-        
+
           function addClip(id, x, y, w, h) {
             const cp = svgEl("clipPath", { id });
-            cp.appendChild(svgEl("rect", { x, y, width: w, height: h, rx: "10", ry: "10" }));
+            cp.appendChild(
+              svgEl("rect", { x, y, width: w, height: h, rx: "10", ry: "10" })
+            );
             defs.appendChild(cp);
             return id;
           }
-        
-          function drawResizeHandle(layer, rect, key){
+
+          function drawResizeHandle(layer, rect, key) {
             const s = 12;
             const hx = rect.x + rect.w - s - 6;
             const hy = rect.y + rect.h - s - 6;
-          
+
             const h = svgEl("rect", {
-              x: hx, y: hy, width: s, height: s, rx: "3", ry: "3",
+              x: hx,
+              y: hy,
+              width: s,
+              height: s,
+              rx: "3",
+              ry: "3",
               fill: "rgba(255,255,255,0.10)",
               stroke: "rgba(255,255,255,0.22)",
               "stroke-width": "1",
               "data-resizekey": key,
-              style: "cursor:nwse-resize"
+              style: "cursor:nwse-resize",
             });
-          
+
             // uma “marcação” diagonal
             const l1 = svgEl("path", {
-              d: `M ${hx+3} ${hy+s-3} L ${hx+s-3} ${hy+3}`,
+              d: `M ${hx + 3} ${hy + s - 3} L ${hx + s - 3} ${hy + 3}`,
               stroke: "rgba(255,255,255,0.25)",
               "stroke-width": "1",
-              "pointer-events": "none"
+              "pointer-events": "none",
             });
-          
+
             layer.appendChild(h);
             layer.appendChild(l1);
           }
@@ -4669,89 +4795,122 @@ const clampSize = (key, baseW, baseH, dw, dh, maxW, maxH) => {
           for (const dc of dcs) {
             const bdc = baseDcPos.get(dc);
             if (!bdc) continue;
-        
+
             const dcKey = "dc:" + dc;
             const adc = applyRootRect(dcKey, bdc, pad);
             actualDcPos.set(dc, adc);
-        
-            const dcG = svgEl("g", { "data-dragkey": dcKey, style: "cursor:move" });
+
+            const dcG = svgEl("g", {
+              "data-dragkey": dcKey,
+              style: "cursor:move",
+            });
             dcLayer.appendChild(dcG);
-        
-            dcG.appendChild(svgEl("rect", {
-              x: adc.x, y: adc.y, width: adc.w, height: adc.h, rx: "20", ry: "20",
-              fill: "rgba(255,255,255,0.02)",
-              stroke: "rgba(122,162,255,0.22)",
-              "stroke-width": "1.2"
-            }));
-        
+
+            dcG.appendChild(
+              svgEl("rect", {
+                x: adc.x,
+                y: adc.y,
+                width: adc.w,
+                height: adc.h,
+                rx: "20",
+                ry: "20",
+                fill: "rgba(255,255,255,0.02)",
+                stroke: "rgba(122,162,255,0.22)",
+                "stroke-width": "1.2",
+              })
+            );
+
             const t = svgEl("text", {
-              x: adc.x + 14, y: adc.y + 21,
+              x: adc.x + 14,
+              y: adc.y + 21,
               fill: "var(--text)",
               "font-family": "var(--mono)",
               "font-size": "12.8",
               opacity: "0.9",
-              "pointer-events": "none"
+              "pointer-events": "none",
             });
             t.textContent = `DATACENTER: ${dc}`;
             dcG.appendChild(t);
             drawResizeHandle(dcG, adc, dcKey);
-        
+
             const envMap = dcMap.get(dc);
             for (const [env, nsMap] of envMap.entries()) {
               const envKeyStr = dc + "||" + env;
               const benv = baseEnvPos.get(envKeyStr);
               if (!benv) continue;
-        
+
               const envKey = "env:" + envKeyStr;
               const aenv = applyChildRect(envKey, benv, bdc, adc, dcPad);
               actualEnvPos.set(envKeyStr, aenv);
-        
-              const envG = svgEl("g", { "data-dragkey": envKey, style: "cursor:move" });
+
+              const envG = svgEl("g", {
+                "data-dragkey": envKey,
+                style: "cursor:move",
+              });
               envLayer.appendChild(envG);
-        
-              envG.appendChild(svgEl("rect", {
-                x: aenv.x, y: aenv.y, width: aenv.w, height: aenv.h, rx: "18", ry: "18",
-                fill: "rgba(255,255,255,0.03)",
-                stroke: "rgba(255,255,255,0.08)",
-                "stroke-width": "1.0"
-              }));
-        
+
+              envG.appendChild(
+                svgEl("rect", {
+                  x: aenv.x,
+                  y: aenv.y,
+                  width: aenv.w,
+                  height: aenv.h,
+                  rx: "18",
+                  ry: "18",
+                  fill: "rgba(255,255,255,0.03)",
+                  stroke: "rgba(255,255,255,0.08)",
+                  "stroke-width": "1.0",
+                })
+              );
+
               const et = svgEl("text", {
-                x: aenv.x + 14, y: aenv.y + 20,
+                x: aenv.x + 14,
+                y: aenv.y + 20,
                 fill: "var(--muted)",
                 "font-family": "var(--mono)",
                 "font-size": "12.2",
-                "pointer-events": "none"
+                "pointer-events": "none",
               });
               et.textContent = `AMBIENTE: ${env}`;
               envG.appendChild(et);
               drawResizeHandle(envG, aenv, envKey);
-        
+
               for (const ns of Array.from(nsMap.keys())) {
                 const nsKeyStr = dc + "||" + env + "||" + ns;
                 const bns = baseNsPos.get(nsKeyStr);
                 if (!bns) continue;
-        
+
                 const nsKey = "ns:" + nsKeyStr;
                 const ans = applyChildRect(nsKey, bns, benv, aenv, envPad);
                 actualNsPos.set(nsKeyStr, ans);
-        
-                const nsG = svgEl("g", { "data-dragkey": nsKey, style: "cursor:move" });
+
+                const nsG = svgEl("g", {
+                  "data-dragkey": nsKey,
+                  style: "cursor:move",
+                });
                 nsLayer.appendChild(nsG);
-        
-                nsG.appendChild(svgEl("rect", {
-                  x: ans.x, y: ans.y, width: ans.w, height: ans.h, rx: "16", ry: "16",
-                  fill: "rgba(255,255,255,0.028)",
-                  stroke: "rgba(255,255,255,0.085)",
-                  "stroke-width": "1.0"
-                }));
-        
+
+                nsG.appendChild(
+                  svgEl("rect", {
+                    x: ans.x,
+                    y: ans.y,
+                    width: ans.w,
+                    height: ans.h,
+                    rx: "16",
+                    ry: "16",
+                    fill: "rgba(255,255,255,0.028)",
+                    stroke: "rgba(255,255,255,0.085)",
+                    "stroke-width": "1.0",
+                  })
+                );
+
                 const nt = svgEl("text", {
-                  x: ans.x + 14, y: ans.y + 18,
+                  x: ans.x + 14,
+                  y: ans.y + 18,
                   fill: "rgba(255,255,255,0.62)",
                   "font-family": "var(--mono)",
                   "font-size": "12.0",
-                  "pointer-events": "none"
+                  "pointer-events": "none",
                 });
                 nt.textContent = `NAMESPACE: ${ns}`;
                 nsG.appendChild(nt);
@@ -4759,7 +4918,7 @@ const clampSize = (key, baseW, baseH, dw, dh, maxW, maxH) => {
               }
             }
           }
-        
+
           // =========================================================
           // Draw CMDB + APP (CMDB livre dentro de NS, APP livre dentro de CMDB)
           // =========================================================
@@ -4769,218 +4928,293 @@ const clampSize = (key, baseW, baseH, dw, dh, maxW, maxH) => {
             if (!appElsById.has(appId)) appElsById.set(appId, []);
             appElsById.get(appId).push(el);
           };
-        
+
           // primeiro, precisamos de um lookup do nsKey de cada cmdb
           const cmdbToNsKey = new Map(); // cmdbId -> "dc||env||ns"
           for (const [dc, envMap] of dcMap.entries()) {
             for (const [env, nsMap] of envMap.entries()) {
               for (const [ns, list] of nsMap.entries()) {
-                for (const c of list) cmdbToNsKey.set(c.id, dc + "||" + env + "||" + ns);
+                for (const c of list)
+                  cmdbToNsKey.set(c.id, dc + "||" + env + "||" + ns);
               }
             }
           }
-        
+
           for (const c of cmdbs) {
             const bcmdb = baseCmdbPos.get(c.id);
             if (!bcmdb) continue;
-        
+
             const nsKeyStr = cmdbToNsKey.get(c.id);
             const bns = nsKeyStr ? baseNsPos.get(nsKeyStr) : null;
             const ans = nsKeyStr ? actualNsPos.get(nsKeyStr) : null;
             if (!bns || !ans) continue;
-        
+
             const cmdbKey = "cmdb:" + c.id;
             const acmdb = applyChildRect(cmdbKey, bcmdb, bns, ans, nsPad);
             actualCmdbPos.set(c.id, acmdb);
-        
+
             const appPosMap = new Map();
             cmdbPosForEdges.set(c.id, { ...acmdb, appPos: appPosMap });
-        
+
             const cmdbIsolated = isIsolatedCmdb(c.id);
-            const fill = cmdbIsolated ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.04)";
-            const stroke = cmdbIsolated ? "rgba(0,0,0,0.25)" : "rgba(122,162,255,0.35)";
-        
+            const fill = cmdbIsolated
+              ? "rgba(255,255,255,0.95)"
+              : "rgba(255,255,255,0.04)";
+            const stroke = cmdbIsolated
+              ? "rgba(0,0,0,0.25)"
+              : "rgba(122,162,255,0.35)";
+
             const cmdbG = svgEl("g", {
               "data-dragkey": cmdbKey,
               "data-nodeid": c.id,
-              style: "cursor:move"
+              style: "cursor:move",
             });
             cmdbLayer.appendChild(cmdbG);
-        
-            cmdbG.appendChild(svgEl("rect", {
-              x: acmdb.x, y: acmdb.y, width: acmdb.w, height: acmdb.h, rx: "16", ry: "16",
-              fill, stroke, "stroke-width": "1.2"
-            }));
-        
-            const clipId = addClip("cmdbTitleClip_" + c.id, acmdb.x + 10, acmdb.y + 10, acmdb.w - 20, 20);
+
+            cmdbG.appendChild(
+              svgEl("rect", {
+                x: acmdb.x,
+                y: acmdb.y,
+                width: acmdb.w,
+                height: acmdb.h,
+                rx: "16",
+                ry: "16",
+                fill,
+                stroke,
+                "stroke-width": "1.2",
+              })
+            );
+
+            const clipId = addClip(
+              "cmdbTitleClip_" + c.id,
+              acmdb.x + 10,
+              acmdb.y + 10,
+              acmdb.w - 20,
+              20
+            );
             const titleG = svgEl("g", { "clip-path": `url(#${clipId})` });
-        
-            const titleText = `${c.name} • ${c.hostname || "-"} • ${c.ip || "-"}`;
+
+            const titleText = `${c.name} • ${c.hostname || "-"} • ${
+              c.ip || "-"
+            }`;
             const tt = svgEl("text", {
-              x: acmdb.x + 14, y: acmdb.y + 22,
+              x: acmdb.x + 14,
+              y: acmdb.y + 22,
               fill: cmdbIsolated ? "rgba(0,0,0,0.78)" : "var(--text)",
               "font-family": "var(--mono)",
               "font-size": "12",
               opacity: cmdbIsolated ? "1" : "0.80",
-              "pointer-events": "none"
+              "pointer-events": "none",
             });
             tt.textContent = titleText;
             titleG.appendChild(tt);
             cmdbG.appendChild(titleG);
             drawResizeHandle(cmdbG, acmdb, cmdbKey);
-        
+
             // apps dentro do cmdb
             const list = appsByCmdb.get(c.id) || [];
             const baseY = acmdb.y + headerH;
-        
+
             if (!list.length) {
               const cx = acmdb.x + acmdb.w / 2;
               const cy = baseY + 18;
-              appPosMap.set("__none__", { mid: { x: cx, y: cy }, in: { x: cx - 10, y: cy }, out: { x: cx + 10, y: cy } });
-              cmdbG.appendChild(svgEl("circle", {
-                cx, cy, r: "4.5",
-                fill: cmdbIsolated ? "rgba(0,0,0,0.25)" : "rgba(255,255,255,0.35)"
-              }));
+              appPosMap.set("__none__", {
+                mid: { x: cx, y: cy },
+                in: { x: cx - 10, y: cy },
+                out: { x: cx + 10, y: cy },
+              });
+              cmdbG.appendChild(
+                svgEl("circle", {
+                  cx,
+                  cy,
+                  r: "4.5",
+                  fill: cmdbIsolated
+                    ? "rgba(0,0,0,0.25)"
+                    : "rgba(255,255,255,0.35)",
+                })
+              );
               continue;
             }
-        
+
             list.forEach((a, i) => {
               const boxW = Math.min(286, acmdb.w - 36);
               const boxH = 18;
-        
+
               // base app (sem offset próprio)
               const axBase = acmdb.x + 18;
               const ayBase = baseY + 18 + i * appH;
               const boxXBase = axBase;
               const boxYBase = ayBase - 10;
-        
+
               // agora o app tem offset "livre", mas clamp dentro do CMDB
               const appKey = "app:" + a.id;
               const offA = getOffset(appKey);
-        
+
               const minX = acmdb.x + 18;
               const maxX = acmdb.x + acmdb.w - 18 - boxW;
               const minY = acmdb.y + headerH + 6;
               const maxY = acmdb.y + acmdb.h - 12 - boxH;
-        
+
               offA.dx = clamp(offA.dx, minX - boxXBase, maxX - boxXBase);
               offA.dy = clamp(offA.dy, minY - boxYBase, maxY - boxYBase);
-        
+
               const boxX = boxXBase + offA.dx;
               const boxY = boxYBase + offA.dy;
               const ay = boxY + 10;
-        
+
               const appIsolated = isIsolatedApp(a.id);
               const appHealth = getAppHealth(a.id);
               const hc = colorsForHealth(appHealth, appIsolated);
-        
-              const g = svgEl("g", { "data-appid": a.id, "data-dragkey": appKey, style: "cursor:move" });
-        
-              const box = svgEl("rect", {
-                x: boxX, y: boxY, width: boxW, height: boxH, rx: "8", ry: "8",
-                fill: hc.fill, stroke: hc.stroke,
-                "pointer-events": "all"
+
+              const g = svgEl("g", {
+                "data-appid": a.id,
+                "data-dragkey": appKey,
+                style: "cursor:move",
               });
-              g.appendChild(box); remember(a.id, box);
-        
+
+              const box = svgEl("rect", {
+                x: boxX,
+                y: boxY,
+                width: boxW,
+                height: boxH,
+                rx: "8",
+                ry: "8",
+                fill: hc.fill,
+                stroke: hc.stroke,
+                "pointer-events": "all",
+              });
+              g.appendChild(box);
+              remember(a.id, box);
+
               const inX = boxX + 6;
               const outX = boxX + boxW - 6;
               const cy = ay;
-        
+
               const inDot = svgEl("circle", {
-                cx: inX, cy, r: "3.2",
-                fill: appIsolated ? "rgba(0,0,0,0.35)" : "rgba(122,162,255,0.55)",
-                stroke: "rgba(0,0,0,0.18)", "stroke-width": "0.6",
-                "pointer-events": "all"
+                cx: inX,
+                cy,
+                r: "3.2",
+                fill: appIsolated
+                  ? "rgba(0,0,0,0.35)"
+                  : "rgba(122,162,255,0.55)",
+                stroke: "rgba(0,0,0,0.18)",
+                "stroke-width": "0.6",
+                "pointer-events": "all",
               });
               const outDot = svgEl("circle", {
-                cx: outX, cy, r: "3.2",
-                fill: appIsolated ? "rgba(0,0,0,0.35)" : "rgba(85,230,165,0.55)",
-                stroke: "rgba(0,0,0,0.18)", "stroke-width": "0.6",
-                "pointer-events": "all"
+                cx: outX,
+                cy,
+                r: "3.2",
+                fill: appIsolated
+                  ? "rgba(0,0,0,0.35)"
+                  : "rgba(85,230,165,0.55)",
+                stroke: "rgba(0,0,0,0.18)",
+                "stroke-width": "0.6",
+                "pointer-events": "all",
               });
-              g.appendChild(inDot); g.appendChild(outDot);
-              remember(a.id, inDot); remember(a.id, outDot);
-        
+              g.appendChild(inDot);
+              g.appendChild(outDot);
+              remember(a.id, inDot);
+              remember(a.id, outDot);
+
               const label = svgEl("text", {
-                x: boxX + 14, y: ay + 4,
+                x: boxX + 14,
+                y: ay + 4,
                 fill: appIsolated ? "rgba(0,0,0,0.82)" : "var(--text)",
                 "font-family": "var(--mono)",
                 "font-size": "12",
-                "pointer-events": "all"
+                "pointer-events": "all",
               });
               label.textContent = `${a.name}:${a.port}`;
-              g.appendChild(label); remember(a.id, label);
-        
+              g.appendChild(label);
+              remember(a.id, label);
+
               // anchors
               appPosMap.set(a.id, {
                 mid: { x: boxX + boxW / 2, y: ay },
-                in:  { x: inX, y: cy },
-                out: { x: outX, y: cy }
+                in: { x: inX, y: cy },
+                out: { x: outX, y: cy },
               });
-        
+
               // exporta anchors
               state.ui = state.ui || {};
               state.ui.graphAnchors = state.ui.graphAnchors || {};
               state.ui.graphAnchors[a.id] = {
-                x: appPosMap.get(a.id)?.mid?.x ?? (boxX + boxW / 2),
+                x: appPosMap.get(a.id)?.mid?.x ?? boxX + boxW / 2,
                 y: appPosMap.get(a.id)?.mid?.y ?? ay,
                 cmdbId: a.cmdbId,
                 cmdbName: nodeById(a.cmdbId)?.name || "",
-                dc: nodeById(a.cmdbId)?.datacenter || nodeById(a.cmdbId)?.dc || "",
-                env: nodeById(a.cmdbId)?.ambiente || nodeById(a.cmdbId)?.env || "",
-                ns: nodeById(a.cmdbId)?.namespace || nodeById(a.cmdbId)?.ns || ""
+                dc:
+                  nodeById(a.cmdbId)?.datacenter ||
+                  nodeById(a.cmdbId)?.dc ||
+                  "",
+                env:
+                  nodeById(a.cmdbId)?.ambiente || nodeById(a.cmdbId)?.env || "",
+                ns:
+                  nodeById(a.cmdbId)?.namespace || nodeById(a.cmdbId)?.ns || "",
               };
-        
+
               appLayer.appendChild(g);
               actualAppBox.set(a.id, { x: boxX, y: boxY, w: boxW, h: boxH });
             });
           }
-        
+
           // =========================================================
           // Edges
           // =========================================================
           const edgeEls = [];
-        
+
           function setEdgeVisible(edge, on) {
             edge.el.style.opacity = on ? "1" : "0";
             if (edge.labelEl) edge.labelEl.style.opacity = on ? "1" : "0";
           }
           function setEdgeEmphasis(edge, strong) {
             const baseW = Number(edge.el.getAttribute("data-basew") || "2.0");
-            edge.el.setAttribute("stroke-width", String(strong ? (baseW + 1.2) : baseW));
-            edge.el.style.filter = strong ? "drop-shadow(0 0 1px rgba(255,255,255,0.35))" : "none";
+            edge.el.setAttribute(
+              "stroke-width",
+              String(strong ? baseW + 1.2 : baseW)
+            );
+            edge.el.style.filter = strong
+              ? "drop-shadow(0 0 1px rgba(255,255,255,0.35))"
+              : "none";
           }
-        
+
           for (const c of conns) {
             if (!allowConnByMode(c)) continue;
-        
+
             const fa = nodeById(c.fromAppId);
             const ta = nodeById(c.toAppId);
             if (!fa || !ta) continue;
-        
+
             const fp = cmdbPosForEdges.get(fa.cmdbId);
             const tp = cmdbPosForEdges.get(ta.cmdbId);
             if (!fp || !tp) continue;
-        
+
             const fpt = fp.appPos.get(fa.id) || fp.appPos.get("__none__");
             const tpt = tp.appPos.get(ta.id) || tp.appPos.get("__none__");
             if (!fpt || !tpt) continue;
-        
-            const x1 = (fpt.out?.x ?? fpt.mid.x), y1 = (fpt.out?.y ?? fpt.mid.y);
-            const x2 = (tpt.in?.x  ?? tpt.mid.x), y2 = (tpt.in?.y  ?? tpt.mid.y);
-        
+
+            const x1 = fpt.out?.x ?? fpt.mid.x,
+              y1 = fpt.out?.y ?? fpt.mid.y;
+            const x2 = tpt.in?.x ?? tpt.mid.x,
+              y2 = tpt.in?.y ?? tpt.mid.y;
+
             const distX = Math.abs(x2 - x1);
-            const dist  = Math.hypot(distX, Math.abs(y2 - y1));
-        
-            const dx = (dist < 140) ? Math.max(10, distX * 0.08)
-                     : (dist < 320) ? Math.max(22, distX * 0.18)
-                     :               Math.max(70, distX * 0.38);
-        
+            const dist = Math.hypot(distX, Math.abs(y2 - y1));
+
+            const dx =
+              dist < 140
+                ? Math.max(10, distX * 0.08)
+                : dist < 320
+                ? Math.max(22, distX * 0.18)
+                : Math.max(70, distX * 0.38);
+
             const { color, w, dash } = strokeForConn(c);
-        
+
             const path = svgEl("path", {
-              d: `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`,
+              d: `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${
+                x2 - dx
+              } ${y2}, ${x2} ${y2}`,
               fill: "none",
               stroke: color,
               "stroke-width": String(w),
@@ -4988,36 +5222,43 @@ const clampSize = (key, baseW, baseH, dw, dh, maxW, maxH) => {
               "data-from": fa.id,
               "data-to": ta.id,
               "data-basew": String(w),
-              "pointer-events": "none"
+              "pointer-events": "none",
             });
             if (dash) path.setAttribute("stroke-dasharray", dash);
-        
+
             if (mode === "hover") path.style.opacity = "0";
             else path.style.opacity = "1";
-        
+
             edgeLayer.appendChild(path);
-        
-            const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+
+            const mx = (x1 + x2) / 2,
+              my = (y1 + y2) / 2;
             const label = svgEl("text", {
-              x: mx + 6, y: my - 6,
+              x: mx + 6,
+              y: my - 6,
               fill: "var(--muted)",
               "font-family": "var(--mono)",
               "font-size": "11.5",
-              "pointer-events": "none"
+              "pointer-events": "none",
             });
             label.textContent = `${c.port} • ${c.connStatus}`;
             if (mode === "hover") label.style.opacity = "0";
             else label.style.opacity = "1";
             labelLayer.appendChild(label);
-        
-            edgeEls.push({ el: path, labelEl: label, fromAppId: fa.id, toAppId: ta.id });
+
+            edgeEls.push({
+              el: path,
+              labelEl: label,
+              fromAppId: fa.id,
+              toAppId: ta.id,
+            });
           }
-        
+
           // hover: edges só quando passar na app
           if (mode === "hover") {
             function showForApp(appId) {
               for (const e of edgeEls) {
-                const rel = (e.fromAppId === appId || e.toAppId === appId);
+                const rel = e.fromAppId === appId || e.toAppId === appId;
                 setEdgeVisible(e, rel);
                 setEdgeEmphasis(e, rel);
               }
@@ -5028,17 +5269,20 @@ const clampSize = (key, baseW, baseH, dw, dh, maxW, maxH) => {
                 setEdgeEmphasis(e, false);
               }
             }
-        
+
             let hoverTimer = null;
             function enter(appId) {
-              if (hoverTimer) { clearTimeout(hoverTimer); hoverTimer = null; }
+              if (hoverTimer) {
+                clearTimeout(hoverTimer);
+                hoverTimer = null;
+              }
               showForApp(appId);
             }
             function leave() {
               if (hoverTimer) clearTimeout(hoverTimer);
               hoverTimer = setTimeout(() => clearAll(), 60);
             }
-        
+
             for (const [appId, els] of appElsById.entries()) {
               for (const el of els) {
                 el.addEventListener("mouseenter", () => enter(appId));
@@ -5422,17 +5666,42 @@ const clampSize = (key, baseW, baseH, dw, dh, maxW, maxH) => {
           () => (drawerOverlay.style.display = "none")
         );
 
-        document.getElementById("btnSaveGraph").onclick = () => {
-          state.ui = state.ui || {};
-          state.ui.graphOffsets = state.ui.graphOffsets || {};
+        function bindSaveGraphButton(){
+          const btn = document.getElementById("btnSaveGraph");
+          if(!btn) return false;
         
-          localStorage.setItem(
-            "cmdbGraphLayout",
-            JSON.stringify(state.ui.graphOffsets)
-          );
+          // evita duplicar listener se você chamar de novo
+          if(btn.__boundSaveGraph) return true;
+          btn.__boundSaveGraph = true;
         
-          printLine("Layout do CMDB Graph salvo com sucesso.", "ok");
-        };
+          btn.addEventListener("click", () => {
+            try{
+              state.ui = state.ui || {};
+              state.ui.graphOffsets = state.ui.graphOffsets || {};
+              state.ui.graphSizes   = state.ui.graphSizes   || {};
+        
+              localStorage.setItem("cmdbGraphLayout_offsets", JSON.stringify(state.ui.graphOffsets));
+              localStorage.setItem("cmdbGraphLayout_sizes",   JSON.stringify(state.ui.graphSizes));
+        
+              if(typeof printLine === "function") printLine("Layout do CMDB Graph salvo com sucesso.", "ok");
+              else alert("Layout do CMDB Graph salvo com sucesso.");
+            }catch(e){
+              console.error(e);
+              if(typeof printLine === "function") printLine("Falha ao salvar layout do CMDB Graph.", "err");
+              else alert("Falha ao salvar layout do CMDB Graph.");
+            }
+          });
+        
+          return true;
+        }
+        
+        // tenta bind no load
+        document.addEventListener("DOMContentLoaded", () => {
+          bindSaveGraphButton();
+        });
+        
+        // se seu modal/actions são montados depois, chame isso ao abrir o modal também:
+        // bindSaveGraphButton();
 
         drawerOverlay.addEventListener("click", (e) => {
           if (e.target === drawerOverlay) drawerOverlay.style.display = "none";
@@ -6778,6 +7047,22 @@ const clampSize = (key, baseW, baseH, dw, dh, maxW, maxH) => {
             "  cmdb graph [errors|nao-testada]  (grafo DC/ENV/CMDB; portas IN/OUT; no modo normal, hover na app destaca conexões)",
             "muted"
           );
+
+          function loadGraphLayout(){
+            try{
+              const off = localStorage.getItem("cmdbGraphLayout_offsets");
+              const sz  = localStorage.getItem("cmdbGraphLayout_sizes");
+          
+              state.ui = state.ui || {};
+              state.ui.graphOffsets = off ? JSON.parse(off) : (state.ui.graphOffsets || {});
+              state.ui.graphSizes   = sz  ? JSON.parse(sz)  : (state.ui.graphSizes   || {});
+            }catch(e){
+              console.error("loadGraphLayout:", e);
+            }
+          }
+          
+          // chame uma vez no boot:
+          loadGraphLayout();
         }
 
         // init
