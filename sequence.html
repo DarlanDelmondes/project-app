@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checklist Pro + Gamificação</title>
+    <style>
+        :root { --primary: #4f46e5; --success: #22c55e; --bg: #f3f4f6; --text: #1f2937; --gold: #f59e0b; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        
+        /* Checklist */
+        .checklist-item { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #f3f4f6; gap: 12px; cursor: pointer; }
+        .checklist-item.done { background: #f0fdf4; color: #9ca3af; text-decoration: line-through; }
+        
+        /* Gamificação */
+        .trophy-counter { text-align: center; font-size: 1.2rem; font-weight: bold; color: var(--gold); margin-bottom: 15px; }
+        .trophy-icon { font-size: 3rem; display: block; margin: 10px auto; animation: bounce 1s infinite alternate; }
+        @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-5px); } }
+
+        /* Botões */
+        button { cursor: pointer; padding: 10px 15px; border: none; border-radius: 6px; font-weight: 600; }
+        .btn-primary { background: var(--primary); color: white; width: 100%; }
+        .btn-finish { background: var(--success); color: white; width: 100%; margin-top: 15px; display: none; }
+        .btn-outline { background: transparent; border: 1px solid #ccc; margin-bottom: 10px; }
+        
+        .progress-container { background: #e5e7eb; height: 12px; border-radius: 6px; margin: 15px 0; overflow: hidden; }
+        .progress-bar { background: var(--success); height: 100%; width: 0%; transition: 0.3s; }
+        
+        .history-item { font-size: 0.85rem; padding: 8px; border-left: 4px solid var(--success); background: #f9fafb; margin-bottom: 5px; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- TROFÉU DO DIA -->
+    <div id="trophyArea" class="card hidden">
+        <div class="trophy-counter">
+            <span class="trophy-icon">🏆</span>
+            META ATINGIDA! <br>
+            <small>Você completou 3 sequências hoje!</small>
+        </div>
+    </div>
+
+    <!-- MODO EXECUÇÃO -->
+    <div id="executionMode" class="card hidden">
+        <button class="btn-outline" onclick="showView('manager')">← Voltar</button>
+        <h2 id="activeTitle"></h2>
+        <div class="progress-container"><div id="progressBar" class="progress-bar"></div></div>
+        <div id="checklistItems"></div>
+        <button id="btnFinish" class="btn-finish" onclick="finishChecklist()">Concluir e Registrar</button>
+    </div>
+
+    <!-- MODO GESTÃO -->
+    <div id="managerMode">
+        <div class="card">
+            <h3>Criar Template</h3>
+            <input type="text" id="tplName" placeholder="Nome do Template" style="width:94%; padding:10px; margin-bottom:10px;">
+            <div style="display:flex; gap:5px; margin-bottom:10px;">
+                <input type="text" id="actionInput" placeholder="Ação..." style="flex:1; padding:10px;">
+                <button class="btn-primary" style="width:50px" onclick="addAction()">+</button>
+            </div>
+            <div id="pendingActions" style="font-size:0.9em; margin-bottom:10px;"></div>
+            <button class="btn-primary" onclick="saveTemplate()">Salvar Template</button>
+        </div>
+
+        <div class="card">
+            <h3>Templates Disponíveis</h3>
+            <div id="templatesList"></div>
+        </div>
+
+        <div class="card">
+            <h3>Histórico (Hoje)</h3>
+            <div id="historyList"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let templates = JSON.parse(localStorage.getItem('seq_templates') || '[]');
+    let history = JSON.parse(localStorage.getItem('seq_history') || '[]');
+    let currentActions = [];
+    let activeTemplate = null;
+
+    function showView(view) {
+        document.getElementById('executionMode').classList.toggle('hidden', view !== 'run');
+        document.getElementById('managerMode').classList.toggle('hidden', view !== 'manager');
+        checkDailyGoal();
+        if(view === 'manager') renderManager();
+    }
+
+    // CRUD
+    function addAction() {
+        const val = document.getElementById('actionInput').value;
+        if(!val) return;
+        currentActions.push(val);
+        document.getElementById('actionInput').value = '';
+        document.getElementById('pendingActions').innerText = "Passos: " + currentActions.join(' → ');
+    }
+
+    function saveTemplate() {
+        const name = document.getElementById('tplName').value;
+        if(!name || currentActions.length === 0) return alert("Dados insuficientes");
+        templates.push({ id: Date.now(), name, actions: currentActions });
+        localStorage.setItem('seq_templates', JSON.stringify(templates));
+        currentActions = [];
+        document.getElementById('tplName').value = '';
+        document.getElementById('pendingActions').innerText = '';
+        renderManager();
+    }
+
+    // EXECUÇÃO
+    function startSequence(id) {
+        const tpl = templates.find(t => t.id === id);
+        activeTemplate = { ...tpl, status: tpl.actions.map(() => false) };
+        document.getElementById('activeTitle').innerText = activeTemplate.name;
+        showView('run');
+        renderChecklist();
+    }
+
+    function renderChecklist() {
+        const container = document.getElementById('checklistItems');
+        let doneCount = 0;
+        container.innerHTML = activeTemplate.actions.map((act, i) => {
+            if(activeTemplate.status[i]) doneCount++;
+            return `<div class="checklist-item ${activeTemplate.status[i]?'done':''}" onclick="toggleStep(${i})">
+                <input type="checkbox" ${activeTemplate.status[i]?'checked':''}> <span>${act}</span>
+            </div>`;
+        }).join('');
+
+        const pct = (doneCount / activeTemplate.actions.length) * 100;
+        document.getElementById('progressBar').style.width = pct + '%';
+        document.getElementById('btnFinish').style.display = pct === 100 ? 'block' : 'none';
+    }
+
+    function toggleStep(i) {
+        activeTemplate.status[i] = !activeTemplate.status[i];
+        renderChecklist();
+    }
+
+    function finishChecklist() {
+        const entry = {
+            name: activeTemplate.name,
+            timestamp: new Date().getTime(),
+            dateStr: new Date().toLocaleDateString()
+        };
+        history.push(entry);
+        localStorage.setItem('seq_history', JSON.stringify(history));
+        alert("Sequência registrada com sucesso!");
+        showView('manager');
+    }
+
+    // HISTÓRICO E GAMIFICAÇÃO
+    function checkDailyGoal() {
+        const today = new Date().toLocaleDateString();
+        const completedToday = history.filter(h => h.dateStr === today).length;
+        document.getElementById('trophyArea').classList.toggle('hidden', completedToday < 3);
+    }
+
+    function renderManager() {
+        // Render Templates
+        document.getElementById('templatesList').innerHTML = templates.map(t => `
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:10px 0;">
+                <span onclick="startSequence(${t.id})" style="cursor:pointer; font-weight:bold; color:var(--primary)">▶ ${t.name}</span>
+                <button style="color:red; background:none" onclick="deleteTemplate(${t.id})">Remover</button>
+            </div>
+        `).join('');
+
+        // Render History
+        const today = new Date().toLocaleDateString();
+        const todayHistory = history.filter(h => h.dateStr === today).reverse();
+        document.getElementById('historyList').innerHTML = todayHistory.length ? 
+            todayHistory.map(h => `<div class="history-item">✅ <b>${new Date(h.timestamp).toLocaleTimeString()}</b> - ${h.name}</div>`).join('') 
+            : '<p style="font-size:0.8em; color:gray">Nenhuma lista completada hoje.</p>';
+    }
+
+    function deleteTemplate(id) {
+        templates = templates.filter(t => t.id !== id);
+        localStorage.setItem('seq_templates', JSON.stringify(templates));
+        renderManager();
+    }
+
+    // Início
+    renderManager();
+    checkDailyGoal();
+</script>
+</body>
+</html>
