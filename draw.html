@@ -1,776 +1,867 @@
->lmth/<
->ydob/<
->tpircs/<
-;)(xoBtooRdda    
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvas v43 - Font Control & Heavy Arrows</title>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --grid-color: #cbd5e1;
+            --box-border: #94a3b8;
+            --handle-color: #3b82f6;
+        }
 
-}    
-;)dInnoc(noitcennoCeteled )edoMtidEsi.etats(fi        
-;)])dit(yhcrareiHlaever ,)dis(yhcrareiHlaever[(lla.esimorP        
-{ )dit ,dis ,dInnoc(kcilClbDnoitcennoCeldnah noitcnuf    
-}    
-}        
-}            
-;))008 ,r(tuoemiTtes >= r(esimorP wen tiawa                
-;)ntb ,di.xob(elggoTmrofrep                
-;)'elggot-ntb. noollab-snoitca.'(rotceleSyreuq.xob = ntb tsnoc                
-{ ))'edom-despalloc'(sniatnoc.tsiLssalc.xob( fi            
-{ )srotsecna fo xob tel( rof        
-;)(esrever.srotsecna        
-}        
-;kaerb esle } ;tnerap = le ;)tnerap(hsup.srotsecna { )tnerap( fi            
-;)'xob.'(tsesolc.tnemelEtnerap.le = tnerap tsnoc            
-{ )le( elihw        
-;][ = srotsecna tel        
-;)dIxob(dIyBtnemelEteg.tnemucod = le tel        
-{ )dIxob(yhcrareiHlaever noitcnuf cnysa    
-CIGOL ECART //    
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); }
 
-}    
-;)}        
-;)'etats-trela'(dda.tsiLssalc.p ))'etats-der'(sniatnoc.tsiLssalc.p! && ))'etats-der'(sniatnoc.tsiLssalc.c >= c(emos.nerdlihc(fi            
-;))'xob.'(llArotceleSyreuq.p(morf.yarrA = nerdlihc tsnoc            
-{ >= p(hcaErof.)'xob.'(llArotceleSyreuq.tnemucod        
-;)}        
-;)'etats-trela'(dda.tsiLssalc.s )))'etats-trela'(sniatnoc.tsiLssalc.t||)'etats-der'(sniatnoc.tsiLssalc.t( && t && s(fi            
-;)dis.c(dIyBtnemelEteg.tnemucod = s ,)dit.c(dIyBtnemelEteg.tnemucod = t tsnoc            
-{ >= c(hcaErof.snoitcennoc        
-;))'etats-trela'(evomer.tsiLssalc.b >= b(hcaErof.)'xob.'(llArotceleSyreuq.tnemucod        
-{ )(gnidacsaCkcehc noitcnuf    
-}    
-;)(gnidacsaCkcehc        
-;)'etats-der'(evomer.tsiLssalc.b esle ;)'etats-der'(dda.tsiLssalc.b )'der'===s(fi        
-;)di(dIyBtnemelEteg.tnemucod = b tsnoc        
-;nruter )edoMtidEsi.etats!(fi        
-{ )s ,di(sutatStes noitcnuf    
-}    
-;)y,x(dlroWoTneercs nruter        
-;thgir.r=x )'thgir'===sop(fi ;tfel.r=x )'tfel'===sop(fi ;mottob.r=y )'mottob'===sop(fi ;pot.r=y )'pot'===sop(fi        
-;2/thgieh.r+pot.r=y ,2/htdiw.r+tfel.r=x tel ;)(tceRtneilCgnidnuoBteg.le = r tsnoc        
-{ )sop ,le(soPnnoCteg noitcnuf    
-    
-}    
-;)Dhtap ,"d"(etubirttAtes.eniLlausiv        
-;)Dhtap ,"d"(etubirttAtes.)'xobtih-nnoc.'(rotceleSyreuq.puorg        
-;`}2y{$ }2x{$ ,}2yc{$ }2xc{$ ,}1yc{$ }1xc{$ C }1y{$ }1x{$ M` = Dhtap tsnoc        
+        /* UI Toolbar */
+        #ui-layer { position: fixed; top: 0; left: 0; width: 100%; height: 0; z-index: 9999; }
+        #toolbar {
+            position: absolute; top: 20px; left: 20px;
+            background: white; padding: 10px; border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; gap: 10px; align-items: center;
+            pointer-events: auto; flex-wrap: wrap; max-width: 90vw;
+        }
+        button.btn-primary { background-color: #2563eb; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; white-space: nowrap;}
+        button.btn-primary:hover { background-color: #1d4ed8; }
+        button.btn-dark { background-color: #1e293b; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; white-space: nowrap;}
+        button.btn-dark:hover { background-color: #334155; }
+        button.btn-outline { background-color: white; color: #334155; border: 1px solid #cbd5e1; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; white-space: nowrap;}
+        button.btn-outline:hover { background-color: #f1f5f9; }
         
-;pc=+2xc )'thgir'===sopt.c(fi ;pc=-2xc )'tfel'===sopt.c(fi ;pc=+2yc )'mottob'===sopt.c(fi ;pc=-2yc )'pot'===sopt.c(fi        
-;pc=+1xc )'thgir'===sops.c(fi ;pc=-1xc )'tfel'===sops.c(fi ;pc=+1yc )'mottob'===sops.c(fi ;pc=-1yc )'pot'===sops.c(fi        
-;2y=2yc ,2x=2xc ,1y=1yc ,1x=1xc tel        
-;)05 ,5.0*laVd(xam.htaM = pc tsnoc ;))2,1y-2y(wop.htaM+)2,1x-2x(wop.htaM(trqs.htaM = laVd tsnoc        
+        #btn-mode.locked { background-color: #ef4444; color: white; border: none; }
+        .icon-btn { border: none; background: transparent; cursor: pointer; color: #64748b; padding: 4px; border-radius: 4px; transition: color 0.2s, background 0.2s; }
+        .icon-btn:hover { background: #e2e8f0; color: #0f172a; }
+        .btn-delete:hover { color: #ef4444; background: #fee2e2; }
 
-}        
-;)ssenkciht ,"htdiw-ekorts"(etubirttAtes.eniLlausiv            
-;))04 / gvAdenibmoc ,02(nim.htaM ,2(xam.htaM = ssenkciht tsnoc            
-.sexob eguh yllaer rof xp02 xaM .rotcaf ezis + xp2 esaB //            
-;2 / )gvAt + gvAs( = gvAdenibmoc tsnoc            
-;2 / )thgieHtesffo.tegraTv + htdiWtesffo.tegraTv( = gvAt tsnoc            
-;2 / )thgieHtesffo.ecruoSv + htdiWtesffo.ecruoSv( = gvAs tsnoc            
-{ )tegraTv && ecruoSv( fi        
-ssenkcihT lanoitroporP ]ETADPU[ //        
-        
-;ffo-y.tp=2y ,ffo-x.tp=2x ,ffo-y.sp=1y ,ffo-x.sp=1x tsnoc        
-;00005- = ffo tsnoc        
-;)sopt.c ,tegraTv(soPnnoCteg = tp tsnoc ;)sops.c ,ecruoSv(soPnnoCteg = sp tsnoc        
-        
-;)'enil-yxorp'(evomer.tsiLssalc.eniLlausiv esle ;)'enil-yxorp'(dda.tsiLssalc.eniLlausiv )dit.c ==! di.tegraTv || dis.c ==! di.ecruoSv( fi        
-;)'lausiv-nnoc.'(rotceleSyreuq.puorg = eniLlausiv tsnoc        
-        
-;'kcolb' = yalpsid.elyts.puorg        
-} ;nruter ;'enon' = yalpsid.elyts.puorg { )tegraTv === ecruoSv || tegraTv! || ecruoSv!( fi        
-        
-;nruter )puorg!( fi ;)di.c(dIyBtnemelEteg.tnemucod = puorg tsnoc        
-;)dit.c(edoNelbisiVdnif = tegraTv tsnoc ;)dis.c(edoNelbisiVdnif = ecruoSv tsnoc        
-{ )c(eniLetadpu noitcnuf    
+        /* Auto Save Indicator */
+        #autosave-status { font-size: 11px; color: #64748b; margin-left: 5px; min-width: 80px; text-align: right; }
 
-}    
-;)eniLetadpu(hcaErof.snoitcennoc        
-}        
-;)} ;)(evomer.g ))di.g(sah.sdIatad!(fi { >= g(hcaErof.spuorg            
-;))di.c >= c(pam.snoitcennoc(teS wen = sdIatad tsnoc            
-;))'puorg-nnoc.g'(llArotceleSyreuq.reyaLgvs(morf.yarrA = spuorg tsnoc            
- { )raelCecrof(fi        
-{ )eslaf = raelCecrof(seniLllAetadpu noitcnuf    
+        /* --- TOAST --- */
+        #toast-container { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 20000; display: flex; flex-direction: column; gap: 10px; pointer-events: none; align-items: center; }
+        .toast { background: #1e293b; color: #f8fafc; padding: 12px 24px; border-radius: 50px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3); display: flex; align-items: center; gap: 15px; font-size: 14px; font-weight: 500; pointer-events: auto; animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); opacity: 0.95; }
+        .toast-action-btn { background: rgba(255,255,255,0.15); border: none; color: #fbbf24; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 12px; transition: background 0.2s; text-transform: uppercase; }
+        .toast-action-btn:hover { background: rgba(255,255,255,0.3); }
+        .toast-btn-yes { color: #4ade80; background: rgba(74, 222, 128, 0.1); } .toast-btn-yes:hover { background: rgba(74, 222, 128, 0.2); }
+        .toast-btn-no { color: #f87171; background: rgba(248, 113, 113, 0.1); } .toast-btn-no:hover { background: rgba(248, 113, 113, 0.2); }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 0.95; transform: translateY(0); } }
+        @keyframes fadeOut { to { opacity: 0; transform: translateY(-10px); } }
 
-}    
-;)(gnidacsaCkcehc ;)]1-htgnel.snoitcennoc[snoitcennoc(eniLetadpu        
-;)} sopt ,dit ,sops ,dis ,di {(hsup.snoitcennoc ))di === di.c >= c(dnif.snoitcennoc!( fi        
+        /* --- DASHBOARD --- */
+        #dashboard-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px); z-index: 10000; display: none; justify-content: center; align-items: center; pointer-events: auto; }
+        #dashboard-panel { background: white; width: 600px; max-height: 80vh; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); display: flex; flex-direction: column; overflow: hidden; }
+        .dash-header { padding: 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+        .dash-title { font-size: 20px; font-weight: bold; color: #1e293b; }
+        .dash-close { cursor: pointer; font-size: 24px; color: #64748b; }
+        .dash-content { padding: 20px; overflow-y: auto; background: #f8fafc; flex-grow: 1; }
+        .project-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 10px; display: flex; align-items: center; transition: transform 0.1s, box-shadow 0.1s; }
+        .project-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .p-info { flex-grow: 1; } .p-name { font-weight: bold; color: #334155; font-size: 16px; } .p-date { font-size: 12px; color: #94a3b8; } .p-actions { display: flex; gap: 10px; }
+        .btn-load { background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+        .btn-trash { background: #fee2e2; color: #ef4444; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+
+        /* Viewport */
+        #viewport { width: 100vw; height: 100vh; overflow: hidden; cursor: grab; } #viewport:active { cursor: grabbing; }
+        #world { position: absolute; top: 0; left: 0; width: 0; height: 0; transform-origin: 0 0; }
+        .grid-background { position: absolute; top: -50000px; left: -50000px; width: 100000px; height: 100000px; background-image: radial-gradient(var(--grid-color) 1px, transparent 1px); background-size: 40px 40px; z-index: -1; pointer-events: none; }
         
-;)g(dlihCdneppa.reyaLgvs ;)siv(dlihCdneppa.g ;)tih(dlihCdneppa.g        
+        /* CONNECTIONS */
+        #connections-layer { position: absolute; top: -50000px; left: -50000px; width: 100000px; height: 100000px; z-index: 500; pointer-events: none; overflow: visible; }
+        .conn-visual { fill: none; stroke: #64748b; stroke-width: 2px; pointer-events: none; transition: stroke 0.2s, stroke-width 0.2s; }
+        .conn-hitbox { fill: none; stroke: transparent; stroke-width: 25px; cursor: pointer; pointer-events: stroke; }
+        .conn-group:hover .conn-visual { stroke: #3b82f6; }
+        .drag-line { stroke: #3b82f6; stroke-width: 4; stroke-dasharray: 5,5; opacity: 0.8; }
+        .proxy-line { stroke-dasharray: 4,4; } 
 
-;)")daehworra#(lru" ,"dne-rekram"(etubirttAtes.siv        
-;)"lausiv-nnoc" ,"ssalc"(etubirttAtes.siv        
-;)"htap" ,sn(SNtnemelEetaerc.tnemucod = siv tsnoc        
+        /* Boxes */
+        .box {
+            position: absolute; background: white; border: 2px solid var(--box-border); border-radius: 16px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05); display: flex; flex-direction: column; z-index: 10;
+            min-width: 200px; min-height: 180px; 
+            --dynamic-font-size: 16px; 
+            --header-height: 36px;
+            --balloon-scale: 1;
+            cursor: grab; 
+            transition: box-shadow 0.2s, border-color 0.2s, background-color 0.2s, width 0.8s cubic-bezier(0.25, 0.8, 0.25, 1), height 0.8s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        .no-transition { transition: none !important; }
+        .box.selected { border-color: var(--handle-color); z-index: 100; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
         
-;)} ;)dit ,dis ,di(kcilClbDnoitcennoCeldnah { )(noitcnuf ,'kcilclbd'(renetsiLtnevEdda.tih        
-;)"xobtih-nnoc" ,"ssalc"(etubirttAtes.tih        
-;)"htap" ,sn(SNtnemelEetaerc.tnemucod = tih tsnoc        
+        .box-title-bar {
+            height: var(--header-height); background: transparent; border-radius: 10px 10px 0 0; 
+            display: flex; align-items: center; justify-content: center;
+            padding: 25px 15px 15px 15px; 
+            cursor: move; user-select: none; flex-shrink: 0; 
+            font-size: calc(var(--header-height) * 0.35); position: relative; 
+        }
+        .box-title-bar:active { cursor: grabbing; }
         
-;)'puorg-nnoc'(dda.tsiLssalc.g ;di = di.g        
-;)"g" ,sn(SNtnemelEetaerc.tnemucod = g tsnoc        
-;)(won.etaD + '-c' || dIgnitsixe = di tsnoc        
-{ )llun = dIgnitsixe ,sopt ,dit ,sops ,dis(noitcennoCdda noitcnuf    
-}    
-;llun nruter        
-}        
-;lEtnerruc nruter            
-} } ;eunitnoc ;)'xob.'(tsesolc.aerAtnerap = lEtnerruc { ))'despalloc'(sniatnoc.tsiLssalc.aerAtnerap( fi { ))'aera-nerdlihc'(sniatnoc.tsiLssalc.aerAtnerap && aerAtnerap( fi            
-;tnemelEtnerap.lEtnerruc = aerAtnerap tsnoc            
-{ )lEtnerruc( elihw        
-;llun nruter )lEtnerruc!( fi ;)di(dIyBtnemelEteg.tnemucod = lEtnerruc tel        
-{ )di(edoNelbisiVdnif noitcnuf    
---- SLITU NNOC --- //    
-    
-}    
-;)(seniLllAetadpu        
-;)tneraPwen(tneraPcitsalEetadpu ))'aera-nerdlihc'(sniatnoc.tsiLssalc.tneraPwen && tneraPwen(fi        
-;)tneraPdlo(tneraPcitsalEetadpu ))'aera-nerdlihc'(sniatnoc.tsiLssalc.tneraPdlo && tneraPdlo(fi        
-;'xp' + poTwen = pot.elyts.xob ;'xp' + tfeLwen = tfel.elyts.xob ;)xob(dlihCdneppa.tneraPwen        
-;elacs.etats / )pot.tceRtneraPwen - pot.tceRxob( = poTwen tsnoc        
-;elacs.etats / )tfel.tceRtneraPwen - tfel.tceRxob( = tfeLwen tsnoc        
-;)(tceRtneilCgnidnuoBteg.tneraPwen : )(tceRtneilCgnidnuoBteg.dlrow ? dlrow === tneraPwen = tceRtneraPwen tsnoc        
-;)(tceRtneilCgnidnuoBteg.xob = tceRxob tsnoc        
-;tnemelEtnerap.xob = tneraPdlo tsnoc        
-{ )tneraPwen ,xob(xoBtneraper noitcnuf    
+        input.title { 
+            width: 90%; border: none; font-weight: bold; background: transparent; outline: none; 
+            font-size: var(--dynamic-font-size); color: #1e293b; 
+            transition: font-size 0.2s, color 0.3s ease; 
+            cursor: text; text-align: center; font-family: 'Segoe UI', sans-serif;
+        }
 
-;)}    
-}        
-;))'desucof-revoh'(evomer.tsiLssalc.b >= b(hcaErof.)'desucof-revoh.'(llArotceleSyreuq.tnemucod            
-{ ))'dnuorgkcab-dirg'(sniatnoc.tsiLssalc.tegrat.e || dlrow === tegrat.e || tropweiv === tegrat.e(fi        
-{ >= )e( ,'kcilc'(renetsiLtnevEdda.tropweiv    
-    
-;)}    
-}        
-}            
-;)sop ,di.xob ,sops.tnItrats ,dis.tnItrats(noitcennoCdda )dis.tnItrats ==! di.xob && xob( fi                
-;]1[)/)+]z-a[(-c/(hctam.emaNssalc.le = sop tsnoc ;)'xob.'(tsesolc.le = xob tsnoc                
-{ ))'rotcennoc'(sniatnoc.tsiLssalc.le && le( fi            
-;)Ytneilc.e ,Xtneilc.e(tnioPmorFtnemele.tnemucod = le tsnoc            
-;'enon' = yalpsid.elyts.eniLpmet ;eslaf = gnitcennoCsi            
-{ )gnitcennoCsi( fi        
-;llun = tegraTporDtnerruc ;llun = metIeziser ;llun = metIgard        
-}        
-;'' = xednIz.elyts.metIgard            
-;)dlrow ,metIgard(xoBtneraper )dlrow ==! tnemelEtnerap.metIgard && tegraTporDtnerruc!( fi esle            
-;)tegraTporDtnerruc ,metIgard(xoBtneraper )tnemelEtnerap.metIgard ==! tegraTporDtnerruc && tegraTporDtnerruc( fi            
-{ )metIgard( fi        
-;))'evitca-pord'(evomer.tsiLssalc.le >= le(hcaErof.)'evitca-pord.'(llArotceleSyreuq.tnemucod        
-;)'noitisnart-on'(evomer.tsiLssalc.metIeziser )metIeziser( fi        
-{ >= )e( ,'puesuom'(renetsiLtnevEdda.wodniw    
-;)}    
-} ;)`}ffo-y.pw{$ }ffo-x.pw{$ L }ffo-ys.tnItrats{$ }ffo-xs.tnItrats{$ M` ,'d'(etubirttAtes.eniLpmet ;00005- = ffo tsnoc { )gnitcennoCsi( fi        
-}        
-;)(seniLllAetadpu ;)tnemelEtnerap.metIeziser(tneraPcitsalEetadpu ;))'aera-nerdlihc.'(rotceleSyreuq.metIeziser(tneraPcitsalEetadpu ;)metIeziser(tnoFcimanyDclac            
-;Hwen = hm.tesatad.metIeziser ;Wwen = wm.tesatad.metIeziser            
-;'xp' + Hwen = thgieh.elyts.metIeziser ;'xp' + Wwen = htdiw.elyts.metIeziser            
-;)ym.tnItrats - y.pw + h.tnItrats ,08(xam.htaM = Hwen tsnoc ;)xm.tnItrats - x.pw + w.tnItrats ,002(xam.htaM = Wwen tsnoc            
-;)(tluafeDtneverp.e            
-{ )metIeziser( fi        
-}        
-;)(seniLllAetadpu ;)tnemelEtnerap.metIgard(tneraPcitsalEetadpu            
-} ;)'evitca-pord'(dda.tsiLssalc.tegraTporDtnerruc ;tegrat = tegraTporDtnerruc { ))tegrat(sniatnoc.metIgard! && tegrat( fi            
-;))'aera-nerdlihc'(sniatnoc.tsiLssalc.le >= le(dnif.woleBstnemele = tegrat tsnoc            
-} ;llun = tegraTporDtnerruc ;)'evitca-pord'(evomer.tsiLssalc.tegraTporDtnerruc { )tegraTporDtnerruc(fi            
-;'otua' = stnevEretniop.elyts.metIgard            
-;)Ytneilc.e ,Xtneilc.e(tnioPmorFstnemele.tnemucod = woleBstnemele tsnoc            
- ;'enon' = stnevEretniop.elyts.metIgard            
-;'xp' + )ym.tnItrats - y.pw + te.tnItrats( = pot.elyts.metIgard ;'xp' + )xm.tnItrats - x.pw + le.tnItrats( = tfel.elyts.metIgard ;)(tluafeDtneverp.e            
-{ )metIgard( fi        
-;)Ytneilc.e ,Xtneilc.e(dlroWoTneercs = pw tsnoc        
-{ >= )e( ,'evomesuom'(renetsiLtnevEdda.wodniw    
-}    
-;'kcolb' = yalpsid.elyts.eniLpmet        
-;} y.pw :ys ,x.pw :xs ,sop :sops ,di :dis { = tnItrats        
-;)2/thgieh.tcer + pot.tcer ,2/htdiw.tcer + tfel.tcer(dlroWoTneercs = pw tsnoc        
-;)(tceRtneilCgnidnuoBteg.tegrat.e = tcer tsnoc        
-;eurt = gnitcennoCsi ;)(tluafeDtneverp.e ;)(noitagaporPpots.e        
-;nruter )edoMtidEsi.etats!(fi        
-{ )sop ,di ,e(nnoCtini noitcnuf    
-}    
-;} thgieHtesffo.metIeziser :h ,htdiWtesffo.metIeziser :w ,y.pw :ym ,x.pw :xm { = tnItrats        
-;)Ytneilc.e ,Xtneilc.e(dlroWoTneercs = pw tsnoc        
-;)'noitisnart-on'(dda.tsiLssalc.metIeziser ;)di(dIyBtnemelEteg.tnemucod = metIeziser ;)(noitagaporPpots.e        
-;nruter )edoMtidEsi.etats!(fi        
-{ )di ,e(eziseRtini noitcnuf    
-}    
-;} poTtesffo.metIgard :te ,tfeLtesffo.metIgard :le ,y.pw :ym ,x.pw :xm { = tnItrats        
-;)Ytneilc.e ,Xtneilc.e(dlroWoTneercs = pw tsnoc        
- ;999 = xednIz.elyts.metIgard ;)di(dIyBtnemelEteg.tnemucod = metIgard        
- ;)(noitagaporPpots.e        
- ;nruter ))'ntb-tod-sutats'(sniatnoc.tsiLssalc.tegrat.e || )'nottub'(tsesolc.tegrat.e( fi        
-;nruter )edoMtidEsi.etats!(fi        
- ;nruter )desserPecaps(fi        
-{ )di ,e(garDtini noitcnuf    
---- SNOITCARETNI --- //    
-
-}    
-;)(seniLllAetadpu        
-;)pg(tneraPcitsalEetadpu ))'aera-nerdlihc'(sniatnoc.tsiLssalc.pg && pg( fi ;tnemelEtnerap.xoBtnerap = pg tsnoc        
-;)xoBtnerap(tnoFcimanyDclac        
-;'xp' + )Hlaunam ,Hdedeen(xam.htaM = thgieh.elyts.xoBtnerap ;'xp' + )Wlaunam ,Wdedeen(xam.htaM = htdiw.elyts.xoBtnerap        
-;022 || )hm.tesatad.xoBtnerap(taolFesrap = Hlaunam tsnoc ;042 || )wm.tesatad.xoBtnerap(taolFesrap = Wlaunam tsnoc        
-;04 + 021 + Yxam = Hdedeen tsnoc ;04 + Xxam = Wdedeen tsnoc        
-;)}        
-;mottob = Yxam )Yxam > mottob( fi ;thgir = Xxam )Xxam > thgir( fi            
-;thgieHtesffo.dlihc + poTtesffo.dlihc = mottob tsnoc ;htdiWtesffo.dlihc + tfeLtesffo.dlihc = thgir tsnoc            
-{ >= dlihc(hcaErof.nerdlihc        
-;0 = Yxam tel ;0 = Xxam tel        
-;))'xob'(sniatnoc.tsiLssalc.c >= c(retlif.)nerdlihc.reniatnoCnerdlihc(morf.yarrA = nerdlihc tsnoc        
-}        
-;nruter ;)pg(tneraPcitsalEetadpu ))'aera-nerdlihc'(sniatnoc.tsiLssalc.pg && pg( fi ;tnemelEtnerap.xoBtnerap = pg tsnoc            
-;)xoBtnerap(tnoFcimanyDclac            
-;'xp' + )08 || )hm.tesatad.xoBtnerap(taolFesrap ,08(xam.htaM = thgieh.elyts.xoBtnerap            
-;'xp' + )Wlaunam ,002(xam.htaM = htdiw.elyts.xoBtnerap            
-;002 || )wm.tesatad.xoBtnerap(taolFesrap = Wlaunam tsnoc            
-{ ))'despalloc'(sniatnoc.tsiLssalc.reniatnoCnerdlihc( fi        
-;nruter )xoBtnerap!( fi ;)'xob.'(tsesolc.reniatnoCnerdlihc = xoBtnerap tsnoc        
-;nruter ))'aera-nerdlihc'(sniatnoc.tsiLssalc.reniatnoCnerdlihc! || reniatnoCnerdlihc!( fi        
-{ )reniatnoCnerdlihc(tneraPcitsalEetadpu noitcnuf    
-}    
-;)(seniLllAetadpu ;)aera(tneraPcitsalEetadpu ;)xob(tnoFcimanyDclac        
-;'▼' : '▶' ? )'despalloc'(sniatnoc.tsiLssalc.aera = txeTrenni.ntb )ntb(fi        
-;)'edom-despalloc'(elggot.tsiLssalc.xob ;)'despalloc'(elggot.tsiLssalc.aera        
-;)di(dIyBtnemelEteg.tnemucod = xob tsnoc        
-;)di + '-aera'(dIyBtnemelEteg.tnemucod = aera tsnoc        
-{ )ntb ,di(elggoTmrofrep noitcnuf    
-}    
-} ;)aerAtnerap(tneraPcitsalEetadpu ))'aera-nerdlihc'(sniatnoc.tsiLssalc.aerAtnerap && aerAtnerap( fi ;tnemelEtnerap.xob = aerAtnerap tsnoc ;)ntBym ,dIxob(elggoTmrofrep { ))'edom-despalloc'(sniatnoc.tsiLssalc.xob!( fi        
-;)'elggot-ntb. noollab-snoitca.'(rotceleSyreuq.xob = ntBym tsnoc        
-} ;))008 ,r(tuoemiTtes >= r(esimorP wen tiawa ;)sesimorp(lla.esimorP tiawa ;))di.dlihc(esolCedacsaCnur >= dlihc(pam.nerdlihCnepo = sesimorp tsnoc { )0 > htgnel.nerdlihCnepo( fi        
-;))'edom-despalloc'(sniatnoc.tsiLssalc.dlihc! && )'xob'(sniatnoc.tsiLssalc.dlihc >= dlihc(retlif.)nerdlihc.aera(morf.yarrA = nerdlihCnepo tsnoc        
-;)'aera-nerdlihc.'(rotceleSyreuq.xob = aera tsnoc        
-;)dIxob(dIyBtnemelEteg.tnemucod = xob tsnoc        
-{ )dIxob(esolCedacsaCnur noitcnuf cnysa    
-}    
-;)ntb ,di(elggoTmrofrep esle ;)ntb ,di(esolCedacsaCnur )gnisolCsi( fi        
-;)'despalloc'(sniatnoc.tsiLssalc.aera! = gnisolCsi tsnoc        
-;)di + '-aera'(dIyBtnemelEteg.tnemucod = aera tsnoc        
-{ )ntb ,di(elggoTtramSeldnah noitcnuf    
-
-}    
-;)'xp' + Hredaeh ,'thgieh-redaeh--'(ytreporPtes.elyts.xob        
-;)51.0 * h ,03(xam.htaM = Hredaeh tsnoc        
+        .actions-balloon {
+            position: absolute; top: calc(-25px * var(--balloon-scale)); right: 0.5em;
+            background: #1e293b; border-radius: 50px; padding: calc(4px * var(--balloon-scale)) calc(8px * var(--balloon-scale));
+            display: none; align-items: center; gap: calc(6px * var(--balloon-scale));
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            font-size: 14px; z-index: 20; animation: popIn 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popIn { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .box.hover-focused > .box-title-bar .actions-balloon { display: flex; }
         
-;)'xp' + eziSlanif ,'ezis-tnof-cimanyd--'(ytreporPtes.elyts.xob        
+        .actions-balloon .icon-btn { color: white; width: calc(24px * var(--balloon-scale)); height: calc(24px * var(--balloon-scale)); font-size: calc(12px * var(--balloon-scale)); display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+        .actions-balloon .icon-btn:hover { background: rgba(255,255,255,0.2); }
+        .actions-balloon .btn-delete:hover { background: #ef4444; color: white; }
+        .actions-balloon .btn-font { font-family: serif; font-weight: bold; } /* Botões de fonte */
         
-;)eziSlanif ,41(xam.htaM = eziSlanif        
-;)htdiWroFeziSxam ,moeGnOdesaBezis(nim.htaM = eziSlanif tel        
-;)6.0 * neLtxet( / )9.0 * w( = htdiWroFeziSxam tsnoc        
-;51.0 * )h ,w(nim.htaM = moeGnOdesaBezis tel        
+        .status-dot-btn { width: calc(14px * var(--balloon-scale)); height: calc(14px * var(--balloon-scale)); border-radius: 50%; cursor: pointer; border: 1px solid rgba(255,255,255,0.3); transition: transform 0.1s; }
+        .status-dot-btn:hover { transform: scale(1.2); border-color: white; }
+        .dot-green { background: #4ade80; } .dot-red { background: #f87171; }
+        .separator { width: 1px; height: calc(16px * var(--balloon-scale)); background: rgba(255,255,255,0.3); }
 
-;)elacSnoollab ,'elacs-noollab--'(ytreporPtes.elyts.xob        
-;)8.1 ,)57.0 ,elacSnoollab(xam.htaM(nim.htaM = elacSnoollab        
- ;022 / )aera(trqs.htaM = elacSnoollab tel        
-;h * w = aera tsnoc        
+        .box-body { padding: 0 15px 15px 15px; display: flex; flex-direction: column; gap: 10px; flex-grow: 1; position: relative; }
+        .children-area { flex-grow: 1; position: relative; margin-top: 5px; background: rgba(240,240,240,0.4); border-radius: 12px; border: 1px dashed #cbd5e1; width: 100%; height: 100%; min-height: 60px; padding: 20px; box-sizing: border-box; transition: opacity 0.2s, transform 0.2s, background-color 0.2s, border-color 0.2s; opacity: 1; transform: scale(1); }
+        .children-area.collapsed { display: none; }
+        .children-area.drop-active { background-color: rgba(59, 130, 246, 0.1); border-color: #3b82f6; box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0.3); }
         
-;thgieHtesffo.xob = h tsnoc ;htdiWtesffo.xob = w tsnoc        
- ;)htgnel.eulav.tupni ,1(xam.htaM = neLtxet tsnoc        
-;)'eltit.tupni'(rotceleSyreuq.xob = tupni tsnoc        
-{ )xob(tnoFcimanyDclac noitcnuf    
-    
-}    
- ;)02 ,02 ,aera(xoBetaerc        
-;'▼' = txeTrenni.ntb )ntb(fi ;)'elggot-ntb. noollab-snoitca.'(rotceleSyreuq.xoBtnerap = ntb tsnoc        
-;)'edom-despalloc'(evomer.tsiLssalc.xoBtnerap ;)'despalloc'(evomer.tsiLssalc.aera        
-;)di(dIyBtnemelEteg.tnemucod = xoBtnerap tsnoc        
-;)di + '-aera'(dIyBtnemelEteg.tnemucod = aera tsnoc        
-;nruter )edoMtidEsi.etats!(fi        
-{ )di(dlihCdda noitcnuf    
+        .box.red-state { border-color: #ef4444; background-color: #fff1f2; }
+        .box.alert-state { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2); border-color: #ef4444; }
+        
+        .box.collapsed-mode .box-body { display: none; }
+        .box.collapsed-mode .box-title-bar { height: 100%; padding: 0; align-items: center; justify-content: center; }
+        .box.collapsed-mode input.title { color: #1e293b; }
 
-}    
-;)}        
-}            
- ;)odnUerotser ,"rezafseD" ,".adivomer oãxenoC"(tsaoTwohs ;)(gnidacsaCkcehc                
- ;)(evomer.htap )htap( fi                
- ;)dInnoc(dIyBtnemelEteg.tnemucod = htap tsnoc                
- ;)1 ,xdi(ecilps.snoitcennoc                
- { )1- ==! xdi( fi            
-;)dInnoc === di.c >= c(xednIdnif.snoitcennoc = xdi tsnoc            
-;)(savnaCezilaires = kcatSodnu            
-{ >= )( ,"?oãxenoc revomeR"(tsaoTmrifnoCwohs        
-;nruter )edoMtidEsi.etats!(fi        
-{ )dInnoc(noitcennoCeteled noitcnuf    
+        .connector { position: absolute; width: 12px; height: 12px; background: white; border: 2px solid #3b82f6; border-radius: 50%; z-index: 600; opacity: 0; transition: opacity 0.2s, transform 0.2s; cursor: crosshair; pointer-events: auto; }
+        .box:hover > .connector { opacity: 1; } .connector:hover { transform: scale(1.4); background: #3b82f6; } .c-top { top: -7px; left: 50%; transform: translateX(-50%); } .c-bottom { bottom: -7px; left: 50%; transform: translateX(-50%); } .c-left { left: -7px; top: 50%; transform: translateY(-50%); } .c-right { right: -7px; top: 50%; transform: translateY(-50%); }
+        .resizer { width: 35px; height: 35px; position: absolute; right: 0; bottom: 0; cursor: nwse-resize; z-index: 102; opacity: 0; pointer-events: auto; }
+        .box:hover > .resizer { opacity: 1; } .resizer::after { content: ''; position: absolute; right: 6px; bottom: 6px; border-left: 10px solid transparent; border-bottom: 10px solid #94a3b8; }
+        
+        body.read-only .actions-balloon .btn-add, body.read-only .actions-balloon .btn-delete, 
+        body.read-only .actions-balloon .btn-clone, body.read-only .actions-balloon .btn-font, /* Hide font btns in read only */
+        body.read-only .actions-balloon .status-dot-btn, body.read-only .actions-balloon .separator { display: none !important; }
+        
+        body.read-only .connector { display: none !important; }
+        body.read-only .resizer { display: none !important; }
+        body.read-only input { pointer-events: none; }
+        body.read-only .box { cursor: default; }
+        body.read-only .box-title-bar { cursor: default; }
+        
+        #file-input { display: none; }
+    </style>
+</head>
+<body>
 
-}    
-;)}        
-;)odnUerotser ,"rezafseD" ,".odíulcxe metI"(tsaoTwohs ;)(gnidacsaCkcehc            
-;)aerAtnerap(tneraPcitsalEetadpu ))'aera-nerdlihc'(sniatnoc.tsiLssalc.aerAtnerap && aerAtnerap( fi            
- ;)eurt(seniLllAetadpu ;)(evomer.xob            
+<div id="ui-layer">
+    <div id="toolbar">
+        <button class="btn-primary" onclick="addRootBox()">+ Nova Caixa</button>
+        <div style="width: 1px; height: 30px; background: #ddd; margin: 0 5px;"></div>
+        <button id="btn-mode" class="btn-outline" onclick="toggleEditMode()" title="Alternar Edição/Leitura">🔓 Edição</button>
+        <div style="width: 1px; height: 30px; background: #ddd; margin: 0 5px;"></div>
+        <button class="btn-dark" onclick="openDashboard()">📂 Projetos</button>
+        <button class="btn-primary" onclick="saveCurrentDrawing()">💾 Salvar</button>
+        <div id="autosave-status"></div>
+        <div style="width: 1px; height: 30px; background: #ddd; margin: 0 5px;"></div>
+        <button class="btn-outline" onclick="exportJSON()" title="Baixar .json">⬇ JSON</button>
+        <button class="btn-outline" onclick="document.getElementById('file-input').click()" title="Carregar .json">⬆ Abrir</button>
+        <input type="file" id="file-input" accept=".json" onchange="importJSON(this)">
+        <button class="btn-outline" onclick="downloadPNG()" title="Baixar Blueprint PNG">📷 PNG</button>
+        <div style="width: 1px; height: 30px; background: #ddd; margin: 0 5px;"></div>
+        <span style="font-size: 12px; color: #555;">Zoom: </span>
+        <span id="zoom-indicator">100%</span>
+        <button class="icon-btn" onclick="resetView()">⟲</button>
+        <button class="icon-btn" onclick="fitToScreen()" title="Centralizar Tudo">🎯</button>
+    </div>
+</div>
+
+<div id="toast-container"></div>
+
+<div id="dashboard-overlay">
+    <div id="dashboard-panel">
+        <div class="dash-header"><span class="dash-title">Gerenciador de Desenhos</span><span class="dash-close" onclick="closeDashboard()">×</span></div>
+        <div class="dash-content" id="projects-list"></div>
+        <div style="padding: 15px; border-top: 1px solid #e2e8f0; text-align: right;"><button class="btn-primary" onclick="newDrawing()">+ Novo Desenho em Branco</button></div>
+    </div>
+</div>
+
+<div id="viewport">
+    <div id="world">
+        <div class="grid-background"></div>
+        <svg id="connections-layer">
+            <defs><marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#64748b" /></marker></defs>
+            <path id="temp-line" class="drag-line" d="" fill="none" style="display: none;"></path>
+        </svg>
+    </div>
+</div>
+
+<script>
+    // --- 1. GLOBAL STATE ---
+    let state = { scale: 1, panning: false, panStart: { x: 0, y: 0 }, offset: { x: 0, y: 0 }, isEditMode: true };
+    let connections = [];
+    let dragItem = null, resizeItem = null, isConnecting = false, startInt = {};
+    let currentDropTarget = null;
+    let spacePressed = false;
+    let currentDrawingName = null;
+    let undoStack = null;
+
+    const viewport = document.getElementById('viewport');
+    const world = document.getElementById('world');
+    const zoomInd = document.getElementById('zoom-indicator');
+    const svgLayer = document.getElementById('connections-layer');
+    const tempLine = document.getElementById('temp-line');
+    const ns = "http://www.w3.org/2000/svg";
+
+    // AUTO SAVE
+    setInterval(performAutoSave, 10000);
+    function performAutoSave() {
+        if (!currentDrawingName) return; 
+        const data = serializeCanvas();
+        const db = getDB();
+        const existingIdx = db.findIndex(p => p.name === currentDrawingName);
+        const proj = { 
+            id: existingIdx !== -1 ? db[existingIdx].id : 'proj_' + Date.now(), 
+            name: currentDrawingName, updatedAt: Date.now(), data: data 
+        };
+        if (existingIdx !== -1) db[existingIdx] = proj; else db.push(proj);
+        setDB(db);
+        const now = new Date();
+        document.getElementById('autosave-status').innerText = `Salvo: ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+    }
+
+    // --- 2. HELPER FUNCTIONS ---
+    function toggleEditMode() {
+        state.isEditMode = !state.isEditMode;
+        const btn = document.getElementById('btn-mode');
+        if (state.isEditMode) {
+            document.body.classList.remove('read-only'); btn.innerText = "🔓 Edição"; btn.classList.remove('locked'); showToast("Modo de Edição Ativado");
+        } else {
+            document.body.classList.add('read-only'); btn.innerText = "🔒 Leitura"; btn.classList.add('locked'); showToast("Modo de Leitura (Bloqueado)");
+            document.querySelectorAll('.hover-focused').forEach(el => el.classList.remove('hover-focused'));
+        }
+    }
+    function closeToast(toast) { toast.style.animation = 'fadeOut 0.2s forwards'; setTimeout(() => toast.remove(), 200); }
+    function showToast(message, actionLabel = null, actionCallback = null) {
+        const container = document.getElementById('toast-container');
+        while(container.children.length > 2) container.removeChild(container.firstChild);
+        const toast = document.createElement('div'); toast.className = 'toast';
+        let html = `<span>${message}</span>`;
+        if (actionLabel) { html += `<button class="toast-action-btn">${actionLabel}</button>`; }
+        toast.innerHTML = html;
+        if (actionLabel && actionCallback) { toast.querySelector('button').onclick = () => { actionCallback(); closeToast(toast); }; }
+        container.appendChild(toast); setTimeout(() => { if (toast.parentElement) closeToast(toast); }, 5000);
+    }
+    function showConfirmToast(message, onConfirm) {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div'); toast.className = 'toast';
+        toast.innerHTML = `<span>${message}</span><div style="display:flex; gap:8px;"><button class="toast-action-btn toast-btn-yes">SIM</button><button class="toast-action-btn toast-btn-no">NÃO</button></div>`;
+        container.appendChild(toast);
+        toast.querySelector('.toast-btn-yes').onclick = () => { closeToast(toast); onConfirm(); };
+        toast.querySelector('.toast-btn-no').onclick = () => { closeToast(toast); };
+    }
+    function restoreUndo() { if(undoStack) { deserializeCanvas(undoStack); undoStack = null; showToast("Ação desfeita."); } }
+
+    // --- 3. IO & PNG ---
+    function exportJSON() {
+        const data = serializeCanvas(); data.name = currentDrawingName || "desenho";
+        const jsonStr = JSON.stringify(data, null, 2); const blob = new Blob([jsonStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `${data.name}.json`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); showToast("Exportado!");
+    }
+    function importJSON(input) {
+        const file = input.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try { const data = JSON.parse(e.target.result); if (data.boxes) { showConfirmToast("Substituir desenho?", () => { currentDrawingName = data.name || "Importado"; deserializeCanvas(data); showToast("Carregado."); }); } } catch (err) { showToast("Erro no arquivo."); }
+        }; reader.readAsText(file); input.value = '';
+    }
+    function downloadPNG() {
+        const boxes = document.querySelectorAll('.box'); if (boxes.length === 0) { showToast("Canvas vazio."); return; }
+        showToast("Gerando PNG...");
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        boxes.forEach(box => { /* bounds calc */ });
+        const prevScale = state.scale; const prevOffset = { ...state.offset };
+        state.scale = 1; state.offset = { x: 0, y: 0 }; updateTransform();
+        const worldRect = world.getBoundingClientRect();
+        boxes.forEach(box => {
+            const rect = box.getBoundingClientRect();
+            const relX = rect.left - worldRect.left; const relY = rect.top - worldRect.top;
+            if (relX < minX) minX = relX; if (relY < minY) minY = relY;
+            if (relX + rect.width > maxX) maxX = relX + rect.width;
+            if (relY + rect.height > maxY) maxY = relY + rect.height;
+        });
+        const padding = 60;
+        html2canvas(world, { backgroundColor: "#f0f2f5", x: minX - padding, y: minY - padding, width: (maxX - minX) + (padding * 2), height: (maxY - minY) + (padding * 2), logging: false, scale: 2 }).then(canvas => {
+            const link = document.createElement('a'); link.download = `${currentDrawingName || 'blueprint'}.png`; link.href = canvas.toDataURL(); link.click();
+            state.scale = prevScale; state.offset = prevOffset; updateTransform(); showToast("Download iniciado!");
+        });
+    }
+
+    // --- 4. STORAGE & DASHBOARD ---
+    function getDB() { return JSON.parse(localStorage.getItem('canvas_projects')) || []; }
+    function setDB(db) { localStorage.setItem('canvas_projects', JSON.stringify(db)); }
+    function openDashboard() {
+        const list = document.getElementById('projects-list'); list.innerHTML = '';
+        const db = getDB();
+        if (db.length === 0) list.innerHTML = '<div style="text-align:center; color:#94a3b8; padding:20px;">Vazio</div>';
+        else {
+            db.sort((a, b) => b.updatedAt - a.updatedAt).forEach(proj => {
+                const dateStr = new Date(proj.updatedAt).toLocaleDateString();
+                const item = document.createElement('div'); item.className = 'project-card';
+                item.innerHTML = `<div class="p-info"><div class="p-name">${proj.name}</div><div class="p-date">${dateStr}</div></div><div class="p-actions"><button class="btn-load" onclick="loadProject('${proj.id}')">Abrir</button><button class="btn-trash" onclick="deleteProject('${proj.id}')">Excluir</button></div>`;
+                list.appendChild(item);
+            });
+        }
+        document.getElementById('dashboard-overlay').style.display = 'flex';
+    }
+    function closeDashboard() { document.getElementById('dashboard-overlay').style.display = 'none'; }
+    function newDrawing() { showConfirmToast("Criar novo desenho?", () => { document.querySelectorAll('.box').forEach(b => b.remove()); updateAllLines(true); connections = []; state = { ...state, scale: 1, panning: false, offset: {x:0, y:0} }; updateTransform(); currentDrawingName = null; addRootBox(); closeDashboard(); showToast("Novo desenho criado."); }); }
+    function deleteProject(id) { showConfirmToast("Excluir projeto?", () => { let db = getDB(); db = db.filter(p => p.id !== id); setDB(db); openDashboard(); showToast("Excluído."); }); }
+    function saveCurrentDrawing() {
+        let name = currentDrawingName; if (!name) { name = prompt("Nome do projeto:", "Projeto"); if (!name) return; currentDrawingName = name; }
+        performAutoSave(); showToast("Projeto salvo!");
+    }
+    function loadProject(id) { const proj = getDB().find(p => p.id === id); if (!proj) return; document.querySelectorAll('.box').forEach(b => b.remove()); updateAllLines(true); connections = []; currentDrawingName = proj.name; deserializeCanvas(proj.data); closeDashboard(); showToast(`Carregado: ${proj.name}`); }
+
+    // --- 5. SERIALIZATION ---
+    function serializeCanvas() {
+        const boxes = [];
+        document.querySelectorAll('.box').forEach(box => {
+            const parent = box.parentElement.closest('.box');
+            boxes.push({
+                id: box.id, x: box.style.left, y: box.style.top, w: box.style.width, h: box.style.height,
+                mw: box.dataset.mw, mh: box.dataset.mh, title: box.querySelector('input.title').value,
+                status: box.classList.contains('red-state') ? 'red' : 'green',
+                collapsed: box.classList.contains('collapsed-mode'), 
+                fontScale: box.dataset.fontScale || 1, // SAVE FONT PREF
+                parentId: parent ? parent.id : null
+            });
+        });
+        return { boxes, connections, viewport: state };
+    }
+    function deserializeCanvas(data) {
+        state = { ...data.viewport, isEditMode: true }; 
+        document.body.classList.remove('read-only'); document.getElementById('btn-mode').innerText = "🔓 Edição"; document.getElementById('btn-mode').classList.remove('locked');
+        updateTransform();
+        const boxMap = {};
+        data.boxes.forEach(d => {
+            const el = createBoxElement(d.id, d.title);
+            el.style.left = d.x; el.style.top = d.y; el.style.width = d.w; el.style.height = d.h;
+            if(d.mw) el.dataset.mw = d.mw; if(d.mh) el.dataset.mh = d.mh;
+            if(d.status === 'red') el.classList.add('red-state');
+            // RESTORE FONT SCALE
+            if(d.fontScale) el.dataset.fontScale = d.fontScale; else el.dataset.fontScale = 1;
             
-;))dit.c(sah.eteleDoTsdi! && )dis.c(sah.eteleDoTsdi! >= c(retlif.snoitcennoc = snoitcennoc            
-;)}            
-;)(evomer.prg )prg(fi                
-;)di.c(dIyBtnemelEteg.tnemucod = prg tsnoc                
-{ >= c(hcaErof.evomeRoTsnnoc            
-;))dit.c(sah.eteleDoTsdi || )dis.c(sah.eteleDoTsdi >= c(retlif.snoitcennoc = evomeRoTsnnoc tsnoc            
+            if(d.collapsed) {
+                el.classList.add('collapsed-mode');
+                el.querySelector('.actions-balloon .btn-toggle').innerText = '▶';
+            }
+            boxMap[d.id] = { el, parentId: d.parentId }; 
+        });
+        Object.values(boxMap).forEach(item => { 
+            if (item.parentId && boxMap[item.parentId]) boxMap[item.parentId].el.querySelector('.children-area').appendChild(item.el); 
+            else world.appendChild(item.el); 
+            calcDynamicFont(item.el);
+        });
+        data.connections.forEach(c => { 
+            if(document.getElementById(c.sid) && document.getElementById(c.tid)) addConnection(c.sid, c.spos, c.tid, c.tpos, c.id); 
+        });
+        setTimeout(() => { document.querySelectorAll('.children-area').forEach(area => updateElasticParent(area)); updateAllLines(); }, 50);
+    }
+
+    // --- 6. ZOOM & PAN ---
+    function screenToWorld(sx, sy) { const rect = world.getBoundingClientRect(); return { x: (sx - rect.left) / state.scale, y: (sy - rect.top) / state.scale }; }
+    function updateTransform() { world.style.transform = `translate(${state.offset.x}px, ${state.offset.y}px) scale(${state.scale})`; zoomInd.innerText = Math.round(state.scale * 100) + '%'; }
+    
+    viewport.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const dir = e.deltaY > 0 ? -1 : 1;
+        let newScale = state.scale + (dir * 0.1 * state.scale);
+        newScale = Math.min(Math.max(0.1, newScale), 5);
+        const rect = viewport.getBoundingClientRect();
+        const mx = e.clientX - rect.left; const my = e.clientY - rect.top; 
+        const worldXBefore = (mx - state.offset.x) / state.scale;
+        const worldYBefore = (my - state.offset.y) / state.scale;
+        state.scale = newScale;
+        state.offset.x = mx - (worldXBefore * state.scale);
+        state.offset.y = my - (worldYBefore * state.scale);
+        updateTransform();
+    }, { passive: false });
+
+    viewport.addEventListener('mousedown', (e) => {
+        const t = e.target;
+        const isBoxMover = t.closest('.box-title-bar'); 
+        const isControl = t.closest('button') || t.tagName === 'INPUT' || t.closest('.resizer') || t.closest('.connector') || t.closest('.connection-line') || t.closest('#dashboard-overlay') || t.closest('#toolbar') || t.classList.contains('conn-hitbox');
+        const canDragBox = state.isEditMode && isBoxMover;
+        if (!canDragBox && !isControl && (e.button === 0 || e.button === 1)) {
+            e.preventDefault(); state.panning = true; state.panStart = { x: e.clientX - state.offset.x, y: e.clientY - state.offset.y }; viewport.style.cursor = 'grabbing';
+        }
+    });
+    window.addEventListener('mousemove', (e) => { if (state.panning) { e.preventDefault(); state.offset.x = e.clientX - state.panStart.x; state.offset.y = e.clientY - state.panStart.y; updateTransform(); } });
+    window.addEventListener('mouseup', () => { state.panning = false; viewport.style.cursor = 'grab'; });
+    function resetView() { state.scale = 1; state.offset = { x: 0, y: 0 }; updateTransform(); }
+    
+    function fitToScreen() {
+        const boxes = document.querySelectorAll('.box');
+        if (boxes.length === 0) { state.scale = 1; state.offset = {x:0,y:0}; updateTransform(); return; }
+        let minWx = Infinity, minWy = Infinity, maxWx = -Infinity, maxWy = -Infinity;
+        boxes.forEach(box => {
+            const rect = box.getBoundingClientRect();
+            const wx = (rect.left - state.offset.x) / state.scale;
+            const wy = (rect.top - state.offset.y) / state.scale;
+            const ww = rect.width / state.scale;
+            const wh = rect.height / state.scale;
+            if (wx < minWx) minWx = wx; if (wy < minWy) minWy = wy;
+            if (wx + ww > maxWx) maxWx = wx + ww; if (wy + wh > maxWy) maxWy = wy + wh;
+        });
+        const padding = 100;
+        const totalW = maxWx - minWx + (padding * 2);
+        const totalH = maxWy - minWy + (padding * 2);
+        const scaleX = window.innerWidth / totalW;
+        const scaleY = window.innerHeight / totalH;
+        let newScale = Math.min(scaleX, scaleY);
+        newScale = Math.min(Math.max(newScale, 0.1), 2);
+        const worldCenterX = (minWx + maxWx) / 2;
+        const worldCenterY = (minWy + maxWy) / 2;
+        const newOffsetX = (window.innerWidth / 2) - (worldCenterX * newScale);
+        const newOffsetY = (window.innerHeight / 2) - (worldCenterY * newScale);
+        state.scale = newScale; state.offset.x = newOffsetX; state.offset.y = newOffsetY;
+        updateTransform();
+    }
+
+    // --- 7. CORE LOGIC ---
+    function addRootBox() { 
+        if(!state.isEditMode) return;
+        const pos = screenToWorld(window.innerWidth/2, window.innerHeight/2); createBox(world, pos.x - 130, pos.y - 110); 
+    }
+    
+    // [NOVIDADE] ADJUST FONT SIZE
+    function adjustFontSize(id, delta) {
+        if(!state.isEditMode) return;
+        const box = document.getElementById(id);
+        let currentScale = parseFloat(box.dataset.fontScale) || 1;
+        currentScale += delta;
+        currentScale = Math.max(0.5, Math.min(3, currentScale)); // Limites
+        box.dataset.fontScale = currentScale;
+        calcDynamicFont(box);
+    }
+
+    function duplicateBox(id) {
+        if(!state.isEditMode) return;
+        const original = document.getElementById(id);
+        const originalParent = original.parentElement; 
+        
+        function recursiveClone(sourceEl, targetParent, isRoot = false) {
+            const title = sourceEl.querySelector('input.title').value;
+            const w = parseFloat(sourceEl.style.width);
+            const h = parseFloat(sourceEl.style.height);
+            const mw = sourceEl.dataset.mw;
+            const mh = sourceEl.dataset.mh;
+            const fScale = sourceEl.dataset.fontScale;
+            const status = sourceEl.classList.contains('red-state') ? 'red' : 'green';
+            const collapsed = sourceEl.classList.contains('collapsed-mode');
+            const newId = 'box-' + Date.now() + Math.random().toString(36).substr(2, 4);
+            const newEl = createBoxElement(newId, title);
             
-;))di.b >= b(pam.eteleDoTsexob(teS wen = eteleDoTsdi tsnoc            
-;])'xob.'(llArotceleSyreuq.xob... ,xob[ = eteleDoTsexob tsnoc            
-;tnemelEtnerap.xob = aerAtnerap tsnoc            
-;nruter )xob!( fi ;)di(dIyBtnemelEteg.tnemucod = xob tsnoc            
-;)(savnaCezilaires = kcatSodnu            
-{ >= )( ,"?axiac atse riulcxE"(tsaoTmrifnoCwohs        
-;nruter )edoMtidEsi.etats!(fi        
-{ )di(xoBeteled noitcnuf    
+            if (isRoot) {
+                const oldLeft = parseFloat(sourceEl.style.left);
+                const oldTop = parseFloat(sourceEl.style.top);
+                newEl.style.left = (oldLeft + 30) + 'px';
+                newEl.style.top = (oldTop + 30) + 'px';
+            } else {
+                newEl.style.left = sourceEl.style.left;
+                newEl.style.top = sourceEl.style.top;
+            }
+            
+            newEl.style.width = w + 'px'; newEl.style.height = h + 'px';
+            if(mw) newEl.dataset.mw = mw; if(mh) newEl.dataset.mh = mh;
+            if(fScale) newEl.dataset.fontScale = fScale;
+            
+            if(status === 'red') newEl.classList.add('red-state');
+            if(collapsed) {
+                newEl.classList.add('collapsed-mode');
+                newEl.querySelector('.actions-balloon .btn-toggle').innerText = '▶';
+            }
+            
+            targetParent.appendChild(newEl);
+            calcDynamicFont(newEl);
+            
+            const sourceArea = sourceEl.querySelector('.children-area');
+            const targetArea = newEl.querySelector('.children-area');
+            
+            Array.from(sourceArea.children).forEach(child => {
+                if(child.classList.contains('box')) {
+                    recursiveClone(child, targetArea, false);
+                }
+            });
+            if(targetParent.classList.contains('children-area')) updateElasticParent(targetParent);
+        }
+        recursiveClone(original, originalParent, true);
+        showToast("Caixa duplicada com sucesso!");
+    }
 
-}    
-;)0 ,)tnerap(tneraPcitsalEetadpu >= )((tuoemiTtes )dlrow ==! tnerap( fi        
-;)le(tnoFcimanyDclac ;)le(dlihCdneppa.tnerap ;'neerg' = sutats.tesatad.le        
-;)h(taolFesrap = hm.tesatad.le ;)w(taolFesrap = wm.tesatad.le ;h = thgieh.elyts.le ;w = htdiw.elyts.le        
-} ;'xp061' = h ;'xp002' = w { )dlrow ==! tnerap(fi ;'xp081' = h tel ;'xp002' = w tel        
-;'xp' + y = pot.elyts.le ;'xp' + x = tfel.elyts.le        
-;)di(tnemelExoBetaerc = le tsnoc        
-;)4 ,2(rtsbus.)63(gnirtSot.)(modnar.htaM + )(won.etaD + '-xob' = di tsnoc        
-{ )y ,x ,tnerap(xoBetaerc noitcnuf    
+    function createBoxElement(id, titleVal = "Novo Item") {
+        const el = document.createElement('div'); el.className = 'box'; el.id = id;
+        el.dataset.fontScale = "1"; // Default Font Scale
+        el.innerHTML = `
+            <div class="box-title-bar" onmousedown="initDrag(event, '${id}')">
+                <input class="title" value="${titleVal}" placeholder="Nome..." oninput="calcDynamicFont(this.closest('.box'))">
+                <div class="actions-balloon">
+                    <div class="status-dot-btn dot-green" onclick="setStatus('${id}', 'green')" title="Normal"></div>
+                    <div class="status-dot-btn dot-red" onclick="setStatus('${id}', 'red')" title="Crítico"></div>
+                    <div class="separator"></div>
+                    
+                    <button class="icon-btn btn-font" onclick="adjustFontSize('${id}', -0.1)" title="Diminuir Texto">A-</button>
+                    <button class="icon-btn btn-font" onclick="adjustFontSize('${id}', 0.1)" title="Aumentar Texto">A+</button>
+                    <div class="separator"></div>
 
-}    
-;le nruter        
-;)}        
-;)'desucof-revoh'(dda.tsiLssalc.le            
-;))'desucof-revoh'(evomer.tsiLssalc.b >= b(hcaErof.)'desucof-revoh.'(llArotceleSyreuq.tnemucod            
- ;)(noitagaporPpots.e            
-{ >= )e( ,'revoesuom'(renetsiLtnevEdda.le        
-;`        
->vid/<>")'thgir' ,'}di{$' ,tneve(nnoCtini"=nwodesuomno "thgir-c rotcennoc"=ssalc vid<>vid/<>")'tfel' ,'}di{$' ,tneve(nnoCtini"=nwodesuomno "tfel-c rotcennoc"=ssalc vid<>vid/<>")'mottob' ,'}di{$' ,tneve(nnoCtini"=nwodesuomno "mottob-c rotcennoc"=ssalc vid<>vid/<>")'pot' ,'}di{$' ,tneve(nnoCtini"=nwodesuomno "pot-c rotcennoc"=ssalc vid<>vid/<>")'}di{$' ,tneve(eziseRtini"=nwodesuomno "reziser"=ssalc vid<            
->vid/<            
->vid/<>"}di{$-aera"=di "aera-nerdlihc"=ssalc vid<                
->"ydob-xob"=ssalc vid<            
->vid/<            
->vid/<                
->nottub/<×>"riulcxE"=eltit ")'}di{$'(xoBeteled"=kcilcno "eteled-ntb ntb-noci"=ssalc nottub<                    
->nottub/<▼>"raspaloC"=eltit ")siht ,'}di{$'(elggoTtramSeldnah"=kcilcno "elggot-ntb ntb-noci"=ssalc nottub<                    
->nottub/<＋>"ohliF ranoicidA"=eltit ")'}di{$'(dlihCdda"=kcilcno "dda-ntb ntb-noci"=ssalc nottub<                    
->vid/<>"rotarapes"=ssalc vid<                    
->vid/<>"ocitírC"=eltit ")'der' ,'}di{$'(sutatStes"=kcilcno "der-tod ntb-tod-sutats"=ssalc vid<                    
->vid/<>"lamroN"=eltit ")'neerg' ,'}di{$'(sutatStes"=kcilcno "neerg-tod ntb-tod-sutats"=ssalc vid<                    
->"noollab-snoitca"=ssalc vid<                
->"))'xob.'(tsesolc.siht(tnoFcimanyDclac"=tupnino "...emoN"=redlohecalp "}laVeltit{$"=eulav "eltit"=ssalc tupni<                
->")'}di{$' ,tneve(garDtini"=nwodesuomno "rab-eltit-xob"=ssalc vid<            
-` = LMTHrenni.le        
-;di = di.le ;'xob' = emaNssalc.le ;)'vid'(tnemelEetaerc.tnemucod = le tsnoc        
-{ )"metI ovoN" = laVeltit ,di(tnemelExoBetaerc noitcnuf    
+                    <button class="icon-btn btn-add" onclick="addChild('${id}')" title="Adicionar Filho">＋</button>
+                    <button class="icon-btn btn-clone" onclick="duplicateBox('${id}')" title="Duplicar">❐</button>
+                    <button class="icon-btn btn-toggle" onclick="handleSmartToggle('${id}', this)" title="Colapsar">▼</button>
+                    <button class="icon-btn btn-delete" onclick="deleteBox('${id}')" title="Excluir">×</button>
+                </div>
+            </div>
+            <div class="box-body">
+                <div class="children-area" id="area-${id}"></div>
+            </div>
+            <div class="resizer" onmousedown="initResize(event, '${id}')"></div><div class="connector c-top" onmousedown="initConn(event, '${id}', 'top')"></div><div class="connector c-bottom" onmousedown="initConn(event, '${id}', 'bottom')"></div><div class="connector c-left" onmousedown="initConn(event, '${id}', 'left')"></div><div class="connector c-right" onmousedown="initConn(event, '${id}', 'right')"></div>
+        `;
+        el.addEventListener('mouseover', (e) => {
+            e.stopPropagation(); 
+            document.querySelectorAll('.hover-focused').forEach(b => b.classList.remove('hover-focused'));
+            el.classList.add('hover-focused');
+        });
+        return el;
+    }
+
+    function createBox(parent, x, y) {
+        const id = 'box-' + Date.now() + Math.random().toString(36).substr(2, 4);
+        const el = createBoxElement(id);
+        el.style.left = x + 'px'; el.style.top = y + 'px';
+        let w = '200px'; let h = '180px'; if(parent !== world) { w = '200px'; h = '160px'; }
+        el.style.width = w; el.style.height = h; el.dataset.mw = parseFloat(w); el.dataset.mh = parseFloat(h);
+        el.dataset.status = 'green'; parent.appendChild(el); calcDynamicFont(el);
+        if (parent !== world) setTimeout(() => updateElasticParent(parent), 0);
+    }
+
+    function deleteBox(id) {
+        if(!state.isEditMode) return;
+        showConfirmToast("Excluir esta caixa?", () => {
+            undoStack = serializeCanvas();
+            const box = document.getElementById(id); if (!box) return;
+            const parentArea = box.parentElement;
+            const boxesToDelete = [box, ...box.querySelectorAll('.box')];
+            const idsToDelete = new Set(boxesToDelete.map(b => b.id));
+            
+            const connsToRemove = connections.filter(c => idsToDelete.has(c.sid) || idsToDelete.has(c.tid));
+            connsToRemove.forEach(c => {
+                const grp = document.getElementById(c.id);
+                if(grp) grp.remove();
+            });
+            connections = connections.filter(c => !idsToDelete.has(c.sid) && !idsToDelete.has(c.tid));
+            
+            box.remove(); updateAllLines(true); 
+            if (parentArea && parentArea.classList.contains('children-area')) updateElasticParent(parentArea);
+            checkCascading(); showToast("Item excluído.", "Desfazer", restoreUndo);
+        });
+    }
+
+    function deleteConnection(connId) {
+        if(!state.isEditMode) return;
+        showConfirmToast("Remover conexão?", () => {
+            undoStack = serializeCanvas();
+            const idx = connections.findIndex(c => c.id === connId);
+            if (idx !== -1) { 
+                connections.splice(idx, 1); 
+                const path = document.getElementById(connId); 
+                if (path) path.remove(); 
+                checkCascading(); showToast("Conexão removida.", "Desfazer", restoreUndo); 
+            }
+        });
+    }
+
+    function addChild(id) {
+        if(!state.isEditMode) return;
+        const area = document.getElementById('area-' + id);
+        const parentBox = document.getElementById(id);
+        area.classList.remove('collapsed'); parentBox.classList.remove('collapsed-mode');
+        const btn = parentBox.querySelector('.actions-balloon .btn-toggle'); if(btn) btn.innerText = '▼';
+        createBox(area, 20, 20); 
+    }
     
-}    
- ;)011 - y.sop ,031 - x.sop ,dlrow(xoBetaerc ;)2/thgieHrenni.wodniw ,2/htdiWrenni.wodniw(dlroWoTneercs = sop tsnoc        
-;nruter )edoMtidEsi.etats!(fi        
- { )(xoBtooRdda noitcnuf    
+    function calcDynamicFont(box) {
+        const input = box.querySelector('input.title');
+        const textLen = Math.max(1, input.value.length); 
+        const w = box.offsetWidth; const h = box.offsetHeight;
+        
+        // Manual Scale
+        const manualScale = parseFloat(box.dataset.fontScale) || 1;
 
-}    
-;)(mrofsnarTetadpu        
-;YtesffOwen = y.tesffo.etats ;XtesffOwen = x.tesffo.etats ;elacSwen = elacs.etats        
-;)elacSwen * YretneCdlrow( - )2 / thgieHrenni.wodniw( = YtesffOwen tsnoc        
-;)elacSwen * XretneCdlrow( - )2 / htdiWrenni.wodniw( = XtesffOwen tsnoc        
-;2 / )yWxam + yWnim( = YretneCdlrow tsnoc        
-;2 / )xWxam + xWnim( = XretneCdlrow tsnoc        
-;)2 ,)1.0 ,elacSwen(xam.htaM(nim.htaM = elacSwen        
-;)Yelacs ,Xelacs(nim.htaM = elacSwen tel        
-;Hlatot / thgieHrenni.wodniw = Yelacs tsnoc        
-;Wlatot / htdiWrenni.wodniw = Xelacs tsnoc        
-;)2 * gniddap( + yWnim - yWxam = Hlatot tsnoc        
-;)2 * gniddap( + xWnim - xWxam = Wlatot tsnoc        
-;001 = gniddap tsnoc        
-;)}        
-;hw + yw = yWxam )yWxam > hw + yw( fi ;ww + xw = xWxam )xWxam > ww + xw( fi            
-;yw = yWnim )yWnim < yw( fi ;xw = xWnim )xWnim < xw( fi            
-;elacs.etats / thgieh.tcer = hw tsnoc            
-;elacs.etats / htdiw.tcer = ww tsnoc            
-;elacs.etats / )y.tesffo.etats - pot.tcer( = yw tsnoc            
-;elacs.etats / )x.tesffo.etats - tfel.tcer( = xw tsnoc            
-;)(tceRtneilCgnidnuoBteg.xob = tcer tsnoc            
-{ >= xob(hcaErof.sexob        
-;ytinifnI- = yWxam ,ytinifnI- = xWxam ,ytinifnI = yWnim ,ytinifnI = xWnim tel        
-} ;nruter ;)(mrofsnarTetadpu ;}0:y,0:x{ = tesffo.etats ;1 = elacs.etats { )0 === htgnel.sexob( fi        
-;)'xob.'(llArotceleSyreuq.tnemucod = sexob tsnoc        
-{ )(neercSoTtif noitcnuf    
+        const area = w * h;
+        let balloonScale = Math.sqrt(area) / 220; 
+        balloonScale = Math.min(Math.max(balloonScale, 0.75), 1.8);
+        box.style.setProperty('--balloon-scale', balloonScale);
+
+        // Auto Calc * Manual Scale
+        let sizeBasedOnGeom = Math.sqrt(area) * 0.12;
+        const maxSizeForWidth = (w * 0.9) / (textLen * 0.6);
+        let finalSize = Math.min(sizeBasedOnGeom, maxSizeForWidth);
+        finalSize = Math.max(14, finalSize);
+        
+        // Apply manual multiplier
+        finalSize = finalSize * manualScale;
+        
+        box.style.setProperty('--dynamic-font-size', finalSize + 'px');
+        
+        const headerH = Math.max(30, h * 0.15);
+        box.style.setProperty('--header-height', headerH + 'px');
+    }
+
+    function handleSmartToggle(id, btn) {
+        const area = document.getElementById('area-' + id);
+        const isClosing = !area.classList.contains('collapsed');
+        if (isClosing) runCascadeClose(id, btn); else performToggle(id, btn);
+    }
+    async function runCascadeClose(boxId) {
+        const box = document.getElementById(boxId);
+        const area = box.querySelector('.children-area');
+        const openChildren = Array.from(area.children).filter(child => child.classList.contains('box') && !child.classList.contains('collapsed-mode'));
+        if (openChildren.length > 0) { const promises = openChildren.map(child => runCascadeClose(child.id)); await Promise.all(promises); await new Promise(r => setTimeout(r, 800)); }
+        const myBtn = box.querySelector('.actions-balloon .btn-toggle');
+        if (!box.classList.contains('collapsed-mode')) { performToggle(boxId, myBtn); const parentArea = box.parentElement; if (parentArea && parentArea.classList.contains('children-area')) updateElasticParent(parentArea); }
+    }
+    function performToggle(id, btn) {
+        const area = document.getElementById('area-' + id);
+        const box = document.getElementById(id);
+        area.classList.toggle('collapsed'); box.classList.toggle('collapsed-mode');
+        if(btn) btn.innerText = area.classList.contains('collapsed') ? '▶' : '▼';
+        calcDynamicFont(box); updateElasticParent(area); updateAllLines();
+    }
+    function updateElasticParent(childrenContainer) {
+        if (!childrenContainer || !childrenContainer.classList.contains('children-area')) return;
+        const parentBox = childrenContainer.closest('.box'); if (!parentBox) return;
+        if (childrenContainer.classList.contains('collapsed')) {
+            const manualW = parseFloat(parentBox.dataset.mw) || 200;
+            parentBox.style.width = Math.max(200, manualW) + 'px';
+            parentBox.style.height = Math.max(80, parseFloat(parentBox.dataset.mh) || 80) + 'px';
+            calcDynamicFont(parentBox);
+            const gp = parentBox.parentElement; if (gp && gp.classList.contains('children-area')) updateElasticParent(gp); return;
+        }
+        const children = Array.from(childrenContainer.children).filter(c => c.classList.contains('box'));
+        let maxX = 0; let maxY = 0;
+        children.forEach(child => {
+            const right = child.offsetLeft + child.offsetWidth; const bottom = child.offsetTop + child.offsetHeight;
+            if (right > maxX) maxX = right; if (bottom > maxY) maxY = bottom;
+        });
+        const neededW = maxX + 40; const neededH = maxY + 120 + 40;
+        const manualW = parseFloat(parentBox.dataset.mw) || 240; const manualH = parseFloat(parentBox.dataset.mh) || 220;
+        parentBox.style.width = Math.max(neededW, manualW) + 'px'; parentBox.style.height = Math.max(neededH, manualH) + 'px';
+        calcDynamicFont(parentBox);
+        const gp = parentBox.parentElement; if (gp && gp.classList.contains('children-area')) updateElasticParent(gp);
+        updateAllLines();
+    }
+
+    // --- INTERACTIONS ---
+    function initDrag(e, id) {
+        if(spacePressed) return; 
+        if(!state.isEditMode) return;
+        if (e.target.closest('button') || e.target.classList.contains('status-dot-btn')) return; 
+        e.stopPropagation(); 
+        dragItem = document.getElementById(id); dragItem.style.zIndex = 999; 
+        const wp = screenToWorld(e.clientX, e.clientY);
+        startInt = { mx: wp.x, my: wp.y, el: dragItem.offsetLeft, et: dragItem.offsetTop };
+    }
+    function initResize(e, id) {
+        if(!state.isEditMode) return;
+        e.stopPropagation(); resizeItem = document.getElementById(id); resizeItem.classList.add('no-transition');
+        const wp = screenToWorld(e.clientX, e.clientY);
+        startInt = { mx: wp.x, my: wp.y, w: resizeItem.offsetWidth, h: resizeItem.offsetHeight };
+    }
+    function initConn(e, id, pos) {
+        if(!state.isEditMode) return;
+        e.stopPropagation(); e.preventDefault(); isConnecting = true;
+        const rect = e.target.getBoundingClientRect();
+        const wp = screenToWorld(rect.left + rect.width/2, rect.top + rect.height/2);
+        startInt = { sid: id, spos: pos, sx: wp.x, sy: wp.y };
+        tempLine.style.display = 'block';
+    }
+    window.addEventListener('mousemove', (e) => {
+        const wp = screenToWorld(e.clientX, e.clientY);
+        if (dragItem) {
+            e.preventDefault(); dragItem.style.left = (startInt.el + wp.x - startInt.mx) + 'px'; dragItem.style.top = (startInt.et + wp.y - startInt.my) + 'px';
+            dragItem.style.pointerEvents = 'none'; 
+            const elementsBelow = document.elementsFromPoint(e.clientX, e.clientY);
+            dragItem.style.pointerEvents = 'auto';
+            if(currentDropTarget) { currentDropTarget.classList.remove('drop-active'); currentDropTarget = null; }
+            const target = elementsBelow.find(el => el.classList.contains('children-area'));
+            if (target && !dragItem.contains(target)) { currentDropTarget = target; currentDropTarget.classList.add('drop-active'); }
+            updateElasticParent(dragItem.parentElement); updateAllLines();
+        }
+        if (resizeItem) {
+            e.preventDefault();
+            const newW = Math.max(200, startInt.w + wp.x - startInt.mx); const newH = Math.max(80, startInt.h + wp.y - startInt.my);
+            resizeItem.style.width = newW + 'px'; resizeItem.style.height = newH + 'px';
+            resizeItem.dataset.mw = newW; resizeItem.dataset.mh = newH;
+            calcDynamicFont(resizeItem); updateElasticParent(resizeItem.querySelector('.children-area')); updateElasticParent(resizeItem.parentElement); updateAllLines();
+        }
+        if (isConnecting) { const off = -50000; tempLine.setAttribute('d', `M ${startInt.sx-off} ${startInt.sy-off} L ${wp.x-off} ${wp.y-off}`); }
+    });
+    window.addEventListener('mouseup', (e) => {
+        if (resizeItem) resizeItem.classList.remove('no-transition');
+        document.querySelectorAll('.drop-active').forEach(el => el.classList.remove('drop-active'));
+        if (dragItem) {
+            if (currentDropTarget && currentDropTarget !== dragItem.parentElement) reparentBox(dragItem, currentDropTarget);
+            else if (!currentDropTarget && dragItem.parentElement !== world) reparentBox(dragItem, world);
+            dragItem.style.zIndex = '';
+        }
+        dragItem = null; resizeItem = null; currentDropTarget = null;
+        if (isConnecting) {
+            isConnecting = false; tempLine.style.display = 'none';
+            const el = document.elementFromPoint(e.clientX, e.clientY);
+            if (el && el.classList.contains('connector')) {
+                const box = el.closest('.box'); const pos = el.className.match(/c-([a-z]+)/)[1];
+                if (box && box.id !== startInt.sid) addConnection(startInt.sid, startInt.spos, box.id, pos);
+            }
+        }
+    });
     
-} ;)(mrofsnarTetadpu ;} 0 :y ,0 :x { = tesffo.etats ;1 = elacs.etats { )(weiVteser noitcnuf    
-;)} ;'barg' = rosruc.elyts.tropweiv ;eslaf = gninnap.etats { >= )( ,'puesuom'(renetsiLtnevEdda.wodniw    
-;)} } ;)(mrofsnarTetadpu ;y.tratSnap.etats - Ytneilc.e = y.tesffo.etats ;x.tratSnap.etats - Xtneilc.e = x.tesffo.etats ;)(tluafeDtneverp.e { )gninnap.etats( fi { >= )e( ,'evomesuom'(renetsiLtnevEdda.wodniw    
-;)}    
-}        
-;'gnibbarg' = rosruc.elyts.tropweiv ;} y.tesffo.etats - Ytneilc.e :y ,x.tesffo.etats - Xtneilc.e :x { = tratSnap.etats ;eurt = gninnap.etats ;)(tluafeDtneverp.e            
-{ ))1 === nottub.e || 0 === nottub.e( && lortnoCsi! && xoBgarDnac!( fi        
-;revoMxoBsi && edoMtidEsi.etats = xoBgarDnac tsnoc        
-;)'xobtih-nnoc'(sniatnoc.tsiLssalc.t || )'rabloot#'(tsesolc.t || )'yalrevo-draobhsad#'(tsesolc.t || )'enil-noitcennoc.'(tsesolc.t || )'rotcennoc.'(tsesolc.t || )'reziser.'(tsesolc.t || 'TUPNI' === emaNgat.t || )'nottub'(tsesolc.t = lortnoCsi tsnoc        
- ;)'rab-eltit-xob.'(tsesolc.t = revoMxoBsi tsnoc        
-;tegrat.e = t tsnoc        
-{ >= )e( ,'nwodesuom'(renetsiLtnevEdda.tropweiv    
+    viewport.addEventListener('click', (e) => {
+        if(e.target === viewport || e.target === world || e.target.classList.contains('grid-background')) {
+            document.querySelectorAll('.hover-focused').forEach(b => b.classList.remove('hover-focused'));
+        }
+    });
 
-;)} eslaf :evissap { ,}    
-;)(mrofsnarTetadpu        
-;)elacs.etats * erofeBYdlrow( - ym = y.tesffo.etats        
-;)elacs.etats * erofeBXdlrow( - xm = x.tesffo.etats        
-;elacSwen = elacs.etats        
-;elacs.etats / )y.tesffo.etats - ym( = erofeBYdlrow tsnoc        
-;elacs.etats / )x.tesffo.etats - xm( = erofeBXdlrow tsnoc        
- ;pot.tcer - Ytneilc.e = ym tsnoc ;tfel.tcer - Xtneilc.e = xm tsnoc        
-;)(tceRtneilCgnidnuoBteg.tropweiv = tcer tsnoc        
-;)5 ,)elacSwen ,1.0(xam.htaM(nim.htaM = elacSwen        
-;)elacs.etats * 1.0 * rid( + elacs.etats = elacSwen tel        
-;1 : 1- ? 0 > Yatled.e = rid tsnoc        
-;)(tluafeDtneverp.e        
-{ >= )e( ,'leehw'(renetsiLtnevEdda.tropweiv    
+    function reparentBox(box, newParent) {
+        const oldParent = box.parentElement;
+        const boxRect = box.getBoundingClientRect();
+        const newParentRect = newParent === world ? world.getBoundingClientRect() : newParent.getBoundingClientRect();
+        const newLeft = (boxRect.left - newParentRect.left) / state.scale;
+        const newTop = (boxRect.top - newParentRect.top) / state.scale;
+        newParent.appendChild(box); box.style.left = newLeft + 'px'; box.style.top = newTop + 'px';
+        if(oldParent && oldParent.classList.contains('children-area')) updateElasticParent(oldParent);
+        if(newParent && newParent.classList.contains('children-area')) updateElasticParent(newParent);
+        updateAllLines();
+    }
     
-} ;'%' + )001 * elacs.etats(dnuor.htaM = txeTrenni.dnImooz ;`)}elacs.etats{$(elacs )xp}y.tesffo.etats{$ ,xp}x.tesffo.etats{$(etalsnart` = mrofsnart.elyts.dlrow { )(mrofsnarTetadpu noitcnuf    
-} ;} elacs.etats / )pot.tcer - ys( :y ,elacs.etats / )tfel.tcer - xs( :x { nruter ;)(tceRtneilCgnidnuoBteg.dlrow = tcer tsnoc { )ys ,xs(dlroWoTneercs noitcnuf    
-
-}    
-;)05 ,} ;)(seniLllAetadpu ;))aera(tneraPcitsalEetadpu >= aera(hcaErof.)'aera-nerdlihc.'(llArotceleSyreuq.tnemucod { >= )((tuoemiTtes        
-;)}        
- ;)di.c ,sopt.c ,dit.c ,sops.c ,dis.c(noitcennoCdda ))dit.c(dIyBtnemelEteg.tnemucod && )dis.c(dIyBtnemelEteg.tnemucod(fi            
- { >= c(hcaErof.snoitcennoc.atad        
-;)}        
-;)le.meti(tnoFcimanyDclac            
- ;)le.meti(dlihCdneppa.dlrow esle            
- ;)le.meti(dlihCdneppa.)'aera-nerdlihc.'(rotceleSyreuq.le.]dItnerap.meti[paMxob )]dItnerap.meti[paMxob && dItnerap.meti( fi            
- { >= meti(hcaErof.)paMxob(seulav.tcejbO        
-;)}        
- ;} dItnerap.d :dItnerap ,le { = ]di.d[paMxob            
-}            
-;'▶' = txeTrenni.)'elggot-ntb. noollab-snoitca.'(rotceleSyreuq.le                
-;)'edom-despalloc'(dda.tsiLssalc.le                
-{ )despalloc.d(fi            
-;)'etats-der'(dda.tsiLssalc.le )'der' === sutats.d(fi            
-;hm.d = hm.tesatad.le )hm.d(fi ;wm.d = wm.tesatad.le )wm.d(fi            
-;h.d = thgieh.elyts.le ;w.d = htdiw.elyts.le ;y.d = pot.elyts.le ;x.d = tfel.elyts.le            
-;)eltit.d ,di.d(tnemelExoBetaerc = le tsnoc            
-{ >= d(hcaErof.sexob.atad        
-;}{ = paMxob tsnoc        
-;)(mrofsnarTetadpu        
-;)'dekcol'(evomer.tsiLssalc.)'edom-ntb'(dIyBtnemelEteg.tnemucod ;"oãçidE ��" = txeTrenni.)'edom-ntb'(dIyBtnemelEteg.tnemucod ;)'ylno-daer'(evomer.tsiLssalc.ydob.tnemucod        
- ;} eurt :edoMtidEsi ,tropweiv.atad... { = etats        
-{ )atad(savnaCezilairesed noitcnuf    
-}    
-;} etats :tropweiv ,snoitcennoc ,sexob { nruter        
-;)}        
-;)}            
-llun : di.tnerap ? tnerap :dItnerap ,)'edom-despalloc'(sniatnoc.tsiLssalc.xob :despalloc                
-,'neerg' : 'der' ? )'etats-der'(sniatnoc.tsiLssalc.xob :sutats                
-,eulav.)'eltit.tupni'(rotceleSyreuq.xob :eltit ,hm.tesatad.xob :hm ,wm.tesatad.xob :wm                
-,thgieh.elyts.xob :h ,htdiw.elyts.xob :w ,pot.elyts.xob :y ,tfel.elyts.xob :x ,di.xob :di                
-{(hsup.sexob            
-;)'xob.'(tsesolc.tnemelEtnerap.xob = tnerap tsnoc            
-{ >= xob(hcaErof.)'xob.'(llArotceleSyreuq.tnemucod        
-;][ = sexob tsnoc        
-{ )(savnaCezilaires noitcnuf    
-
-} ;)`}eman.jorp{$ :odagerraC`(tsaoTwohs ;)(draobhsaDesolc ;)atad.jorp(savnaCezilairesed ;eman.jorp = emaNgniwarDtnerruc ;][ = snoitcennoc ;)eurt(seniLllAetadpu ;))(evomer.b >= b(hcaErof.)'xob.'(llArotceleSyreuq.tnemucod ;nruter )jorp!( fi ;)di === di.p >= p(dnif.)(BDteg = jorp tsnoc { )di(tcejorPdaol noitcnuf    
-}    
-;)"!ovlas otejorP"(tsaoTwohs ;)(evaSotuAmrofrep        
-} ;eman = emaNgniwarDtnerruc ;nruter )eman!( fi ;)"otejorP" ,":otejorp od emoN"(tpmorp = eman { )eman!( fi ;emaNgniwarDtnerruc = eman tel        
-{ )(gniwarDtnerruCevas noitcnuf    
-} ;)} ;)".odíulcxE"(tsaoTwohs ;)(draobhsaDnepo ;)bd(BDtes ;)di ==! di.p >= p(retlif.bd = bd ;)(BDteg = bd tel { >= )( ,"?otejorp riulcxE"(tsaoTmrifnoCwohs { )di(tcejorPeteled noitcnuf    
-} ;)} ;)".odairc ohnesed ovoN"(tsaoTwohs ;)(draobhsaDesolc ;)(xoBtooRdda ;llun = emaNgniwarDtnerruc ;)(mrofsnarTetadpu ;} }0:y ,0:x{ :tesffo ,eslaf :gninnap ,1 :elacs ,etats... { = etats ;][ = snoitcennoc ;)eurt(seniLllAetadpu ;))(evomer.b >= b(hcaErof.)'xob.'(llArotceleSyreuq.tnemucod { >= )( ,"?ohnesed ovon rairC"(tsaoTmrifnoCwohs { )(gniwarDwen noitcnuf    
-} ;'enon' = yalpsid.elyts.)'yalrevo-draobhsad'(dIyBtnemelEteg.tnemucod { )(draobhsaDesolc noitcnuf    
-}    
-;'xelf' = yalpsid.elyts.)'yalrevo-draobhsad'(dIyBtnemelEteg.tnemucod        
-}        
-;)}            
-;)meti(dlihCdneppa.tsil                
-;`>vid/<>nottub/<riulcxE>")'}di.jorp{$'(tcejorPeteled"=kcilcno "hsart-ntb"=ssalc nottub<>nottub/<rirbA>")'}di.jorp{$'(tcejorPdaol"=kcilcno "daol-ntb"=ssalc nottub<>"snoitca-p"=ssalc vid<>vid/<>vid/<}rtSetad{$>"etad-p"=ssalc vid<>vid/<}eman.jorp{$>"eman-p"=ssalc vid<>"ofni-p"=ssalc vid<` = LMTHrenni.meti                
-;'drac-tcejorp' = emaNssalc.meti ;)'vid'(tnemelEetaerc.tnemucod = meti tsnoc                
-;)(gnirtSetaDelacoLot.)tAdetadpu.jorp(etaD wen = rtSetad tsnoc                
-{ >= jorp(hcaErof.)tAdetadpu.a - tAdetadpu.b >= )b ,a((tros.bd            
-{ esle        
-;'>vid/<oizaV>";xp02:gniddap ;8b3a49#:roloc ;retnec:ngila-txet"=elyts vid<' = LMTHrenni.tsil )0 === htgnel.bd( fi        
-;)(BDteg = bd tsnoc        
-;'' = LMTHrenni.tsil ;)'tsil-stcejorp'(dIyBtnemelEteg.tnemucod = tsil tsnoc        
-{ )(draobhsaDnepo noitcnuf    
-} ;))bd(yfignirts.NOSJ ,'stcejorp_savnac'(metItes.egarotSlacol { )bd(BDtes noitcnuf    
-} ;][ || ))'stcejorp_savnac'(metIteg.egarotSlacol(esrap.NOSJ nruter { )(BDteg noitcnuf    
-
-}    
-;)}        
-;)"!odaicini daolnwoD"(tsaoTwohs ;)(mrofsnarTetadpu ;tesffOverp = tesffo.etats ;elacSverp = elacs.etats            
-;)(kcilc.knil ;)(LRUataDot.savnac = ferh.knil ;`gnp.}'tnirpeulb' || emaNgniwarDtnerruc{$` = daolnwod.knil ;)'a'(tnemelEetaerc.tnemucod = knil tsnoc            
-{ >= savnac(neht.)} 2 :elacs ,eslaf :gniggol ,)2 * gniddap( + )Ynim - Yxam( :thgieh ,)2 * gniddap( + )Xnim - Xxam( :htdiw ,gniddap - Ynim :y ,gniddap - Xnim :x ,"5f2f0f#" :roloCdnuorgkcab { ,dlrow(savnac2lmth        
-;06 = gniddap tsnoc        
-;)}        
-;thgieh.tcer + Yler = Yxam )Yxam > thgieh.tcer + Yler( fi            
-;htdiw.tcer + Xler = Xxam )Xxam > htdiw.tcer + Xler( fi            
-;Yler = Ynim )Ynim < Yler( fi ;Xler = Xnim )Xnim < Xler( fi            
-;pot.tceRdlrow - pot.tcer = Yler tsnoc ;tfel.tceRdlrow - tfel.tcer = Xler tsnoc            
-;)(tceRtneilCgnidnuoBteg.xob = tcer tsnoc            
-{ >= xob(hcaErof.sexob        
-;)(tceRtneilCgnidnuoBteg.dlrow = tceRdlrow tsnoc        
-;)(mrofsnarTetadpu ;} 0 :y ,0 :x { = tesffo.etats ;1 = elacs.etats        
-;} tesffo.etats... { = tesffOverp tsnoc ;elacs.etats = elacSverp tsnoc        
-;)} /* clac sdnuob */ { >= xob(hcaErof.sexob        
-;ytinifnI- = Yxam ,ytinifnI- = Xxam ,ytinifnI = Ynim ,ytinifnI = Xnim tel        
-;)"...GNP odnareG"(tsaoTwohs        
-} ;nruter ;)".oizav savnaC"(tsaoTwohs { )0 === htgnel.sexob( fi ;)'xob.'(llArotceleSyreuq.tnemucod = sexob tsnoc        
-{ )(GNPdaolnwod noitcnuf    
-}    
-;'' = eulav.tupni ;)elif(txeTsAdaer.redaer ;}        
-} ;)".oviuqra on orrE"(tsaoTwohs { )rre( hctac } } ;)} ;)".odagerraC"(tsaoTwohs ;)atad(savnaCezilairesed ;"odatropmI" || eman.atad = emaNgniwarDtnerruc { >= )( ,"?ohnesed riutitsbuS"(tsaoTmrifnoCwohs { )sexob.atad( fi ;)tluser.tegrat.e(esrap.NOSJ = atad tsnoc { yrt            
-{ )e(noitcnuf = daolno.redaer        
-;)(redaeReliF wen = redaer tsnoc        
-;nruter )elif!( fi ;]0[selif.tupni = elif tsnoc        
-{ )tupni(NOSJtropmi noitcnuf    
-}    
-;)"!odatropxE"(tsaoTwohs ;)lru(LRUtcejbOekover.LRU ;)a(dlihCevomer.ydob.tnemucod ;)(kcilc.a ;)a(dlihCdneppa.ydob.tnemucod        
-;`nosj.}eman.atad{$` = daolnwod.a ;lru = ferh.a ;)'a'(tnemelEetaerc.tnemucod = a tsnoc ;)bolb(LRUtcejbOetaerc.LRU = lru tsnoc        
-;)} "nosj/noitacilppa" :epyt { ,]rtSnosj[(bolB wen = bolb tsnoc ;)2 ,llun ,atad(yfignirts.NOSJ = rtSnosj tsnoc        
-;"ohnesed" || emaNgniwarDtnerruc = eman.atad ;)(savnaCezilaires = atad tsnoc        
-{ )(NOSJtropxe noitcnuf    
-
-} } ;)".atiefsed oãçA"(tsaoTwohs ;llun = kcatSodnu ;)kcatSodnu(savnaCezilairesed { )kcatSodnu(fi { )(odnUerotser noitcnuf    
-}    
-;} ;)tsaot(tsaoTesolc { >= )( = kcilcno.)'on-ntb-tsaot.'(rotceleSyreuq.tsaot        
-;} ;)(mrifnoCno ;)tsaot(tsaoTesolc { >= )( = kcilcno.)'sey-ntb-tsaot.'(rotceleSyreuq.tsaot        
-;)tsaot(dlihCdneppa.reniatnoc        
-;`>vid/<>nottub/<OÃN>"on-ntb-tsaot ntb-noitca-tsaot"=ssalc nottub<>nottub/<MIS>"sey-ntb-tsaot ntb-noitca-tsaot"=ssalc nottub<>";xp8:pag ;xelf:yalpsid"=elyts vid<>naps/<}egassem{$>naps<` = LMTHrenni.tsaot        
-;'tsaot' = emaNssalc.tsaot ;)'vid'(tnemelEetaerc.tnemucod = tsaot tsnoc        
-;)'reniatnoc-tsaot'(dIyBtnemelEteg.tnemucod = reniatnoc tsnoc        
-{ )mrifnoCno ,egassem(tsaoTmrifnoCwohs noitcnuf    
-}    
-;)0005 ,} ;)tsaot(tsaoTesolc )tnemelEtnerap.tsaot( fi { >= )((tuoemiTtes ;)tsaot(dlihCdneppa.reniatnoc        
-} ;} ;)tsaot(tsaoTesolc ;)(kcabllaCnoitca { >= )( = kcilcno.)'nottub'(rotceleSyreuq.tsaot { )kcabllaCnoitca && lebaLnoitca( fi        
-;lmth = LMTHrenni.tsaot        
-} ;`>nottub/<}lebaLnoitca{$>"ntb-noitca-tsaot"=ssalc nottub<` =+ lmth { )lebaLnoitca( fi        
-;`>naps/<}egassem{$>naps<` = lmth tel        
-;'tsaot' = emaNssalc.tsaot ;)'vid'(tnemelEetaerc.tnemucod = tsaot tsnoc        
-;)dlihCtsrif.reniatnoc(dlihCevomer.reniatnoc )2 > htgnel.nerdlihc.reniatnoc(elihw        
-;)'reniatnoc-tsaot'(dIyBtnemelEteg.tnemucod = reniatnoc tsnoc        
-{ )llun = kcabllaCnoitca ,llun = lebaLnoitca ,egassem(tsaoTwohs noitcnuf    
-} ;)002 ,)(evomer.tsaot >= )((tuoemiTtes ;'sdrawrof s2.0 tuOedaf' = noitamina.elyts.tsaot { )tsaot(tsaoTesolc noitcnuf    
-
-}    
-}        
-;))'desucof-revoh'(evomer.tsiLssalc.le >= le(hcaErof.)'desucof-revoh.'(llArotceleSyreuq.tnemucod            
-;)")odaeuqolB( arutieL ed odoM"(tsaoTwohs ;)'dekcol'(dda.tsiLssalc.ntb ;"arutieL ��" = txeTrenni.ntb ;)'ylno-daer'(dda.tsiLssalc.ydob.tnemucod            
-{ esle }        
-;)"odavitA oãçidE ed odoM"(tsaoTwohs ;)'dekcol'(evomer.tsiLssalc.ntb ;"oãçidE ��" = txeTrenni.ntb ;)'ylno-daer'(evomer.tsiLssalc.ydob.tnemucod            
-{ )edoMtidEsi.etats( fi        
-;)'edom-ntb'(dIyBtnemelEteg.tnemucod = ntb tsnoc        
-;edoMtidEsi.etats! = edoMtidEsi.etats        
-{ )(edoMtidEelggot noitcnuf    
-
-}    
-;`})'0',2(tratSdap.))(sdnoceSteg.won(gnirtS{$:})'0',2(tratSdap.))(setuniMteg.won(gnirtS{$:})(sruoHteg.won{$ :ovlaS` = txeTrenni.)'sutats-evasotua'(dIyBtnemelEteg.tnemucod        
-;)(etaD wen = won tsnoc        
+    // --- CONN UTILS ---
+    function findVisibleNode(id) {
+        let currentEl = document.getElementById(id); if (!currentEl) return null;
+        while (currentEl) {
+            const parentArea = currentEl.parentElement;
+            if (parentArea && parentArea.classList.contains('children-area')) { if (parentArea.classList.contains('collapsed')) { currentEl = parentArea.closest('.box'); continue; } }
+            return currentEl;
+        }
+        return null;
+    }
+    function addConnection(sid, spos, tid, tpos, existingId = null) {
+        const id = existingId || 'c-' + Date.now();
+        const g = document.createElementNS(ns, "g");
+        g.id = id; g.classList.add('conn-group');
         
-;)bd(BDtes        
-;)jorp(hsup.bd esle ;jorp = ]xdIgnitsixe[bd )1- ==! xdIgnitsixe( fi        
+        const hit = document.createElementNS(ns, "path");
+        hit.setAttribute("class", "conn-hitbox");
+        hit.addEventListener('dblclick', function() { handleConnectionDblClick(id, sid, tid); });
         
-;}        
- atad :atad            
- ,)(won.etaD :tAdetadpu            
- ,emaNgniwarDtnerruc :eman            
- ,)(won.etaD + '_jorp' : di.]xdIgnitsixe[bd ? 1- ==! xdIgnitsixe :di            
- { = jorp tsnoc        
-;)emaNgniwarDtnerruc === eman.p >= p(xednIdnif.bd = xdIgnitsixe tsnoc        
-;)(BDteg = bd tsnoc        
-;)(savnaCezilaires = atad tsnoc        
+        const vis = document.createElementNS(ns, "path");
+        vis.setAttribute("class", "conn-visual");
+        vis.setAttribute("marker-end", "url(#arrowhead)");
+
+        g.appendChild(hit); g.appendChild(vis); svgLayer.appendChild(g);
         
-;"ocitámotuA ohnucsaR" = emaNgniwarDtnerruc )emaNgniwarDtnerruc!( fi        
-{ )(evaSotuAmrofrep noitcnuf    
+        if (!connections.find(c => c.id === id)) connections.push({ id, sid, spos, tid, tpos });
+        updateLine(connections[connections.length-1]); checkCascading();
+    }
 
-sodnuges 01 // ;)00001 ,}    
-;)(evaSotuAmrofrep        
-{ >= )((lavretnItes    
-METSYS EVAS OTUA //    
+    function updateAllLines(forceClear = false) {
+        if(forceClear) { 
+            const groups = Array.from(svgLayer.querySelectorAll('g.conn-group'));
+            const dataIds = new Set(connections.map(c => c.id));
+            groups.forEach(g => { if(!dataIds.has(g.id)) g.remove(); });
+        }
+        connections.forEach(updateLine);
+    }
 
-;"gvs/0002/gro.3w.www//:ptth" = sn tsnoc    
-;)'enil-pmet'(dIyBtnemelEteg.tnemucod = eniLpmet tsnoc    
-;)'reyal-snoitcennoc'(dIyBtnemelEteg.tnemucod = reyaLgvs tsnoc    
-;)'rotacidni-mooz'(dIyBtnemelEteg.tnemucod = dnImooz tsnoc    
-;)'dlrow'(dIyBtnemelEteg.tnemucod = dlrow tsnoc    
-;)'tropweiv'(dIyBtnemelEteg.tnemucod = tropweiv tsnoc    
-
-;llun = kcatSodnu tel    
-;llun = emaNgniwarDtnerruc tel    
-;eslaf = desserPecaps tel    
-;llun = tegraTporDtnerruc tel    
-;}{ = tnItrats ,eslaf = gnitcennoCsi ,llun = metIeziser ,llun = metIgard tel    
-;][ = snoitcennoc tel    
-;} eurt :edoMtidEsi ,} 0 :y ,0 :x { :tesffo ,} 0 :y ,0 :x { :tratSnap ,eslaf :gninnap ,1 :elacs { = etats tel    
->tpircs<
-
->vid/<
->vid/<    
->gvs/<        
->htap/<>";enon :yalpsid"=elyts "enon"=llif ""=d "enil-gard"=ssalc "enil-pmet"=di htap<            
->sfed/<>rekram/<>/ "b84746#"=llif "7 0 ,5.3 01 ,0 0"=stniop nogylop<>"otua"=tneiro "5.3"=Yfer "9"=Xfer "7"=thgieHrekram "01"=htdiWrekram "daehworra"=di rekram<>sfed<            
->"reyal-snoitcennoc"=di gvs<        
->vid/<>"dnuorgkcab-dirg"=ssalc vid<        
->"dlrow"=di vid<    
->"tropweiv"=di vid<
-
->vid/<
->vid/<    
->vid/<>nottub/<ocnarB me ohneseD ovoN +>")(gniwarDwen"=kcilcno "yramirp-ntb"=ssalc nottub<>";thgir :ngila-txet ;0f8e2e# dilos xp1 :pot-redrob ;xp51 :gniddap"=elyts vid<        
->vid/<>"tsil-stcejorp"=di "tnetnoc-hsad"=ssalc vid<        
->vid/<>naps/<×>")(draobhsaDesolc"=kcilcno "esolc-hsad"=ssalc naps<>naps/<sohneseD ed rodaicnereG>"eltit-hsad"=ssalc naps<>"redaeh-hsad"=ssalc vid<        
->"lenap-draobhsad"=di vid<    
->"yalrevo-draobhsad"=di vid<
-
->vid/<>"reniatnoc-tsaot"=di vid<
-
->vid/<
->vid/<    
->nottub/<��>"oduT razilartneC"=eltit ")(neercSoTtif"=kcilcno "ntb-noci"=ssalc nottub<        
->nottub/<⟲>")(weiVteser"=kcilcno "ntb-noci"=ssalc nottub<        
->naps/<%001>"rotacidni-mooz"=di naps<        
->naps/< :mooZ>";555# :roloc ;xp21 :ezis-tnof"=elyts naps<        
->vid/<>";xp5 0 :nigram ;ddd# :dnuorgkcab ;xp03 :thgieh ;xp1 :htdiw"=elyts vid<        
->nottub/<GNP ��>"GNP tnirpeulB raxiaB"=eltit ")(GNPdaolnwod"=kcilcno "eniltuo-ntb"=ssalc nottub<        
->")siht(NOSJtropmi"=egnahcno "nosj."=tpecca "tupni-elif"=di "elif"=epyt tupni<        
->nottub/<rirbA ⬆>"nosj. ragerraC"=eltit ")(kcilc.)'tupni-elif'(dIyBtnemelEteg.tnemucod"=kcilcno "eniltuo-ntb"=ssalc nottub<        
->nottub/<NOSJ ⬇>"nosj. raxiaB"=eltit ")(NOSJtropxe"=kcilcno "eniltuo-ntb"=ssalc nottub<        
->vid/<>";xp5 0 :nigram ;ddd# :dnuorgkcab ;xp03 :thgieh ;xp1 :htdiw"=elyts vid<        
->vid/<>"sutats-evasotua"=di vid<        
->nottub/<ravlaS ��>")(gniwarDtnerruCevas"=kcilcno "yramirp-ntb"=ssalc nottub<        
->nottub/<sotejorP ��>")(draobhsaDnepo"=kcilcno "krad-ntb"=ssalc nottub<        
->vid/<>";xp5 0 :nigram ;ddd# :dnuorgkcab ;xp03 :thgieh ;xp1 :htdiw"=elyts vid<        
->nottub/<oãçidE ��>"arutieL/oãçidE ranretlA"=eltit ")(edoMtidEelggot"=kcilcno "eniltuo-ntb"=ssalc "edom-ntb"=di nottub<        
->vid/<>";xp5 0 :nigram ;ddd# :dnuorgkcab ;xp03 :thgieh ;xp1 :htdiw"=elyts vid<        
->nottub/<axiaC avoN +>")(xoBtooRdda"=kcilcno "yramirp-ntb"=ssalc nottub<        
->"rabloot"=di vid<    
->"reyal-iu"=di vid<
-
->ydob<
->daeh/<
->elyts/<    
-} ;enon :yalpsid { tupni-elif#        
+    function updateLine(c) {
+        const vSource = findVisibleNode(c.sid); const vTarget = findVisibleNode(c.tid);
+        const group = document.getElementById(c.id); if (!group) return;
         
-} ;tluafed :rosruc { rab-eltit-xob. ylno-daer.ydob        
-} ;tluafed :rosruc { xob. ylno-daer.ydob        
-} ;enon :stneve-retniop { tupni ylno-daer.ydob        
-} ;tnatropmi! enon :yalpsid { reziser. ylno-daer.ydob        
-} ;tnatropmi! enon :yalpsid { rotcennoc. ylno-daer.ydob        
-} ;tnatropmi! enon :yalpsid { rotarapes. noollab-snoitca. ylno-daer.ydob ,ntb-tod-sutats. noollab-snoitca. ylno-daer.ydob ,eteled-ntb. noollab-snoitca. ylno-daer.ydob ,dda-ntb. noollab-snoitca. ylno-daer.ydob        
+        if (!vSource || !vTarget || vSource === vTarget) { group.style.display = 'none'; return; }
+        group.style.display = 'block';
         
-} ;8b3a49# dilos xp01 :mottob-redrob ;tnerapsnart dilos xp01 :tfel-redrob ;xp6 :mottob ;xp6 :thgir ;etulosba :noitisop ;'' :tnetnoc { retfa::reziser. } ;1 :yticapo { reziser. > revoh:xob.        
-} ;otua :stneve-retniop ;0 :yticapo ;201 :xedni-z ;eziser-eswn :rosruc ;0 :mottob ;0 :thgir ;etulosba :noitisop ;xp53 :thgieh ;xp53 :htdiw { reziser.        
-} ;)%05-(Yetalsnart :mrofsnart ;%05 :pot ;xp7- :thgir { thgir-c. } ;)%05-(Yetalsnart :mrofsnart ;%05 :pot ;xp7- :tfel { tfel-c. } ;)%05-(Xetalsnart :mrofsnart ;%05 :tfel ;xp7- :mottob { mottob-c. } ;)%05-(Xetalsnart :mrofsnart ;%05 :tfel ;xp7- :pot { pot-c. } ;6f28b3# :dnuorgkcab ;)4.1(elacs :mrofsnart { revoh:rotcennoc. } ;1 :yticapo { rotcennoc. > revoh:xob.        
-} ;otua :stneve-retniop ;riahssorc :rosruc ;s2.0 mrofsnart ,s2.0 yticapo :noitisnart ;0 :yticapo ;006 :xedni-z ;%05 :suidar-redrob ;6f28b3# dilos xp2 :redrob ;etihw :dnuorgkcab ;xp21 :thgieh ;xp21 :htdiw ;etulosba :noitisop { rotcennoc.        
-
-} ;b392e1# :roloc { eltit.tupni edom-despalloc.xob.        
-} ;retnec :tnetnoc-yfitsuj ;retnec :smeti-ngila ;0 :gniddap ;%001 :thgieh { rab-eltit-xob. edom-despalloc.xob.        
-} ;enon :yalpsid { ydob-xob. edom-despalloc.xob.        
+        const visualLine = group.querySelector('.conn-visual');
+        if (vSource.id !== c.sid || vTarget.id !== c.tid) visualLine.classList.add('proxy-line'); else visualLine.classList.remove('proxy-line');
         
-} ;4444fe# :roloc-redrob ;)2.0 ,86 ,86 ,932(abgr xp4 0 0 0 :wodahs-xob { etats-trela.xob.        
-} ;2f1fff# :roloc-dnuorgkcab ;4444fe# :roloc-redrob { etats-der.xob.        
+        const ps = getConnPos(vSource, c.spos); const pt = getConnPos(vTarget, c.tpos);
+        const off = -50000;
+        const x1=ps.x-off, y1=ps.y-off, x2=pt.x-off, y2=pt.y-off;
         
-} ;)3.0 ,642 ,031 ,95(abgr xp2 0 0 0 tesni :wodahs-xob ;6f28b3# :roloc-redrob ;)1.0 ,642 ,031 ,95(abgr :roloc-dnuorgkcab { evitca-pord.aera-nerdlihc.        
-} ;enon :yalpsid { despalloc.aera-nerdlihc.        
-} ;)1(elacs :mrofsnart ;1 :yticapo ;s2.0 roloc-redrob ,s2.0 roloc-dnuorgkcab ,s2.0 mrofsnart ,s2.0 yticapo :noitisnart ;xob-redrob :gnizis-xob ;xp02 :gniddap ;xp06 :thgieh-nim ;%001 :thgieh ;%001 :htdiw ;1e5dbc# dehsad xp1 :redrob ;xp21 :suidar-redrob ;)4.0,042,042,042(abgr :dnuorgkcab ;xp5 :pot-nigram ;evitaler :noitisop ;1 :worg-xelf { aera-nerdlihc.        
-} ;evitaler :noitisop ;1 :worg-xelf ;xp01 :pag ;nmuloc :noitcerid-xelf ;xelf :yalpsid ;xp51 xp51 xp51 0 :gniddap { ydob-xob.        
+        // [UPDATE] HEAVY ARROWS BASED ON TARGET
+        if (vTarget) {
+            const minDim = Math.min(vTarget.offsetWidth, vTarget.offsetHeight);
+            // 1/12th of min dimension as thickness.
+            const thickness = Math.max(3, Math.min(30, minDim / 15)); 
+            visualLine.setAttribute("stroke-width", thickness);
+        }
 
-} ;)3.0,552,552,552(abgr :dnuorgkcab ;))elacs-noollab--(rav * xp61(clac :thgieh ;xp1 :htdiw { rotarapes.        
-} ;17178f# :dnuorgkcab { der-tod. } ;08eda4# :dnuorgkcab { neerg-tod.        
-} ;etihw :roloc-redrob ;)2.1(elacs :mrofsnart { revoh:ntb-tod-sutats.        
-} ;s1.0 mrofsnart :noitisnart ;)3.0,552,552,552(abgr dilos xp1 :redrob ;retniop :rosruc ;%05 :suidar-redrob ;))elacs-noollab--(rav * xp41(clac :thgieh ;))elacs-noollab--(rav * xp41(clac :htdiw { ntb-tod-sutats.        
+        const dVal = Math.sqrt(Math.pow(x2-x1,2)+Math.pow(y2-y1,2)); const cp = Math.max(dVal*0.5, 50);
+        let cx1=x1, cy1=y1, cx2=x2, cy2=y2;
+        if(c.spos==='top') cy1-=cp; if(c.spos==='bottom') cy1+=cp; if(c.spos==='left') cx1-=cp; if(c.spos==='right') cx1+=cp;
+        if(c.tpos==='top') cy2-=cp; if(c.tpos==='bottom') cy2+=cp; if(c.tpos==='left') cx2-=cp; if(c.tpos==='right') cx2+=cp;
         
-} ;etihw :roloc ;4444fe# :dnuorgkcab { revoh:eteled-ntb. noollab-snoitca.        
-} ;)2.0,552,552,552(abgr :dnuorgkcab { revoh:ntb-noci. noollab-snoitca.        
-} ;%05 :suidar-redrob ;retnec :tnetnoc-yfitsuj ;retnec :smeti-ngila ;xelf :yalpsid ;))elacs-noollab--(rav * xp21(clac :ezis-tnof ;))elacs-noollab--(rav * xp42(clac :thgieh ;))elacs-noollab--(rav * xp42(clac :htdiw ;etihw :roloc { ntb-noci. noollab-snoitca.        
-        
-} ;xelf :yalpsid { noollab-snoitca. rab-eltit-xob. > desucof-revoh.xob.        
-} } ;1 :yticapo ;)1(elacs :mrofsnart { ot } ;0 :yticapo ;)5.0(elacs :mrofsnart { morf { nIpop semarfyek@        
-}        
-;)572.1 ,23.0 ,588.0 ,571.0(reizeb-cibuc s51.0 nIpop :noitamina ;02 :xedni-z ;xp41 :ezis-tnof            
-;)2.0,0,0,0(abgr xp01 xp4 0 :wodahs-xob            
-;))elacs-noollab--(rav * xp6(clac :pag ;retnec :smeti-ngila ;enon :yalpsid            
-;))elacs-noollab--(rav * xp8(clac ))elacs-noollab--(rav * xp4(clac :gniddap ;xp05 :suidar-redrob ;b392e1# :dnuorgkcab            
-;me5.0 :thgir ;))elacs-noollab--(rav * xp52-(clac :pot ;etulosba :noitisop            
-{ noollab-snoitca.        
+        const pathD = `M ${x1} ${y1} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${x2} ${y2}`;
+        group.querySelector('.conn-hitbox').setAttribute("d", pathD);
+        visualLine.setAttribute("d", pathD);
+    }
+    
+    function getConnPos(el, pos) {
+        const r = el.getBoundingClientRect(); let x=r.left+r.width/2, y=r.top+r.height/2;
+        if(pos==='top') y=r.top; if(pos==='bottom') y=r.bottom; if(pos==='left') x=r.left; if(pos==='right') x=r.right;
+        return screenToWorld(x,y);
+    }
+    function setStatus(id, s) {
+        if(!state.isEditMode) return;
+        const b = document.getElementById(id);
+        if(s==='red') b.classList.add('red-state'); else b.classList.remove('red-state');
+        checkCascading();
+    }
+    function checkCascading() {
+        document.querySelectorAll('.box').forEach(b => b.classList.remove('alert-state'));
+        connections.forEach(c => {
+            const t = document.getElementById(c.tid), s = document.getElementById(c.sid);
+            if(s && t && (t.classList.contains('red-state')||t.classList.contains('alert-state'))) s.classList.add('alert-state');
+        });
+        document.querySelectorAll('.box').forEach(p => {
+            const children = Array.from(p.querySelectorAll('.box'));
+            if(children.some(c => c.classList.contains('red-state')) && !p.classList.contains('red-state')) p.classList.add('alert-state');
+        });
+    }
 
-} ;retnec :ngila-txet ;txet :rosruc ;esae s3.0 roloc ,s2.0 ezis-tnof :noitisnart ;b392e1# :roloc ;)ezis-tnof-cimanyd--(rav :ezis-tnof ;enon :eniltuo ;tnerapsnart :dnuorgkcab ;dlob :thgiew-tnof ;enon :redrob ;%09 :htdiw { eltit.tupni        
-        
-} ;gnibbarg :rosruc { evitca:rab-eltit-xob.        
-}        
- ;evitaler :noitisop ;)53.0 * )thgieh-redaeh--(rav(clac :ezis-tnof            
- ;0 :knirhs-xelf ;enon :tceles-resu ;evom :rosruc            
- ;xp51 xp51 xp51 xp52 :gniddap            
-;retnec :tnetnoc-yfitsuj ;retnec :smeti-ngila ;xelf :yalpsid            
- ;0 0 xp01 xp01 :suidar-redrob ;tnerapsnart :dnuorgkcab ;)thgieh-redaeh--(rav :thgieh            
-{ rab-eltit-xob.        
-        
-} ;)2.0 ,642 ,031 ,95(abgr xp3 0 0 0 :wodahs-xob ;001 :xedni-z ;)roloc-eldnah--(rav :roloc-redrob { detceles.xob.        
-} ;tnatropmi! enon :noitisnart { noitisnart-on.        
-}        
-;)1 ,52.0 ,8.0 ,52.0(reizeb-cibuc s8.0 thgieh ,)1 ,52.0 ,8.0 ,52.0(reizeb-cibuc s8.0 htdiw ,s2.0 roloc-dnuorgkcab ,s2.0 roloc-redrob ,s2.0 wodahs-xob :noitisnart            
- ;barg :rosruc            
-;1 :elacs-noollab-- ;xp63 :thgieh-redaeh-- ;xp61 :ezis-tnof-cimanyd--            
- ;xp081 :thgieh-nim ;xp002 :htdiw-nim            
-;01 :xedni-z ;nmuloc :noitcerid-xelf ;xelf :yalpsid ;)50.0,0,0,0(abgr xp01 xp4 0 :wodahs-xob            
-;xp61 :suidar-redrob ;)redrob-xob--(rav dilos xp2 :redrob ;etihw :dnuorgkcab ;etulosba :noitisop            
-{ xob.        
-/* sexoB */        
+    // TRACE LOGIC
+    async function revealHierarchy(boxId) {
+        let el = document.getElementById(boxId);
+        let ancestors = [];
+        while (el) {
+            const parent = el.parentElement.closest('.box');
+            if (parent) { ancestors.push(parent); el = parent; } else break;
+        }
+        ancestors.reverse();
+        for (let box of ancestors) {
+            if (box.classList.contains('collapsed-mode')) {
+                const btn = box.querySelector('.actions-balloon .btn-toggle');
+                performToggle(box.id, btn);
+                await new Promise(r => setTimeout(r, 800));
+            }
+        }
+    }
+    function handleConnectionDblClick(connId, sid, tid) {
+        Promise.all([revealHierarchy(sid), revealHierarchy(tid)]);
+        if(state.isEditMode) deleteConnection(connId);
+    }
 
- } ;4,4 :yarrahsad-ekorts { enil-yxorp.        
-} ;8.0 :yticapo ;5,5 :yarrahsad-ekorts ;2 :htdiw-ekorts ;6f28b3# :ekorts { enil-gard.        
-} ;6f28b3# :ekorts { lausiv-nnoc. revoh:puorg-nnoc.        
-} ;ekorts :stneve-retniop ;retniop :rosruc ;xp51 :htdiw-ekorts ;tnerapsnart :ekorts ;enon :llif { xobtih-nnoc.        
-} ;s2.0 htdiw-ekorts ,s2.0 ekorts :noitisnart ;enon :stneve-retniop ;xp2 :htdiw-ekorts ;b84746# :ekorts ;enon :llif { lausiv-nnoc.        
-} ;elbisiv :wolfrevo ;enon :stneve-retniop ;005 :xedni-z ;xp000001 :thgieh ;xp000001 :htdiw ;xp00005- :tfel ;xp00005- :pot ;etulosba :noitisop { reyal-snoitcennoc#        
-/* SNOITCENNOC */        
-        
-} ;enon :stneve-retniop ;1- :xedni-z ;xp04 xp04 :ezis-dnuorgkcab ;)xp1 tnerapsnart ,xp1 )roloc-dirg--(rav(tneidarg-laidar :egami-dnuorgkcab ;xp000001 :thgieh ;xp000001 :htdiw ;xp00005- :tfel ;xp00005- :pot ;etulosba :noitisop { dnuorgkcab-dirg.        
-} ;0 0 :nigiro-mrofsnart ;0 :thgieh ;0 :htdiw ;0 :tfel ;0 :pot ;etulosba :noitisop { dlrow#        
-} ;gnibbarg :rosruc { evitca:tropweiv# } ;barg :rosruc ;neddih :wolfrevo ;hv001 :thgieh ;wv001 :htdiw { tropweiv#        
-/* tropweiV */        
-
-} ;xp31 :ezis-tnof ;retniop :rosruc ;xp4 :suidar-redrob ;xp21 xp6 :gniddap ;enon :redrob ;4444fe# :roloc ;2e2eef# :dnuorgkcab { hsart-ntb.        
-} ;xp31 :ezis-tnof ;retniop :rosruc ;xp4 :suidar-redrob ;xp21 xp6 :gniddap ;enon :redrob ;etihw :roloc ;6f28b3# :dnuorgkcab { daol-ntb.        
-} ;xp01 :pag ;xelf :yalpsid { snoitca-p. } ;8b3a49# :roloc ;xp21 :ezis-tnof { etad-p. } ;xp61 :ezis-tnof ;551433# :roloc ;dlob :thgiew-tnof { eman-p. } ;1 :worg-xelf { ofni-p.        
-} ;)50.0,0,0,0(abgr xp6 xp4 0 :wodahs-xob ;)xp2-(Yetalsnart :mrofsnart { revoh:drac-tcejorp.        
-} ;s1.0 wodahs-xob ,s1.0 mrofsnart :noitisnart ;retnec :smeti-ngila ;xelf :yalpsid ;xp01 :mottob-nigram ;xp51 :gniddap ;xp8 :suidar-redrob ;0f8e2e# dilos xp1 :redrob ;etihw :dnuorgkcab { drac-tcejorp.        
-} ;1 :worg-xelf ;cfaf8f# :dnuorgkcab ;otua :y-wolfrevo ;xp02 :gniddap { tnetnoc-hsad.        
-} ;b84746# :roloc ;xp42 :ezis-tnof ;retniop :rosruc { esolc-hsad.        
-} ;b392e1# :roloc ;dlob :thgiew-tnof ;xp02 :ezis-tnof { eltit-hsad.        
-} ;retnec :smeti-ngila ;neewteb-ecaps :tnetnoc-yfitsuj ;xelf :yalpsid ;0f8e2e# dilos xp1 :mottob-redrob ;xp02 :gniddap { redaeh-hsad.        
-} ;neddih :wolfrevo ;nmuloc :noitcerid-xelf ;xelf :yalpsid ;)1.0 ,0 ,0 ,0(abgr xp5- xp52 xp02 0 :wodahs-xob ;xp21 :suidar-redrob ;hv08 :thgieh-xam ;xp006 :htdiw ;etihw :dnuorgkcab { lenap-draobhsad#        
-} ;otua :stneve-retniop ;retnec :smeti-ngila ;retnec :tnetnoc-yfitsuj ;enon :yalpsid ;00001 :xedni-z ;)xp4(rulb :retlif-pordkcab ;)5.0 ,0 ,0 ,0(abgr :dnuorgkcab ;hv001 :thgieh ;wv001 :htdiw ;0 :tfel ;0 :pot ;dexif :noitisop { yalrevo-draobhsad#        
-/* --- DRAOBHSAD --- */        
-
-} } ;)xp01-(Yetalsnart :mrofsnart ;0 :yticapo { ot { tuOedaf semarfyek@        
-} } ;)0(Yetalsnart :mrofsnart ;59.0 :yticapo { ot } ;)xp02(Yetalsnart :mrofsnart ;0 :yticapo { morf { pUedils semarfyek@        
-} ;)2.0 ,311 ,311 ,842(abgr :dnuorgkcab { revoh:on-ntb-tsaot. } ;)1.0 ,311 ,311 ,842(abgr :dnuorgkcab ;17178f# :roloc { on-ntb-tsaot.        
-} ;)2.0 ,821 ,222 ,47(abgr :dnuorgkcab { revoh:sey-ntb-tsaot. } ;)1.0 ,821 ,222 ,47(abgr :dnuorgkcab ;08eda4# :roloc { sey-ntb-tsaot.        
-} ;)3.0,552,552,552(abgr :dnuorgkcab { revoh:ntb-noitca-tsaot.        
-} ;esacreppu :mrofsnart-txet ;s2.0 dnuorgkcab :noitisnart ;xp21 :ezis-tnof ;dlob :thgiew-tnof ;retniop :rosruc ;xp02 :suidar-redrob ;xp41 xp6 :gniddap ;42fbbf# :roloc ;enon :redrob ;)51.0,552,552,552(abgr :dnuorgkcab { ntb-noitca-tsaot.        
-} ;59.0 :yticapo ;)572.1 ,23.0 ,588.0 ,571.0(reizeb-cibuc s3.0 pUedils :noitamina ;otua :stneve-retniop ;005 :thgiew-tnof ;xp41 :ezis-tnof ;xp51 :pag ;retnec :smeti-ngila ;xelf :yalpsid ;)3.0 ,0 ,0 ,0(abgr xp3- xp51 xp01 0 :wodahs-xob ;xp05 :suidar-redrob ;xp42 xp21 :gniddap ;cfaf8f# :roloc ;b392e1# :dnuorgkcab { tsaot.        
-} ;retnec :smeti-ngila ;enon :stneve-retniop ;xp01 :pag ;nmuloc :noitcerid-xelf ;xelf :yalpsid ;00002 :xedni-z ;)%05-(Xetalsnart :mrofsnart ;%05 :tfel ;xp03 :mottob ;dexif :noitisop { reniatnoc-tsaot#        
-/* --- TSAOT --- */        
-
-} ;thgir :ngila-txet ;xp08 :htdiw-nim ;xp5 :tfel-nigram ;b84746# :roloc ;xp11 :ezis-tnof { sutats-evasotua#        
-/* rotacidnI evaS otuA */        
-
-} ;2e2eef# :dnuorgkcab ;4444fe# :roloc { revoh:eteled-ntb.        
-} ;a271f0# :roloc ;0f8e2e# :dnuorgkcab { revoh:ntb-noci.        
-} ;s2.0 dnuorgkcab ,s2.0 roloc :noitisnart ;xp4 :suidar-redrob ;xp4 :gniddap ;b84746# :roloc ;retniop :rosruc ;tnerapsnart :dnuorgkcab ;enon :redrob { ntb-noci.        
-} ;enon :redrob ;etihw :roloc ;4444fe# :roloc-dnuorgkcab { dekcol.edom-ntb#        
-        
-} ;9f5f1f# :roloc-dnuorgkcab { revoh:eniltuo-ntb.nottub        
-};parwon :ecaps-etihw ;006 :thgiew-tnof ;retniop :rosruc ;xp4 :suidar-redrob ;xp61 xp8 :gniddap ;1e5dbc# dilos xp1 :redrob ;551433# :roloc ;etihw :roloc-dnuorgkcab { eniltuo-ntb.nottub        
-} ;551433# :roloc-dnuorgkcab { revoh:krad-ntb.nottub        
-};parwon :ecaps-etihw ;006 :thgiew-tnof ;retniop :rosruc ;xp4 :suidar-redrob ;xp61 xp8 :gniddap ;enon :redrob ;etihw :roloc ;b392e1# :roloc-dnuorgkcab { krad-ntb.nottub        
-} ;8de4d1# :roloc-dnuorgkcab { revoh:yramirp-ntb.nottub        
-};parwon :ecaps-etihw ;006 :thgiew-tnof ;retniop :rosruc ;xp4 :suidar-redrob ;xp61 xp8 :gniddap ;enon :redrob ;etihw :roloc ;be3652# :roloc-dnuorgkcab { yramirp-ntb.nottub        
-}        
-;wv09 :htdiw-xam ;parw :parw-xelf ;otua :stneve-retniop            
-;retnec :smeti-ngila ;xp01 :pag ;xelf :yalpsid ;)51.0,0,0,0(abgr xp21 xp4 0 :wodahs-xob            
-;xp8 :suidar-redrob ;xp01 :gniddap ;etihw :dnuorgkcab            
-;xp02 :tfel ;xp02 :pot ;etulosba :noitisop            
-{ rabloot#        
-} ;9999 :xedni-z ;0 :thgieh ;%001 :htdiw ;0 :tfel ;0 :pot ;dexif :noitisop { reyal-iu#        
-/* rablooT IU */        
-
-} ;)roloc-gb--(rav :roloc-dnuorgkcab ;fires-snas ,'IU eogeS' :ylimaf-tnof ;neddih :wolfrevo ;%001 :thgieh ;%001 :htdiw ;0 :gniddap ;0 :nigram { lmth ,ydob        
-
-}        
-;6f28b3# :roloc-eldnah--            
-;8b3a49# :redrob-xob--            
-;1e5dbc# :roloc-dirg--            
-;5f2f0f# :roloc-gb--            
-{ toor:        
->elyts<    
->tpircs/<>"sj.nim.savnac2lmth/tsid/moc.neztreh.savnac2lmth//:sptth"=crs tpircs<    
->eltit/<ssenkcihT cimanyD & evaSotuA - 14v savnaC>eltit<    
->"0.1=elacs-laitini ,htdiw-ecived=htdiw"=tnetnoc "tropweiv"=eman atem<    
->"8-FTU"=tesrahc atem<    
->daeh<
->"RB-tp"=gnal lmth<
->lmth EPYTCOD!<
+    addRootBox();
+</script>
+</body>
+</html>
