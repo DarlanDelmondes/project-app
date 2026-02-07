@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Canvas v68 - Ultimate Release</title>
+    <title>Canvas v69 - Load & Font Fixes</title>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
         :root {
@@ -88,8 +88,7 @@
         .conn-group:hover .conn-visual { stroke: #3b82f6; }
         .drag-line { stroke: #3b82f6; stroke-width: 4; stroke-dasharray: 5,5; opacity: 0.8; }
         .proxy-line { stroke-dasharray: 4,4; } 
-        /* REMOVED: .no-pan class on actions balloon. Only inputs/buttons need it now. */
-        .no-pan-strict { pointer-events: auto !important; }
+        .no-pan { pointer-events: auto !important; }
 
         /* Boxes */
         .box {
@@ -222,9 +221,6 @@
         .resizer.bottom-left::after { left: 6px; bottom: 6px; transform: scaleX(-1); }
         .box:hover > .resizer { opacity: 1; } 
         
-        /* CLASS TO BLOCK PANNING */
-        .no-pan-strict { pointer-events: auto !important; }
-
         body.read-only .actions-balloon .btn-add, body.read-only .actions-balloon .btn-delete, 
         body.read-only .actions-balloon .btn-clone, body.read-only .actions-balloon .btn-font, 
         body.read-only .actions-balloon .status-dot-btn, body.read-only .actions-balloon .separator,
@@ -243,7 +239,7 @@
 <body>
 
 <div id="ui-layer">
-    <div id="toolbar" class="no-pan-strict">
+    <div id="toolbar" class="no-pan">
         <button class="btn-primary" onclick="addRootBox()">+ Nova Caixa</button>
         <div style="width: 1px; height: 30px; background: #ddd; margin: 0 5px;"></div>
         <button id="btn-mode" class="btn-outline" onclick="toggleEditMode()" title="Alternar Edição/Leitura">🔓 Edição</button>
@@ -268,7 +264,7 @@
 <div id="toast-container"></div>
 
 <div id="dashboard-overlay" class="modal-overlay">
-    <div id="dashboard-panel" class="modal-panel no-pan-strict">
+    <div id="dashboard-panel" class="modal-panel no-pan">
         <div class="dash-header"><span class="dash-title">Gerenciador de Desenhos</span><span class="dash-close" onclick="closeDashboard()">×</span></div>
         <div class="dash-content" id="projects-list"></div>
         <div style="padding: 15px; border-top: 1px solid #e2e8f0; text-align: right;"><button class="btn-primary" onclick="newDrawing()">+ Novo Desenho em Branco</button></div>
@@ -276,7 +272,7 @@
 </div>
 
 <div id="journal-overlay" class="modal-overlay">
-    <div class="modal-panel no-pan-strict" style="width: 800px;">
+    <div class="modal-panel no-pan" style="width: 800px;">
         <div class="dash-header">
             <div>
                 <span class="dash-title">📰 Jornal de Pendências</span>
@@ -405,7 +401,11 @@
     function calcDynamicFont(box) {
         const input = box.querySelector('input.title');
         const textLen = Math.max(1, input.value.length); 
-        const w = box.offsetWidth; const h = box.offsetHeight;
+        
+        // [FIX] Handle hidden box dimensions
+        const w = box.offsetWidth || parseFloat(box.style.width); 
+        const h = box.offsetHeight || parseFloat(box.style.height);
+        
         const area = w * h;
         
         const manualScale = parseFloat(box.dataset.fontScale) || 1;
@@ -513,6 +513,7 @@
     function toggleTaskView(boxId) {
         const box = document.getElementById(boxId);
         box.classList.toggle('show-tasks');
+        updateElasticParent(box.querySelector('.children-area')); 
         updateElasticParent(box.parentElement.closest('.children-area')); 
         updateAllLines();
     }
@@ -523,13 +524,14 @@
         renderTask(container, "Nova tarefa", "todo", "", "");
         if (!box.classList.contains('show-tasks')) box.classList.add('show-tasks');
         updateBoxSummary(box);
+        updateElasticParent(box.querySelector('.children-area')); 
         updateElasticParent(box.parentElement.closest('.children-area'));
         updateAllLines();
     }
     
     function renderTask(container, text, status, owner = "", date = "") {
         const div = document.createElement('div');
-        div.className = `task-item ${status === 'done' ? 'done' : ''} no-pan-strict`; 
+        div.className = `task-item ${status === 'done' ? 'done' : ''} no-pan`; 
         div.dataset.status = status;
         
         let statusClass = '';
@@ -537,11 +539,11 @@
         if(status === 'done') statusClass = 'done';
         
         div.innerHTML = `
-            <div class="task-status-toggle ${statusClass} no-pan-strict" onclick="cycleTaskStatus(this)"></div>
-            <input class="task-input no-pan-strict" value="${text}" placeholder="Tarefa...">
-            <input class="task-owner no-pan-strict" value="${owner}" placeholder="Resp." title="Responsável">
-            <input class="task-date no-pan-strict" type="date" value="${date}" title="Data Limite">
-            <button class="task-del-btn no-pan-strict" onclick="removeTask(this)">×</button>
+            <div class="task-status-toggle ${statusClass} no-pan" onclick="cycleTaskStatus(this)"></div>
+            <input class="task-input no-pan" value="${text}" placeholder="Tarefa...">
+            <input class="task-owner no-pan" value="${owner}" placeholder="Resp." title="Responsável">
+            <input class="task-date no-pan" type="date" value="${date}" title="Data Limite">
+            <button class="task-del-btn no-pan" onclick="removeTask(this)">×</button>
         `;
         container.insertBefore(div, container.lastElementChild); 
     }
@@ -556,7 +558,7 @@
         else if(current === 'done') next = 'todo';
         
         item.dataset.status = next;
-        btn.className = `task-status-toggle ${next === 'done' ? 'done' : (next === 'doing' ? 'doing' : '')} no-pan-strict`;
+        btn.className = `task-status-toggle ${next === 'done' ? 'done' : (next === 'doing' ? 'doing' : '')} no-pan`;
         if(next === 'done') item.classList.add('done'); else item.classList.remove('done');
         
         updateBoxSummary(boxId);
@@ -578,7 +580,7 @@
         let allTasks = [];
         document.querySelectorAll('.box').forEach(box => {
             const boxTitle = box.querySelector('input.title').value;
-            // Use strict ownership check to avoid duplicates
+            // [FIXED] Use strict ownership check to avoid duplicates
             const taskItems = box.querySelectorAll('.task-item');
             
             taskItems.forEach(item => {
@@ -717,33 +719,33 @@
             <div class="box-title-bar" onmousedown="initDrag(event, '${id}')" ondblclick="enableTitleEdit('${id}')">
                 <input class="title" value="${titleVal}" placeholder="Nome..." onblur="disableTitleEdit('${id}')" oninput="calcDynamicFont(this.closest('.box'))" readonly>
                 <div class="task-summary-badge"></div>
-                <div class="actions-balloon no-pan-strict">
-                    <div class="status-dot-btn dot-neutral no-pan-strict" onclick="setStatus('${id}', 'neutral')" title="Normal"></div>
-                    <div class="status-dot-btn dot-green no-pan-strict" onclick="setStatus('${id}', 'green')" title="Ok"></div>
-                    <div class="status-dot-btn dot-red no-pan-strict" onclick="setStatus('${id}', 'red')" title="Crítico"></div>
+                <div class="actions-balloon no-pan">
+                    <div class="status-dot-btn dot-neutral no-pan" onclick="setStatus('${id}', 'neutral')" title="Normal"></div>
+                    <div class="status-dot-btn dot-green no-pan" onclick="setStatus('${id}', 'green')" title="Ok"></div>
+                    <div class="status-dot-btn dot-red no-pan" onclick="setStatus('${id}', 'red')" title="Crítico"></div>
                     <div class="separator"></div>
-                    <button class="icon-btn btn-font no-pan-strict" onclick="toggleTaskView('${id}')" title="Tarefas">📋</button>
+                    <button class="icon-btn btn-font no-pan" onclick="toggleTaskView('${id}')" title="Tarefas">📋</button>
                     <div class="separator"></div>
-                    <button class="icon-btn btn-font no-pan-strict" onclick="adjustFontSize('${id}', -0.1)" title="Diminuir Texto">A-</button>
-                    <button class="icon-btn btn-font no-pan-strict" onclick="adjustFontSize('${id}', 0.1)" title="Aumentar Texto">A+</button>
+                    <button class="icon-btn btn-font no-pan" onclick="adjustFontSize('${id}', -0.1)" title="Diminuir Texto">A-</button>
+                    <button class="icon-btn btn-font no-pan" onclick="adjustFontSize('${id}', 0.1)" title="Aumentar Texto">A+</button>
                     <div class="separator"></div>
-                    <button class="icon-btn btn-add no-pan-strict" onclick="addChild('${id}')" title="Adicionar Filho">＋</button>
-                    <button class="icon-btn btn-clone no-pan-strict" onclick="duplicateBox('${id}')" title="Duplicar">❐</button>
-                    <button class="icon-btn btn-toggle no-pan-strict" onclick="handleSmartToggle('${id}', this)" title="Colapsar">▼</button>
-                    <button class="icon-btn btn-delete no-pan-strict" onclick="deleteBox('${id}')" title="Excluir">×</button>
+                    <button class="icon-btn btn-add no-pan" onclick="addChild('${id}')" title="Adicionar Filho">＋</button>
+                    <button class="icon-btn btn-clone no-pan" onclick="duplicateBox('${id}')" title="Duplicar">❐</button>
+                    <button class="icon-btn btn-toggle no-pan" onclick="handleSmartToggle('${id}', this)" title="Colapsar">▼</button>
+                    <button class="icon-btn btn-delete no-pan" onclick="deleteBox('${id}')" title="Excluir">×</button>
                 </div>
             </div>
             <div class="box-body">
-                <div class="task-container no-pan-strict">
-                    <button class="add-task-btn no-pan-strict" onclick="addTask('${id}')">+ Nova Tarefa</button>
+                <div class="task-container no-pan">
+                    <button class="add-task-btn no-pan" onclick="addTask('${id}')">+ Nova Tarefa</button>
                 </div>
                 <div class="children-area" id="area-${id}"></div>
             </div>
             
-            <div class="resizer bottom-right no-pan-strict" onmousedown="initResize(event, '${id}', 'br')"></div>
-            <div class="resizer bottom-left no-pan-strict" onmousedown="initResize(event, '${id}', 'bl')"></div>
+            <div class="resizer bottom-right no-pan" onmousedown="initResize(event, '${id}', 'br')"></div>
+            <div class="resizer bottom-left no-pan" onmousedown="initResize(event, '${id}', 'bl')"></div>
             
-            <div class="connector c-top no-pan-strict" onmousedown="initConn(event, '${id}', 'top')"></div><div class="connector c-bottom no-pan-strict" onmousedown="initConn(event, '${id}', 'bottom')"></div><div class="connector c-left no-pan-strict" onmousedown="initConn(event, '${id}', 'left')"></div><div class="connector c-right no-pan-strict" onmousedown="initConn(event, '${id}', 'right')"></div>
+            <div class="connector c-top no-pan" onmousedown="initConn(event, '${id}', 'top')"></div><div class="connector c-bottom no-pan" onmousedown="initConn(event, '${id}', 'bottom')"></div><div class="connector c-left no-pan" onmousedown="initConn(event, '${id}', 'left')"></div><div class="connector c-right no-pan" onmousedown="initConn(event, '${id}', 'right')"></div>
         `;
         el.addEventListener('mouseover', (e) => {
             e.stopPropagation(); 
@@ -997,7 +999,7 @@
             // Extract Tasks
             const tasks = [];
             box.querySelectorAll('.task-item').forEach(tItem => {
-                // Check direct ownership
+                // Strict check: only tasks belonging to this box
                 if (tItem.closest('.box') === box) {
                     tasks.push({
                         text: tItem.querySelector('.task-input').value,
@@ -1064,7 +1066,13 @@
         data.connections.forEach(c => { 
             if(document.getElementById(c.sid) && document.getElementById(c.tid)) addConnection(c.sid, c.spos, c.tid, c.tpos, c.id); 
         });
-        setTimeout(() => { document.querySelectorAll('.children-area').forEach(area => updateElasticParent(area)); updateAllLines(); }, 50);
+        
+        // FIX: Force recalculate font size and layout after load
+        setTimeout(() => { 
+            document.querySelectorAll('.children-area').forEach(area => updateElasticParent(area)); 
+            document.querySelectorAll('.box').forEach(box => calcDynamicFont(box));
+            updateAllLines(); 
+        }, 50);
     }
     
     function setStatus(id, s) {
@@ -1156,9 +1164,11 @@
         if(spacePressed) return; 
         if(!state.isEditMode) return;
         
-        // Don't drag if clicking in any "no-pan-strict" element (buttons, inputs)
-        if (e.target.closest('.no-pan-strict')) return;
-
+        const t = e.target;
+        if (t.tagName === 'INPUT' && t.classList.contains('editing')) return;
+        if (t.classList.contains('task-input')) return; 
+        if (t.closest('button') || t.classList.contains('status-dot-btn') || t.classList.contains('task-status-toggle')) return; 
+        
         e.stopPropagation(); 
         dragItem = document.getElementById(id); dragItem.style.zIndex = 999; 
         const wp = screenToWorld(e.clientX, e.clientY);
@@ -1298,7 +1308,7 @@
 
     // FIXED: Allow pan even on box body, only block on controls
     viewport.addEventListener('mousedown', (e) => {
-        if (e.target.closest('.no-pan-strict') || e.target.closest('#toolbar') || e.target.closest('.modal-panel')) return;
+        if (e.target.closest('.no-pan') || e.target.closest('.no-pan-strict') || e.target.closest('#toolbar') || e.target.closest('.modal-panel')) return;
 
         const isControl = e.target.closest('button') || e.target.tagName === 'INPUT';
         if (!isControl && (e.button === 0 || e.button === 1)) {
