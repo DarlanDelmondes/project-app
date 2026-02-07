@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Canvas v69 - Manual Save & Expand</title>
+    <title>Canvas v72 - Adaptive Zoom UI</title>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
         :root {
@@ -18,8 +18,11 @@
             
             /* Button States */
             --btn-save-default: #2563eb;
-            --btn-save-pending: #f59e0b; /* Laranja */
+            --btn-save-pending: #f59e0b;
             --btn-save-hover-pending: #d97706;
+
+            /* UI SCALING VAR (Controlled by JS) */
+            --ui-scale: 1;
         }
 
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); }
@@ -37,10 +40,8 @@
         button.btn-primary { background-color: var(--btn-save-default); color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; white-space: nowrap; transition: background 0.3s; }
         button.btn-primary:hover { background-color: #1d4ed8; }
         
-        /* Estilo para Botão Pendente */
-        button.btn-pending { background-color: var(--btn-save-pending) !important; color: #fff !important; animation: pulse 2s infinite; }
-        button.btn-pending:hover { background-color: var(--btn-save-hover-pending) !important; }
-        
+        button.btn-pending { border:none; border-radius: 10px; padding: 10px; animation: pulse 2s infinite; }
+        button.btn-pending:hover { cursor: pointer; animation: pulse 3s; }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); } 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); } }
 
         button.btn-dark { background-color: #1e293b; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; white-space: nowrap;}
@@ -53,7 +54,7 @@
         .icon-btn:hover { background: #e2e8f0; color: #0f172a; }
         .btn-delete:hover { color: #ef4444; background: #fee2e2; }
 
-        #last-saved-msg { font-size: 11px; color: #64748b; margin-left: 5px; min-width: 80px; text-align: right; }
+        #autosave-status { font-size: 11px; color: #64748b; margin-left: 5px; min-width: 80px; text-align: right; }
 
         /* TOAST */
         #toast-container { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 20000; display: flex; flex-direction: column; gap: 10px; pointer-events: none; align-items: center; }
@@ -85,8 +86,11 @@
         .journal-item { padding: 10px 15px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 10px; }
         .journal-item:last-child { border-bottom: none; }
         .journal-tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; text-transform: uppercase; }
+        
         .tag-todo { background: #f3f4f6; color: #64748b; border: 1px solid #cbd5e1; }
         .tag-doing { background: #fef3c7; color: #d97706; border: 1px solid #fcd34d; }
+        .tag-overdue { background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; }
+
         .journal-text { flex-grow: 1; font-size: 14px; color: #1e293b; }
         .journal-meta { font-size: 12px; color: #64748b; display: flex; gap: 10px; align-items: center;}
         .journal-context { font-size: 11px; color: #94a3b8; font-style: italic; }
@@ -148,16 +152,28 @@
             color: #1e293b !important;
         }
 
-        /* BALÃO */
+        /* BALÃO - ADAPTIVE SCALING */
         .actions-balloon {
             position: absolute; top: -35px; right: 10px; 
             background: #1e293b; border-radius: 50px; 
             padding: 8px 12px; 
             display: none; align-items: center; gap: 8px;
             box-shadow: 0 6px 12px rgba(0,0,0,0.3);
-            font-size: 14px; z-index: 20; animation: popIn 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            font-size: 14px; z-index: 20; 
+            
+            /* Logic for adaptive scale */
+            transform-origin: bottom right;
+            transform: scale(var(--ui-scale));
+            
+            animation: popIn 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-        @keyframes popIn { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        
+        /* Updated PopIn to respect UI Scale */
+        @keyframes popIn { 
+            from { transform: scale(0); opacity: 0; } 
+            to { transform: scale(var(--ui-scale)); opacity: 1; } 
+        }
+
         .box.hover-focused > .box-title-bar .actions-balloon { display: flex; }
         
         .actions-balloon .icon-btn { color: white; width: 28px; height: 28px; font-size: 14px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
@@ -193,10 +209,13 @@
         .box.collapsed-mode.red-state > .box-title-bar > input.title { color: white !important; }
 
         /* TAREFAS */
-        .task-container { display: none; margin-bottom: 10px; background: rgba(255,255,255,0.6); padding: 8px; border-radius: 8px; border: 1px solid #cbd5e1; }
-        .box.show-tasks .task-container { display: flex; flex-direction: column; gap: 5px; }
-        .task-item { display: flex; align-items: center; gap: 6px; }
-        .task-status-toggle { width: 14px; height: 14px; border-radius: 50%; border: 1px solid #94a3b8; cursor: pointer; flex-shrink: 0; background: white; }
+        .task-container { 
+            display: block; 
+            margin-bottom: 10px; background: rgba(255,255,255,0.6); padding: 8px; border-radius: 8px; border: 1px solid #cbd5e1; 
+        }
+        
+        .task-item { display: block; align-items: center; gap: 6px; margin-bottom: 5px; }
+        .task-status-toggle { display: inline-block; width: 14px; height: 14px; border-radius: 50%; border: 1px solid #94a3b8; cursor: pointer; flex-shrink: 0; background: white; }
         .task-status-toggle.doing { background: #fbbf24; border-color: #d97706; }
         .task-status-toggle.done { background: #4ade80; border-color: #16a34a; }
         
@@ -205,6 +224,9 @@
         
         .task-owner { width: 60px; border: none; background: transparent; font-size: 11px; color: #64748b; border-bottom: 1px dotted #cbd5e1; margin-left: 2px; }
         .task-date { width: 90px; border: none; background: transparent; font-size: 11px; color: #64748b; }
+        /* OVERDUE STYLE */
+        .task-date.overdue { color: #ef4444; font-weight: bold; border-bottom: 1px solid #ef4444; }
+
         .task-owner:focus, .task-date:focus { background: white; outline: none; border-bottom: 1px solid #3b82f6; color: #0f172a; }
 
         .task-item.done .task-input { text-decoration: line-through; color: #94a3b8; }
@@ -328,7 +350,7 @@
     let spacePressed = false;
     let currentDrawingName = null;
     let undoStack = null;
-    let hasUnsavedChanges = false; // [NEW] Track changes
+    let hasUnsavedChanges = false;
 
     const viewport = document.getElementById('viewport');
     const world = document.getElementById('world');
@@ -415,10 +437,10 @@
         if (!connections.find(c => c.id === id)) connections.push({ id, sid, spos, tid, tpos });
         updateLine(connections[connections.length-1]); 
         checkCascading();
-        markUnsaved(); // [CHANGE]
+        markUnsaved();
     }
-    
-    // --- 3. SAVE & UNSAVED LOGIC (NEW) ---
+
+    // --- 3. PROJECT MGMT ---
     function markUnsaved() {
         hasUnsavedChanges = true;
         const btn = document.getElementById('btn-save');
@@ -434,51 +456,17 @@
         btn.classList.remove('btn-pending');
         btn.classList.add('btn-primary');
     }
-
-    function expandAllBoxes() {
-        // Find all collapsed boxes and open them
-        document.querySelectorAll('.box.collapsed-mode').forEach(box => {
-            const btn = box.querySelector('.actions-balloon .btn-toggle');
-            performToggle(box.id, btn); // This handles the visual expansion
-        });
-    }
-
-    function saveCurrentDrawing() {
-        let name = currentDrawingName;
-        if (!name) { 
-            name = prompt("Nome do projeto:", "Projeto"); 
-            if (!name) return; 
-            currentDrawingName = name; 
-        }
-        
-        // [FEATURE] Expand All before Saving
-        expandAllBoxes();
-
-        // Small delay to allow expansion rendering (optional, but safer)
-        setTimeout(() => {
-            saveDataInternal();
-            markSaved();
-            showToast("Projeto salvo e expandido!");
-        }, 100);
-    }
-
-    function saveDataInternal() {
-        const data = serializeCanvas();
-        const db = getDB();
-        const existingIdx = db.findIndex(p => p.name === currentDrawingName);
-        const proj = { 
-            id: existingIdx !== -1 ? db[existingIdx].id : 'proj_' + Date.now(), 
-            name: currentDrawingName, updatedAt: Date.now(), data: data 
-        };
-        if (existingIdx !== -1) db[existingIdx] = proj; else db.push(proj);
+    
+    function deleteProject(id) {
+        if(!confirm("Tem certeza que deseja excluir este projeto?")) return;
+        let db = getDB();
+        db = db.filter(p => p.id !== id);
         setDB(db);
-        
-        const now = new Date();
-        const el = document.getElementById('last-saved-msg');
-        if(el) el.innerText = `Salvo: ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+        openDashboard();
+        showToast("Projeto excluído.");
     }
-
-    // --- 4. DOM & LOGIC ---
+    
+    // --- 4. BOX LOGIC ---
     function calcDynamicFont(box) {
         const input = box.querySelector('input.title');
         const textLen = Math.max(1, input.value.length); 
@@ -546,7 +534,7 @@
         if(oldParent && oldParent.classList.contains('children-area')) updateElasticParent(oldParent);
         if(newParent && newParent.classList.contains('children-area')) updateElasticParent(newParent);
         updateAllLines();
-        markUnsaved(); // [CHANGE]
+        markUnsaved();
     }
 
     function createBox(parent, x, y) {
@@ -558,7 +546,7 @@
         el.dataset.status = 'neutral'; 
         parent.appendChild(el); calcDynamicFont(el);
         if (parent !== world) setTimeout(() => updateElasticParent(parent), 0);
-        markUnsaved(); // [CHANGE]
+        markUnsaved();
     }
     
     function addRootBox() { 
@@ -592,22 +580,47 @@
 
     function toggleTaskView(boxId) {
         const box = document.getElementById(boxId);
-        box.classList.toggle('show-tasks');
+        const container = box.querySelector('.task-container');
+        
+        // Se estiver visível, esconde. Se estiver escondido, mostra.
+        if (container.style.display === 'none') {
+            container.style.display = 'block';
+        } else {
+            container.style.display = 'none';
+        }
+        
+        // Atualizar layout
         updateElasticParent(box.parentElement.closest('.children-area')); 
         updateAllLines();
+        markUnsaved();
     }
     
     function addTask(boxId) {
         const box = document.getElementById(boxId);
         const container = box.querySelector('.task-container');
         renderTask(container, "Nova tarefa", "todo", "", "");
-        if (!box.classList.contains('show-tasks')) box.classList.add('show-tasks');
+        // Garantir que está visível ao adicionar
+        container.style.display = 'block';
+        
         updateBoxSummary(box);
         updateElasticParent(box.parentElement.closest('.children-area'));
         updateAllLines();
-        markUnsaved(); // [CHANGE]
+        markUnsaved();
     }
     
+    function checkTaskOverdue(inputDate) {
+        const today = new Date().toISOString().split('T')[0];
+        const val = inputDate.value;
+        const taskItem = inputDate.closest('.task-item');
+        
+        if (val && val < today && taskItem.dataset.status !== 'done') {
+            inputDate.classList.add('overdue');
+        } else {
+            inputDate.classList.remove('overdue');
+        }
+        markUnsaved();
+    }
+
     function renderTask(container, text, status, owner = "", date = "") {
         const div = document.createElement('div');
         div.className = `task-item ${status === 'done' ? 'done' : ''} no-pan`; 
@@ -621,10 +634,14 @@
             <div class="task-status-toggle ${statusClass} no-pan" onclick="cycleTaskStatus(this)"></div>
             <input class="task-input no-pan" value="${text}" placeholder="Tarefa..." oninput="markUnsaved()">
             <input class="task-owner no-pan" value="${owner}" placeholder="Resp." title="Responsável" oninput="markUnsaved()">
-            <input class="task-date no-pan" type="date" value="${date}" title="Data Limite" oninput="markUnsaved()">
+            <input class="task-date no-pan" type="date" value="${date}" title="Data Limite" onchange="checkTaskOverdue(this)">
             <button class="task-del-btn no-pan" onclick="removeTask(this)">×</button>
         `;
         container.insertBefore(div, container.lastElementChild); 
+        
+        // Initial check for loaded tasks
+        const dateInput = div.querySelector('.task-date');
+        checkTaskOverdue(dateInput);
     }
     
     function cycleTaskStatus(btn) {
@@ -640,8 +657,12 @@
         btn.className = `task-status-toggle ${next === 'done' ? 'done' : (next === 'doing' ? 'doing' : '')} no-pan`;
         if(next === 'done') item.classList.add('done'); else item.classList.remove('done');
         
+        // Re-check overdue status when status changes (if done, remove red)
+        const dateInput = item.querySelector('.task-date');
+        checkTaskOverdue(dateInput);
+        
         updateBoxSummary(boxId);
-        markUnsaved(); // [CHANGE]
+        markUnsaved();
     }
     
     function removeTask(btn) {
@@ -650,7 +671,7 @@
         item.remove();
         updateBoxSummary(box.id);
         updateAllLines();
-        markUnsaved(); // [CHANGE]
+        markUnsaved();
     }
 
     // --- JOURNAL LOGIC ---
@@ -658,10 +679,11 @@
         const content = document.getElementById('journal-content');
         content.innerHTML = '';
         
+        const today = new Date().toISOString().split('T')[0];
         let allTasks = [];
+        
         document.querySelectorAll('.box').forEach(box => {
             const boxTitle = box.querySelector('input.title').value;
-            // Use strict ownership check to avoid duplicates
             const taskItems = box.querySelectorAll('.task-item');
             
             taskItems.forEach(item => {
@@ -670,13 +692,17 @@
                 const status = item.dataset.status;
                 if(status === 'done') return; 
                 
+                const dateVal = item.querySelector('.task-date').value;
+                const isOverdue = dateVal && dateVal < today;
+
                 allTasks.push({
                     boxId: box.id, 
                     box: boxTitle,
                     text: item.querySelector('.task-input').value,
                     owner: item.querySelector('.task-owner').value || "Sem Responsável",
-                    date: item.querySelector('.task-date').value,
-                    status: status
+                    date: dateVal,
+                    status: status,
+                    isOverdue: isOverdue
                 });
             });
         });
@@ -702,11 +728,17 @@
             tasks.forEach(t => {
                 let tagClass = t.status === 'doing' ? 'tag-doing' : 'tag-todo';
                 let tagText = t.status === 'doing' ? 'Fazendo' : 'A Fazer';
-                let dateStr = t.date ? `<span style="color:#d97706;">📅 ${t.date}</span>` : '';
+                
+                let overdueHtml = t.isOverdue ? '<span class="journal-tag tag-overdue">🔴 ATRASADO</span>' : '';
+                
+                let dateStr = t.date ? `<span style="color:${t.isOverdue ? '#ef4444' : '#d97706'};">📅 ${t.date}</span>` : '';
                 
                 html += `
                     <div class="journal-item">
-                        <span class="journal-tag ${tagClass}">${tagText}</span>
+                        <div style="display:flex; gap:5px; align-items:center;">
+                            <span class="journal-tag ${tagClass}">${tagText}</span>
+                            ${overdueHtml}
+                        </div>
                         <span class="journal-text">${t.text}</span>
                         <div class="journal-meta">
                             ${dateStr}
@@ -725,8 +757,9 @@
     }
 
     function downloadJournalCSV() {
-        const headers = ["Status", "Tarefa", "Responsável", "Data Limite", "Caixa de Origem"];
+        const headers = ["Status", "Atrasado?", "Tarefa", "Responsável", "Data Limite", "Caixa de Origem"];
         let csvContent = "\uFEFF" + headers.join(",") + "\n"; 
+        const today = new Date().toISOString().split('T')[0];
 
         document.querySelectorAll('.box').forEach(box => {
             const boxTitle = box.querySelector('input.title').value.replace(/"/g, '""'); 
@@ -741,10 +774,11 @@
                 const text = item.querySelector('.task-input').value.replace(/"/g, '""');
                 const owner = (item.querySelector('.task-owner').value || "").replace(/"/g, '""');
                 const date = item.querySelector('.task-date').value;
+                const isOverdue = date && date < today ? "SIM" : "NÃO";
 
                 let statusLabel = status === 'doing' ? 'Fazendo' : 'A Fazer';
 
-                csvContent += `"${statusLabel}","${text}","${owner}","${date}","${boxTitle}"\n`;
+                csvContent += `"${statusLabel}","${isOverdue}","${text}","${owner}","${date}","${boxTitle}"\n`;
             });
         });
 
@@ -929,13 +963,15 @@
             const sourceTasks = sourceEl.querySelectorAll('.task-item');
             if(sourceTasks.length > 0) {
                  const tContainer = newEl.querySelector('.task-container');
+                 // Ensure visible on clone
+                 tContainer.style.display = 'block';
                  sourceTasks.forEach(t => {
                      // Check direct ownership
                      if (t.closest('.box') === sourceEl) {
                         renderTask(tContainer, t.querySelector('.task-input').value, t.dataset.status, t.querySelector('.task-owner').value, t.querySelector('.task-date').value);
                      }
                  });
-                 if(sourceEl.classList.contains('show-tasks')) newEl.classList.add('show-tasks'); 
+                 // No toggle needed
                  updateBoxSummary(newEl);
             }
 
@@ -948,7 +984,7 @@
             if(targetParent.classList.contains('children-area')) updateElasticParent(targetParent);
         }
         recursiveClone(original, originalParent, true);
-        markUnsaved(); // [CHANGE]
+        markUnsaved(); 
         showToast("Caixa duplicada com sucesso!");
     }
 
@@ -1066,6 +1102,30 @@
             showToast("Projeto salvo e expandido!");
         }, 100);
     }
+    
+    function expandAllBoxes() {
+        document.querySelectorAll('.box.collapsed-mode').forEach(box => {
+            const btn = box.querySelector('.actions-balloon .btn-toggle');
+            performToggle(box.id, btn); 
+        });
+    }
+    
+    function saveDataInternal() {
+        const data = serializeCanvas();
+        const db = getDB();
+        const existingIdx = db.findIndex(p => p.name === currentDrawingName);
+        const proj = { 
+            id: existingIdx !== -1 ? db[existingIdx].id : 'proj_' + Date.now(), 
+            name: currentDrawingName, updatedAt: Date.now(), data: data 
+        };
+        if (existingIdx !== -1) db[existingIdx] = proj; else db.push(proj);
+        setDB(db);
+        
+        const now = new Date();
+        const el = document.getElementById('last-saved-msg');
+        if(el) el.innerText = `Salvo: ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+    }
+    
     function loadProject(id) { const proj = getDB().find(p => p.id === id); if (!proj) return; document.querySelectorAll('.box').forEach(b => b.remove()); updateAllLines(true); connections = []; currentDrawingName = proj.name; deserializeCanvas(proj.data); closeDashboard(); showToast(`Carregado: ${proj.name}`); }
 
     function serializeCanvas() {
@@ -1075,7 +1135,7 @@
             // Extract Tasks
             const tasks = [];
             box.querySelectorAll('.task-item').forEach(tItem => {
-                // Strict check: only tasks belonging to this box
+                // Check direct ownership
                 if (tItem.closest('.box') === box) {
                     tasks.push({
                         text: tItem.querySelector('.task-input').value,
@@ -1128,6 +1188,8 @@
 
             if(d.tasks && d.tasks.length > 0) {
                 const tContainer = el.querySelector('.task-container');
+                // Ensure container is visible since we force block
+                tContainer.style.display = 'block'; 
                 d.tasks.forEach(t => renderTask(tContainer, t.text, t.status, t.owner, t.date));
                 updateBoxSummary(el);
             }
@@ -1159,7 +1221,7 @@
         if(s === 'red') b.classList.add('red-state');
         if(s === 'green') b.classList.add('green-state');
         checkCascading();
-        markUnsaved(); // [CHANGE]
+        markUnsaved(); 
     }
     
     function adjustFontSize(id, delta) {
@@ -1170,7 +1232,7 @@
         currentScale = Math.max(0.5, Math.min(3, currentScale)); 
         box.dataset.fontScale = currentScale;
         calcDynamicFont(box);
-        markUnsaved(); // [CHANGE]
+        markUnsaved(); 
     }
     
     function addChild(id) {
@@ -1180,14 +1242,14 @@
         area.classList.remove('collapsed'); parentBox.classList.remove('collapsed-mode');
         const btn = parentBox.querySelector('.actions-balloon .btn-toggle'); if(btn) btn.innerText = '▼';
         createBox(area, 20, 20); 
-        markUnsaved(); // [CHANGE]
+        markUnsaved(); 
     }
     
     function handleSmartToggle(id, btn) {
         const area = document.getElementById('area-' + id);
         const isClosing = !area.classList.contains('collapsed');
         if (isClosing) runCascadeClose(id, btn); else performToggle(id, btn);
-        markUnsaved(); // [CHANGE]
+        markUnsaved(); 
     }
     
     async function runCascadeClose(boxId) {
@@ -1372,7 +1434,18 @@
     });
     
     // --- GRAPHICS & ZOOM ---
-    function updateTransform() { world.style.transform = `translate(${state.offset.x}px, ${state.offset.y}px) scale(${state.scale})`; zoomInd.innerText = Math.round(state.scale * 100) + '%'; }
+    function updateTransform() { 
+        world.style.transform = `translate(${state.offset.x}px, ${state.offset.y}px) scale(${state.scale})`; 
+        zoomInd.innerText = Math.round(state.scale * 100) + '%'; 
+        
+        let uiScale = 1;
+        if (state.scale <= 0.8 && state.scale > 0.2) {
+            uiScale = 1.5;
+        } else if (state.scale <= 0.2) {
+            uiScale = 7.0;
+        }
+        document.documentElement.style.setProperty('--ui-scale', uiScale);
+    }
     
     viewport.addEventListener('wheel', (e) => {
         e.preventDefault();
@@ -1389,11 +1462,9 @@
         updateTransform();
     }, { passive: false });
 
-    // FIXED: Pan ONLY when not clicking inside a box (unless dragging)
+    // FIXED: Allow pan even on box body, only block on controls
     viewport.addEventListener('mousedown', (e) => {
-        // If clicking inside a box or on controls, ignore panning here
-        if (e.target.closest('.no-pan') || e.target.closest('#toolbar') || e.target.closest('.modal-panel')) return;
-        // [MODIFIED] Removed check for .box so we CAN pan from box body (as requested in v67)
+        if (e.target.closest('.no-pan') || e.target.closest('.no-pan-strict') || e.target.closest('#toolbar') || e.target.closest('.modal-panel')) return;
 
         const isControl = e.target.closest('button') || e.target.tagName === 'INPUT';
         if (!isControl && (e.button === 0 || e.button === 1)) {
@@ -1412,7 +1483,7 @@
 
     // INIT
     addRootBox();
-    // REMOVED AUTO SAVE TIMER
+    // No auto-save timer
 </script>
 </body>
 </html>
