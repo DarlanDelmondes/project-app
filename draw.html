@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Canvas v69 - Load & Font Fixes</title>
+    <title>Canvas v69 - Manual Save & Expand</title>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
         :root {
@@ -15,6 +15,11 @@
             /* CORES */
             --color-wine: #680e2a;   
             --color-forest: #064e3b; 
+            
+            /* Button States */
+            --btn-save-default: #2563eb;
+            --btn-save-pending: #f59e0b; /* Laranja */
+            --btn-save-hover-pending: #d97706;
         }
 
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); }
@@ -28,8 +33,16 @@
             pointer-events: auto; flex-wrap: wrap; max-width: 90vw;
         }
         button { font-family: 'Segoe UI', sans-serif; }
-        button.btn-primary { background-color: #2563eb; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; white-space: nowrap;}
+        
+        button.btn-primary { background-color: var(--btn-save-default); color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; white-space: nowrap; transition: background 0.3s; }
         button.btn-primary:hover { background-color: #1d4ed8; }
+        
+        /* Estilo para Botão Pendente */
+        button.btn-pending { background-color: var(--btn-save-pending) !important; color: #fff !important; animation: pulse 2s infinite; }
+        button.btn-pending:hover { background-color: var(--btn-save-hover-pending) !important; }
+        
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); } 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); } }
+
         button.btn-dark { background-color: #1e293b; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; white-space: nowrap;}
         button.btn-dark:hover { background-color: #334155; }
         button.btn-outline { background-color: white; color: #334155; border: 1px solid #cbd5e1; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; white-space: nowrap;}
@@ -40,7 +53,7 @@
         .icon-btn:hover { background: #e2e8f0; color: #0f172a; }
         .btn-delete:hover { color: #ef4444; background: #fee2e2; }
 
-        #autosave-status { font-size: 11px; color: #64748b; margin-left: 5px; min-width: 80px; text-align: right; }
+        #last-saved-msg { font-size: 11px; color: #64748b; margin-left: 5px; min-width: 80px; text-align: right; }
 
         /* TOAST */
         #toast-container { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 20000; display: flex; flex-direction: column; gap: 10px; pointer-events: none; align-items: center; }
@@ -63,7 +76,9 @@
         .project-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 10px; display: flex; align-items: center; transition: transform 0.1s, box-shadow 0.1s; }
         .project-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         .p-info { flex-grow: 1; } .p-name { font-weight: bold; color: #334155; font-size: 16px; } .p-date { font-size: 12px; color: #94a3b8; } .p-actions { display: flex; gap: 10px; }
-        
+        .btn-load { background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+        .btn-trash { background: #fee2e2; color: #ef4444; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+
         /* JOURNAL STYLES */
         .journal-group { margin-bottom: 20px; background: white; border-radius: 8px; border: 1px solid #e2e8f0; overflow: hidden; }
         .journal-header { background: #f1f5f9; padding: 10px 15px; font-weight: bold; color: #334155; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; }
@@ -221,6 +236,9 @@
         .resizer.bottom-left::after { left: 6px; bottom: 6px; transform: scaleX(-1); }
         .box:hover > .resizer { opacity: 1; } 
         
+        /* CLASS TO BLOCK PANNING */
+        .no-pan { pointer-events: auto !important; }
+
         body.read-only .actions-balloon .btn-add, body.read-only .actions-balloon .btn-delete, 
         body.read-only .actions-balloon .btn-clone, body.read-only .actions-balloon .btn-font, 
         body.read-only .actions-balloon .status-dot-btn, body.read-only .actions-balloon .separator,
@@ -246,8 +264,8 @@
         <div style="width: 1px; height: 30px; background: #ddd; margin: 0 5px;"></div>
         <button class="btn-dark" onclick="openDashboard()">📂 Projetos</button>
         <button class="btn-dark" onclick="openJournal()">📰 Jornal</button>
-        <button class="btn-primary" onclick="saveCurrentDrawing()">💾 Salvar</button>
-        <div id="autosave-status"></div>
+        <button id="btn-save" class="btn-primary" onclick="saveCurrentDrawing()">💾 Salvar</button>
+        <div id="last-saved-msg"></div>
         <div style="width: 1px; height: 30px; background: #ddd; margin: 0 5px;"></div>
         <button class="btn-outline" onclick="exportJSON()" title="Baixar .json">⬇ JSON</button>
         <button class="btn-outline" onclick="document.getElementById('file-input').click()" title="Carregar .json">⬆ Abrir</button>
@@ -310,6 +328,7 @@
     let spacePressed = false;
     let currentDrawingName = null;
     let undoStack = null;
+    let hasUnsavedChanges = false; // [NEW] Track changes
 
     const viewport = document.getElementById('viewport');
     const world = document.getElementById('world');
@@ -317,7 +336,7 @@
     const svgLayer = document.getElementById('connections-layer');
     const tempLine = document.getElementById('temp-line');
 
-    // --- 2. HELPERS (Math, DOM, Lines) ---
+    // --- 2. HELPERS ---
     function screenToWorld(sx, sy) { 
         const rect = world.getBoundingClientRect(); 
         return { x: (sx - rect.left) / state.scale, y: (sy - rect.top) / state.scale }; 
@@ -394,23 +413,82 @@
         g.appendChild(hit); g.appendChild(vis); svgLayer.appendChild(g);
         
         if (!connections.find(c => c.id === id)) connections.push({ id, sid, spos, tid, tpos });
-        updateLine(connections[connections.length-1]); checkCascading();
+        updateLine(connections[connections.length-1]); 
+        checkCascading();
+        markUnsaved(); // [CHANGE]
     }
     
-    // --- 3. BOX LOGIC ---
+    // --- 3. SAVE & UNSAVED LOGIC (NEW) ---
+    function markUnsaved() {
+        hasUnsavedChanges = true;
+        const btn = document.getElementById('btn-save');
+        btn.innerHTML = "⚠️ Salvar (Pendente)";
+        btn.classList.add('btn-pending');
+        btn.classList.remove('btn-primary');
+    }
+
+    function markSaved() {
+        hasUnsavedChanges = false;
+        const btn = document.getElementById('btn-save');
+        btn.innerHTML = "💾 Salvar";
+        btn.classList.remove('btn-pending');
+        btn.classList.add('btn-primary');
+    }
+
+    function expandAllBoxes() {
+        // Find all collapsed boxes and open them
+        document.querySelectorAll('.box.collapsed-mode').forEach(box => {
+            const btn = box.querySelector('.actions-balloon .btn-toggle');
+            performToggle(box.id, btn); // This handles the visual expansion
+        });
+    }
+
+    function saveCurrentDrawing() {
+        let name = currentDrawingName;
+        if (!name) { 
+            name = prompt("Nome do projeto:", "Projeto"); 
+            if (!name) return; 
+            currentDrawingName = name; 
+        }
+        
+        // [FEATURE] Expand All before Saving
+        expandAllBoxes();
+
+        // Small delay to allow expansion rendering (optional, but safer)
+        setTimeout(() => {
+            saveDataInternal();
+            markSaved();
+            showToast("Projeto salvo e expandido!");
+        }, 100);
+    }
+
+    function saveDataInternal() {
+        const data = serializeCanvas();
+        const db = getDB();
+        const existingIdx = db.findIndex(p => p.name === currentDrawingName);
+        const proj = { 
+            id: existingIdx !== -1 ? db[existingIdx].id : 'proj_' + Date.now(), 
+            name: currentDrawingName, updatedAt: Date.now(), data: data 
+        };
+        if (existingIdx !== -1) db[existingIdx] = proj; else db.push(proj);
+        setDB(db);
+        
+        const now = new Date();
+        const el = document.getElementById('last-saved-msg');
+        if(el) el.innerText = `Salvo: ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+    }
+
+    // --- 4. DOM & LOGIC ---
     function calcDynamicFont(box) {
         const input = box.querySelector('input.title');
         const textLen = Math.max(1, input.value.length); 
         
-        // [FIX] Handle hidden box dimensions
         const w = box.offsetWidth || parseFloat(box.style.width); 
         const h = box.offsetHeight || parseFloat(box.style.height);
-        
         const area = w * h;
         
         const manualScale = parseFloat(box.dataset.fontScale) || 1;
 
-        // Auto Calc for Collapsed Mode
         let sizeBasedOnGeom = Math.sqrt(area) * 0.12;
         const maxSizeForWidth = (w * 0.9) / (textLen * 0.6);
         let finalSize = Math.min(sizeBasedOnGeom, maxSizeForWidth);
@@ -468,6 +546,7 @@
         if(oldParent && oldParent.classList.contains('children-area')) updateElasticParent(oldParent);
         if(newParent && newParent.classList.contains('children-area')) updateElasticParent(newParent);
         updateAllLines();
+        markUnsaved(); // [CHANGE]
     }
 
     function createBox(parent, x, y) {
@@ -479,6 +558,7 @@
         el.dataset.status = 'neutral'; 
         parent.appendChild(el); calcDynamicFont(el);
         if (parent !== world) setTimeout(() => updateElasticParent(parent), 0);
+        markUnsaved(); // [CHANGE]
     }
     
     function addRootBox() { 
@@ -513,7 +593,6 @@
     function toggleTaskView(boxId) {
         const box = document.getElementById(boxId);
         box.classList.toggle('show-tasks');
-        updateElasticParent(box.querySelector('.children-area')); 
         updateElasticParent(box.parentElement.closest('.children-area')); 
         updateAllLines();
     }
@@ -524,9 +603,9 @@
         renderTask(container, "Nova tarefa", "todo", "", "");
         if (!box.classList.contains('show-tasks')) box.classList.add('show-tasks');
         updateBoxSummary(box);
-        updateElasticParent(box.querySelector('.children-area')); 
         updateElasticParent(box.parentElement.closest('.children-area'));
         updateAllLines();
+        markUnsaved(); // [CHANGE]
     }
     
     function renderTask(container, text, status, owner = "", date = "") {
@@ -540,9 +619,9 @@
         
         div.innerHTML = `
             <div class="task-status-toggle ${statusClass} no-pan" onclick="cycleTaskStatus(this)"></div>
-            <input class="task-input no-pan" value="${text}" placeholder="Tarefa...">
-            <input class="task-owner no-pan" value="${owner}" placeholder="Resp." title="Responsável">
-            <input class="task-date no-pan" type="date" value="${date}" title="Data Limite">
+            <input class="task-input no-pan" value="${text}" placeholder="Tarefa..." oninput="markUnsaved()">
+            <input class="task-owner no-pan" value="${owner}" placeholder="Resp." title="Responsável" oninput="markUnsaved()">
+            <input class="task-date no-pan" type="date" value="${date}" title="Data Limite" oninput="markUnsaved()">
             <button class="task-del-btn no-pan" onclick="removeTask(this)">×</button>
         `;
         container.insertBefore(div, container.lastElementChild); 
@@ -562,6 +641,7 @@
         if(next === 'done') item.classList.add('done'); else item.classList.remove('done');
         
         updateBoxSummary(boxId);
+        markUnsaved(); // [CHANGE]
     }
     
     function removeTask(btn) {
@@ -570,6 +650,7 @@
         item.remove();
         updateBoxSummary(box.id);
         updateAllLines();
+        markUnsaved(); // [CHANGE]
     }
 
     // --- JOURNAL LOGIC ---
@@ -580,7 +661,7 @@
         let allTasks = [];
         document.querySelectorAll('.box').forEach(box => {
             const boxTitle = box.querySelector('input.title').value;
-            // [FIXED] Use strict ownership check to avoid duplicates
+            // Use strict ownership check to avoid duplicates
             const taskItems = box.querySelectorAll('.task-item');
             
             taskItems.forEach(item => {
@@ -717,7 +798,7 @@
         el.dataset.fontScale = "1"; 
         el.innerHTML = `
             <div class="box-title-bar" onmousedown="initDrag(event, '${id}')" ondblclick="enableTitleEdit('${id}')">
-                <input class="title" value="${titleVal}" placeholder="Nome..." onblur="disableTitleEdit('${id}')" oninput="calcDynamicFont(this.closest('.box'))" readonly>
+                <input class="title" value="${titleVal}" placeholder="Nome..." onblur="disableTitleEdit('${id}')" oninput="calcDynamicFont(this.closest('.box')); markUnsaved();" readonly>
                 <div class="task-summary-badge"></div>
                 <div class="actions-balloon no-pan">
                     <div class="status-dot-btn dot-neutral no-pan" onclick="setStatus('${id}', 'neutral')" title="Normal"></div>
@@ -792,6 +873,7 @@
             box.remove(); updateAllLines(true); 
             if (parentArea && parentArea.classList.contains('children-area')) updateElasticParent(parentArea);
             checkCascading(); showToast("Item excluído.", "Desfazer", restoreUndo);
+            markUnsaved();
         });
     }
 
@@ -866,6 +948,7 @@
             if(targetParent.classList.contains('children-area')) updateElasticParent(targetParent);
         }
         recursiveClone(original, originalParent, true);
+        markUnsaved(); // [CHANGE]
         showToast("Caixa duplicada com sucesso!");
     }
 
@@ -879,24 +962,9 @@
                 const path = document.getElementById(connId); 
                 if (path) path.remove(); 
                 checkCascading(); showToast("Conexão removida.", "Desfazer", restoreUndo); 
+                markUnsaved();
             }
         });
-    }
-
-    function performAutoSave() {
-        if (!currentDrawingName) return; 
-        const data = serializeCanvas();
-        const db = getDB();
-        const existingIdx = db.findIndex(p => p.name === currentDrawingName);
-        const proj = { 
-            id: existingIdx !== -1 ? db[existingIdx].id : 'proj_' + Date.now(), 
-            name: currentDrawingName, updatedAt: Date.now(), data: data 
-        };
-        if (existingIdx !== -1) db[existingIdx] = proj; else db.push(proj);
-        setDB(db);
-        const now = new Date();
-        const el = document.getElementById('autosave-status');
-        if(el) el.innerText = `Salvo: ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
     }
 
     function getDB() { return JSON.parse(localStorage.getItem('canvas_projects')) || []; }
@@ -985,10 +1053,18 @@
     }
     function closeDashboard() { document.getElementById('dashboard-overlay').style.display = 'none'; }
     function newDrawing() { showConfirmToast("Criar novo desenho?", () => { document.querySelectorAll('.box').forEach(b => b.remove()); updateAllLines(true); connections = []; state = { ...state, scale: 1, panning: false, offset: {x:0, y:0} }; updateTransform(); currentDrawingName = null; addRootBox(); closeDashboard(); showToast("Novo desenho criado."); }); }
-    function deleteProject(id) { showConfirmToast("Excluir projeto?", () => { let db = getDB(); db = db.filter(p => p.id !== id); setDB(db); openDashboard(); showToast("Excluído."); }); }
     function saveCurrentDrawing() {
         let name = currentDrawingName; if (!name) { name = prompt("Nome do projeto:", "Projeto"); if (!name) return; currentDrawingName = name; }
-        performAutoSave(); showToast("Projeto salvo!");
+        
+        // [FEATURE] Expand All before Saving
+        expandAllBoxes();
+
+        // Small delay to allow expansion rendering (optional, but safer)
+        setTimeout(() => {
+            saveDataInternal();
+            markSaved();
+            showToast("Projeto salvo e expandido!");
+        }, 100);
     }
     function loadProject(id) { const proj = getDB().find(p => p.id === id); if (!proj) return; document.querySelectorAll('.box').forEach(b => b.remove()); updateAllLines(true); connections = []; currentDrawingName = proj.name; deserializeCanvas(proj.data); closeDashboard(); showToast(`Carregado: ${proj.name}`); }
 
@@ -1072,6 +1148,7 @@
             document.querySelectorAll('.children-area').forEach(area => updateElasticParent(area)); 
             document.querySelectorAll('.box').forEach(box => calcDynamicFont(box));
             updateAllLines(); 
+            markSaved(); // Start fresh
         }, 50);
     }
     
@@ -1082,6 +1159,7 @@
         if(s === 'red') b.classList.add('red-state');
         if(s === 'green') b.classList.add('green-state');
         checkCascading();
+        markUnsaved(); // [CHANGE]
     }
     
     function adjustFontSize(id, delta) {
@@ -1092,6 +1170,7 @@
         currentScale = Math.max(0.5, Math.min(3, currentScale)); 
         box.dataset.fontScale = currentScale;
         calcDynamicFont(box);
+        markUnsaved(); // [CHANGE]
     }
     
     function addChild(id) {
@@ -1101,12 +1180,14 @@
         area.classList.remove('collapsed'); parentBox.classList.remove('collapsed-mode');
         const btn = parentBox.querySelector('.actions-balloon .btn-toggle'); if(btn) btn.innerText = '▼';
         createBox(area, 20, 20); 
+        markUnsaved(); // [CHANGE]
     }
     
     function handleSmartToggle(id, btn) {
         const area = document.getElementById('area-' + id);
         const isClosing = !area.classList.contains('collapsed');
         if (isClosing) runCascadeClose(id, btn); else performToggle(id, btn);
+        markUnsaved(); // [CHANGE]
     }
     
     async function runCascadeClose(boxId) {
@@ -1164,11 +1245,9 @@
         if(spacePressed) return; 
         if(!state.isEditMode) return;
         
-        const t = e.target;
-        if (t.tagName === 'INPUT' && t.classList.contains('editing')) return;
-        if (t.classList.contains('task-input')) return; 
-        if (t.closest('button') || t.classList.contains('status-dot-btn') || t.classList.contains('task-status-toggle')) return; 
-        
+        // Don't drag if clicking in any "no-pan" element (buttons, inputs)
+        if (e.target.closest('.no-pan')) return;
+
         e.stopPropagation(); 
         dragItem = document.getElementById(id); dragItem.style.zIndex = 999; 
         const wp = screenToWorld(e.clientX, e.clientY);
@@ -1262,12 +1341,16 @@
     });
     
     window.addEventListener('mouseup', (e) => {
-        if (resizeItem) resizeItem.classList.remove('no-transition');
+        if (resizeItem) {
+            resizeItem.classList.remove('no-transition');
+            markUnsaved(); // [CHANGE] Resize done
+        }
         document.querySelectorAll('.drop-active').forEach(el => el.classList.remove('drop-active'));
         if (dragItem) {
             if (state.dragThresholdMet) {
                 if (currentDropTarget && currentDropTarget !== dragItem.parentElement) reparentBox(dragItem, currentDropTarget);
                 else if (!currentDropTarget && dragItem.parentElement !== world) reparentBox(dragItem, world);
+                markUnsaved(); // [CHANGE] Move done
             }
             dragItem.style.zIndex = '';
         }
@@ -1306,12 +1389,17 @@
         updateTransform();
     }, { passive: false });
 
-    // FIXED: Allow pan even on box body, only block on controls
+    // FIXED: Pan ONLY when not clicking inside a box (unless dragging)
     viewport.addEventListener('mousedown', (e) => {
-        if (e.target.closest('.no-pan') || e.target.closest('.no-pan-strict') || e.target.closest('#toolbar') || e.target.closest('.modal-panel')) return;
+        // If clicking inside a box or on controls, ignore panning here
+        if (e.target.closest('.no-pan') || e.target.closest('#toolbar') || e.target.closest('.modal-panel')) return;
+        // [MODIFIED] Removed check for .box so we CAN pan from box body (as requested in v67)
 
         const isControl = e.target.closest('button') || e.target.tagName === 'INPUT';
         if (!isControl && (e.button === 0 || e.button === 1)) {
+            // Check if clicking title bar -> Drag Box instead of Pan
+            if (e.target.closest('.box-title-bar')) return;
+
             e.preventDefault(); 
             state.panning = true; 
             state.panStart = { x: e.clientX - state.offset.x, y: e.clientY - state.offset.y }; 
@@ -1324,7 +1412,7 @@
 
     // INIT
     addRootBox();
-    setInterval(performAutoSave, 10000);
+    // REMOVED AUTO SAVE TIMER
 </script>
 </body>
 </html>
