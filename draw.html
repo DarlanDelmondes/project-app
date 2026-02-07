@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Canvas v72 - Adaptive Zoom UI</title>
+    <title>Canvas v75 - Final Integrated System</title>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
         :root {
@@ -21,72 +21,290 @@
             --btn-save-pending: #f59e0b;
             --btn-save-hover-pending: #d97706;
 
-            /* UI SCALING VAR (Controlled by JS) */
+            /* UI Scaling (Controlled by JS) */
             --ui-scale: 1;
         }
 
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); }
-
-        /* UI Toolbar */
-        #ui-layer { position: fixed; top: 0; left: 0; width: 100%; height: 0; z-index: 9999; }
-        #toolbar {
-            position: absolute; top: 20px; left: 20px;
-            background: white; padding: 10px; border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; gap: 10px; align-items: center;
-            pointer-events: auto; flex-wrap: wrap; max-width: 90vw;
+        body, html { 
+            margin: 0; 
+            padding: 0; 
+            width: 100%; 
+            height: 100%; 
+            overflow: hidden; 
+            font-family: 'Segoe UI', sans-serif; 
+            background-color: var(--bg-color); 
         }
+
+        /* --- UI Toolbar --- */
+        #ui-layer { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 0; 
+            z-index: 9999; 
+        }
+        
+        #toolbar {
+            position: absolute; 
+            top: 20px; 
+            left: 20px;
+            background: white; 
+            padding: 10px; 
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
+            display: flex; 
+            gap: 10px; 
+            align-items: center;
+            pointer-events: auto; 
+            flex-wrap: wrap; 
+            max-width: 90vw;
+        }
+
         button { font-family: 'Segoe UI', sans-serif; }
         
-        button.btn-primary { background-color: var(--btn-save-default); color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; white-space: nowrap; transition: background 0.3s; }
-        button.btn-primary:hover { background-color: #1d4ed8; }
+        button.btn-primary { 
+            background-color: var(--btn-save-default); 
+            color: white; 
+            border: none; 
+            padding: 8px 16px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-weight: 600; 
+            white-space: nowrap; 
+            transition: background 0.3s; 
+        }
+        button.btn-primary:hover { 
+            background-color: #1d4ed8; 
+        }
         
-        button.btn-pending { border:none; border-radius: 10px; padding: 10px; animation: pulse 2s infinite; }
-        button.btn-pending:hover { cursor: pointer; animation: pulse 3s; }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); } 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); } }
-
-        button.btn-dark { background-color: #1e293b; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; white-space: nowrap;}
-        button.btn-dark:hover { background-color: #334155; }
-        button.btn-outline { background-color: white; color: #334155; border: 1px solid #cbd5e1; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; white-space: nowrap;}
-        button.btn-outline:hover { background-color: #f1f5f9; }
+        /* Botão Pendente (Pulsante) */
+        button.btn-pending { 
+            background-color: var(--btn-save-pending) !important; 
+            color: #fff !important; 
+            animation: pulse 2s infinite; 
+        }
+        button.btn-pending:hover { 
+            background-color: var(--btn-save-hover-pending) !important; 
+        }
         
-        #btn-mode.locked { background-color: #ef4444; color: white; border: none; }
-        .icon-btn { border: none; background: transparent; cursor: pointer; color: #64748b; padding: 4px; border-radius: 4px; transition: color 0.2s, background 0.2s; }
-        .icon-btn:hover { background: #e2e8f0; color: #0f172a; }
-        .btn-delete:hover { color: #ef4444; background: #fee2e2; }
+        @keyframes pulse { 
+            0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); } 
+            70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); } 
+            100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); } 
+        }
 
-        #autosave-status { font-size: 11px; color: #64748b; margin-left: 5px; min-width: 80px; text-align: right; }
+        button.btn-dark { 
+            background-color: #1e293b; 
+            color: white; 
+            border: none; 
+            padding: 8px 16px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-weight: 600; 
+            white-space: nowrap;
+        }
+        button.btn-dark:hover { 
+            background-color: #334155; 
+        }
+        
+        button.btn-outline { 
+            background-color: white; 
+            color: #334155; 
+            border: 1px solid #cbd5e1; 
+            padding: 8px 16px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-weight: 600; 
+            white-space: nowrap;
+        }
+        button.btn-outline:hover { 
+            background-color: #f1f5f9; 
+        }
+        
+        /* Post-it Button Style */
+        .btn-postit {
+            background-color: #fef9c3;
+            color: #854d0e;
+            border: 1px solid #fde047;
+        }
+        .btn-postit:hover {
+            background-color: #fde047;
+        }
+        
+        #btn-mode.locked { 
+            background-color: #ef4444; 
+            color: white; 
+            border: none; 
+        }
+        
+        .icon-btn { 
+            border: none; 
+            background: transparent; 
+            cursor: pointer; 
+            color: #64748b; 
+            padding: 4px; 
+            border-radius: 4px; 
+            transition: color 0.2s, background 0.2s; 
+        }
+        .icon-btn:hover { 
+            background: #e2e8f0; 
+            color: #0f172a; 
+        }
+        .btn-delete:hover { 
+            color: #ef4444; 
+            background: #fee2e2; 
+        }
 
-        /* TOAST */
-        #toast-container { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 20000; display: flex; flex-direction: column; gap: 10px; pointer-events: none; align-items: center; }
-        .toast { background: #1e293b; color: #f8fafc; padding: 12px 24px; border-radius: 50px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3); display: flex; align-items: center; gap: 15px; font-size: 14px; font-weight: 500; pointer-events: auto; animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); opacity: 0.95; }
-        .toast-action-btn { background: rgba(255,255,255,0.15); border: none; color: #fbbf24; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 12px; transition: background 0.2s; text-transform: uppercase; }
+        #autosave-status { 
+            font-size: 11px; 
+            color: #64748b; 
+            margin-left: 5px; 
+            min-width: 80px; 
+            text-align: right; 
+        }
+
+        /* --- TOAST --- */
+        #toast-container { 
+            position: fixed; 
+            bottom: 30px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            z-index: 20000; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 10px; 
+            pointer-events: none; 
+            align-items: center; 
+        }
+        .toast { 
+            background: #1e293b; 
+            color: #f8fafc; 
+            padding: 12px 24px; 
+            border-radius: 50px; 
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3); 
+            display: flex; 
+            align-items: center; 
+            gap: 15px; 
+            font-size: 14px; 
+            font-weight: 500; 
+            pointer-events: auto; 
+            animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            opacity: 0.95; 
+        }
+        .toast-action-btn { 
+            background: rgba(255,255,255,0.15); 
+            border: none; 
+            color: #fbbf24; 
+            padding: 6px 14px; 
+            border-radius: 20px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            font-size: 12px; 
+            transition: background 0.2s; 
+            text-transform: uppercase; 
+        }
         .toast-action-btn:hover { background: rgba(255,255,255,0.3); }
-        .toast-btn-yes { color: #4ade80; background: rgba(74, 222, 128, 0.1); } .toast-btn-yes:hover { background: rgba(74, 222, 128, 0.2); }
-        .toast-btn-no { color: #f87171; background: rgba(248, 113, 113, 0.1); } .toast-btn-no:hover { background: rgba(248, 113, 113, 0.2); }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 0.95; transform: translateY(0); } }
-        @keyframes fadeOut { to { opacity: 0; transform: translateY(-10px); } }
+        .toast-btn-yes { color: #4ade80; background: rgba(74, 222, 128, 0.1); } 
+        .toast-btn-yes:hover { background: rgba(74, 222, 128, 0.2); }
+        .toast-btn-no { color: #f87171; background: rgba(248, 113, 113, 0.1); } 
+        .toast-btn-no:hover { background: rgba(248, 113, 113, 0.2); }
+        
+        @keyframes slideUp { 
+            from { opacity: 0; transform: translateY(20px); } 
+            to { opacity: 0.95; transform: translateY(0); } 
+        }
+        @keyframes fadeOut { 
+            to { opacity: 0; transform: translateY(-10px); } 
+        }
 
-        /* DASHBOARD & JOURNAL OVERLAYS */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px); z-index: 10000; display: none; justify-content: center; align-items: center; pointer-events: auto; }
-        .modal-panel { background: white; width: 700px; max-height: 85vh; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); display: flex; flex-direction: column; overflow: hidden; }
-        .dash-header { padding: 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+        /* --- DASHBOARD & JOURNAL OVERLAYS --- */
+        .modal-overlay { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100vw; 
+            height: 100vh; 
+            background: rgba(0, 0, 0, 0.5); 
+            backdrop-filter: blur(4px); 
+            z-index: 10000; 
+            display: none; 
+            justify-content: center; 
+            align-items: center; 
+            pointer-events: auto; 
+        }
+        .modal-panel { 
+            background: white; 
+            width: 700px; 
+            max-height: 85vh; 
+            border-radius: 12px; 
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); 
+            display: flex; 
+            flex-direction: column; 
+            overflow: hidden; 
+        }
+        .dash-header { 
+            padding: 20px; 
+            border-bottom: 1px solid #e2e8f0; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
         .dash-title { font-size: 20px; font-weight: bold; color: #1e293b; }
         .dash-close { cursor: pointer; font-size: 24px; color: #64748b; }
         .dash-content { padding: 20px; overflow-y: auto; background: #f8fafc; flex-grow: 1; }
         
-        .project-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 10px; display: flex; align-items: center; transition: transform 0.1s, box-shadow 0.1s; }
+        .project-card { 
+            background: white; 
+            border: 1px solid #e2e8f0; 
+            border-radius: 8px; 
+            padding: 15px; 
+            margin-bottom: 10px; 
+            display: flex; 
+            align-items: center; 
+            transition: transform 0.1s, box-shadow 0.1s; 
+        }
         .project-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .p-info { flex-grow: 1; } .p-name { font-weight: bold; color: #334155; font-size: 16px; } .p-date { font-size: 12px; color: #94a3b8; } .p-actions { display: flex; gap: 10px; }
+        .p-info { flex-grow: 1; } 
+        .p-name { font-weight: bold; color: #334155; font-size: 16px; } 
+        .p-date { font-size: 12px; color: #94a3b8; } 
+        .p-actions { display: flex; gap: 10px; }
         .btn-load { background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
         .btn-trash { background: #fee2e2; color: #ef4444; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
 
-        /* JOURNAL STYLES */
-        .journal-group { margin-bottom: 20px; background: white; border-radius: 8px; border: 1px solid #e2e8f0; overflow: hidden; }
-        .journal-header { background: #f1f5f9; padding: 10px 15px; font-weight: bold; color: #334155; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; }
-        .journal-item { padding: 10px 15px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 10px; }
+        /* --- JOURNAL STYLES --- */
+        .journal-group { 
+            margin-bottom: 20px; 
+            background: white; 
+            border-radius: 8px; 
+            border: 1px solid #e2e8f0; 
+            overflow: hidden; 
+        }
+        .journal-header { 
+            background: #f1f5f9; 
+            padding: 10px 15px; 
+            font-weight: bold; 
+            color: #334155; 
+            border-bottom: 1px solid #e2e8f0; 
+            display: flex; 
+            justify-content: space-between; 
+        }
+        .journal-item { 
+            padding: 10px 15px; 
+            border-bottom: 1px solid #f1f5f9; 
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+        }
         .journal-item:last-child { border-bottom: none; }
-        .journal-tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; text-transform: uppercase; }
         
+        .journal-tag { 
+            font-size: 10px; 
+            padding: 2px 6px; 
+            border-radius: 4px; 
+            font-weight: bold; 
+            text-transform: uppercase; 
+        }
         .tag-todo { background: #f3f4f6; color: #64748b; border: 1px solid #cbd5e1; }
         .tag-doing { background: #fef3c7; color: #d97706; border: 1px solid #fcd34d; }
         .tag-overdue { background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; }
@@ -94,26 +312,65 @@
         .journal-text { flex-grow: 1; font-size: 14px; color: #1e293b; }
         .journal-meta { font-size: 12px; color: #64748b; display: flex; gap: 10px; align-items: center;}
         .journal-context { font-size: 11px; color: #94a3b8; font-style: italic; }
-        .journal-jump-btn { background: #e0f2fe; color: #0369a1; border: none; border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer; font-weight: bold; }
+        .journal-jump-btn { 
+            background: #e0f2fe; 
+            color: #0369a1; 
+            border: none; 
+            border-radius: 4px; 
+            padding: 4px 8px; 
+            font-size: 11px; 
+            cursor: pointer; 
+            font-weight: bold; 
+        }
         .journal-jump-btn:hover { background: #bae6fd; }
 
-        /* Viewport */
-        #viewport { width: 100vw; height: 100vh; overflow: hidden; cursor: grab; } #viewport:active { cursor: grabbing; }
+        /* --- Viewport & Grid --- */
+        #viewport { width: 100vw; height: 100vh; overflow: hidden; cursor: grab; } 
+        #viewport:active { cursor: grabbing; }
         #world { position: absolute; top: 0; left: 0; width: 0; height: 0; transform-origin: 0 0; }
-        .grid-background { position: absolute; top: -50000px; left: -50000px; width: 100000px; height: 100000px; background-image: radial-gradient(var(--grid-color) 1px, transparent 1px); background-size: 40px 40px; z-index: -1; pointer-events: none; }
-        #connections-layer { position: absolute; top: -50000px; left: -50000px; width: 100000px; height: 100000px; z-index: 500; pointer-events: none; overflow: visible; }
+        .grid-background { 
+            position: absolute; 
+            top: -50000px; 
+            left: -50000px; 
+            width: 100000px; 
+            height: 100000px; 
+            background-image: radial-gradient(var(--grid-color) 1px, transparent 1px); 
+            background-size: 40px 40px; 
+            z-index: -1; 
+            pointer-events: none; 
+        }
+        
+        #connections-layer { 
+            position: absolute; 
+            top: -50000px; 
+            left: -50000px; 
+            width: 100000px; 
+            height: 100000px; 
+            z-index: 500; 
+            pointer-events: none; 
+            overflow: visible; 
+        }
         .conn-visual { fill: none; stroke: #64748b; stroke-width: 2px; pointer-events: none; transition: stroke 0.2s, stroke-width 0.2s; }
         .conn-hitbox { fill: none; stroke: transparent; stroke-width: 25px; cursor: pointer; pointer-events: stroke; }
         .conn-group:hover .conn-visual { stroke: #3b82f6; }
         .drag-line { stroke: #3b82f6; stroke-width: 4; stroke-dasharray: 5,5; opacity: 0.8; }
         .proxy-line { stroke-dasharray: 4,4; } 
         .no-pan { pointer-events: auto !important; }
+        /* Strict class for elements that MUST capture click (like inputs) */
+        .no-pan-strict { pointer-events: auto !important; }
 
-        /* Boxes */
+        /* --- BOX STYLES --- */
         .box {
-            position: absolute; background: white; border: 2px solid var(--box-border); border-radius: 16px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05); display: flex; flex-direction: column; z-index: 10;
-            min-width: 200px; min-height: 180px; 
+            position: absolute; 
+            background: white; 
+            border: 2px solid var(--box-border); 
+            border-radius: 16px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
+            display: flex; 
+            flex-direction: column; 
+            z-index: 10;
+            min-width: 200px; 
+            min-height: 180px; 
             
             --dynamic-font-size: 24px; 
             --static-font-size: 16px; 
@@ -122,8 +379,19 @@
             cursor: grab; 
             transition: box-shadow 0.2s, border-color 0.2s, background-color 0.2s, width 0.8s cubic-bezier(0.25, 0.8, 0.25, 1), height 0.8s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
-        .box.highlight-focus { animation: flashFocus 1.5s ease-out infinite; box-shadow: 0 0 0 8px rgba(59, 130, 246, 0.4); border-color: #3b82f6; z-index: 2000; }
-        @keyframes flashFocus { 0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); } 50% { box-shadow: 0 0 0 15px rgba(59, 130, 246, 0); } 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); } }
+        
+        /* Focus Animation when jumping from Journal */
+        .box.highlight-focus { 
+            animation: flashFocus 1.5s ease-out infinite; 
+            box-shadow: 0 0 0 8px rgba(59, 130, 246, 0.4); 
+            border-color: #3b82f6; 
+            z-index: 2000; 
+        }
+        @keyframes flashFocus { 
+            0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); } 
+            50% { box-shadow: 0 0 0 15px rgba(59, 130, 246, 0); } 
+            100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); } 
+        }
 
         .no-transition { transition: none !important; }
         .box.selected { border-color: var(--handle-color); z-index: 100; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
@@ -152,28 +420,33 @@
             color: #1e293b !important;
         }
 
-        /* BALÃO - ADAPTIVE SCALING */
+        /* --- BALÃO DE AÇÕES --- */
         .actions-balloon {
-            position: absolute; top: -35px; right: 10px; 
-            background: #1e293b; border-radius: 50px; 
+            position: absolute; 
+            top: -35px; 
+            right: 10px; 
+            background: #1e293b; 
+            border-radius: 50px; 
             padding: 8px 12px; 
-            display: none; align-items: center; gap: 8px;
+            display: none; 
+            align-items: center; 
+            gap: 8px;
             box-shadow: 0 6px 12px rgba(0,0,0,0.3);
-            font-size: 14px; z-index: 20; 
+            font-size: 14px; 
+            z-index: 20; 
             
-            /* Logic for adaptive scale */
-            transform-origin: bottom right;
+            /* SCALING LOGIC */
+            transform-origin: bottom right; 
             transform: scale(var(--ui-scale));
             
             animation: popIn 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         
-        /* Updated PopIn to respect UI Scale */
         @keyframes popIn { 
             from { transform: scale(0); opacity: 0; } 
             to { transform: scale(var(--ui-scale)); opacity: 1; } 
         }
-
+        
         .box.hover-focused > .box-title-bar .actions-balloon { display: flex; }
         
         .actions-balloon .icon-btn { color: white; width: 28px; height: 28px; font-size: 14px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
@@ -214,8 +487,9 @@
             margin-bottom: 10px; background: rgba(255,255,255,0.6); padding: 8px; border-radius: 8px; border: 1px solid #cbd5e1; 
         }
         
-        .task-item { display: block; align-items: center; gap: 6px; margin-bottom: 5px; }
-        .task-status-toggle { display: inline-block; width: 14px; height: 14px; border-radius: 50%; border: 1px solid #94a3b8; cursor: pointer; flex-shrink: 0; background: white; }
+        .task-item { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+        
+        .task-status-toggle { width: 14px; height: 14px; border-radius: 50%; border: 1px solid #94a3b8; cursor: pointer; flex-shrink: 0; background: white; }
         .task-status-toggle.doing { background: #fbbf24; border-color: #d97706; }
         .task-status-toggle.done { background: #4ade80; border-color: #16a34a; }
         
@@ -246,6 +520,68 @@
         .box.collapsed-mode .task-summary-badge { display: block; }
         .task-summary-badge:empty { display: none !important; }
 
+        /* --- POST-IT NOTE STYLES --- */
+        .note {
+            position: absolute; 
+            background: #fef9c3; /* Yellow-100 */
+            border: 1px solid #fde047; /* Yellow-300 */
+            box-shadow: 2px 4px 6px rgba(0,0,0,0.1);
+            display: flex; 
+            flex-direction: column; 
+            z-index: 5;
+            min-width: 150px; 
+            min-height: 150px;
+            border-radius: 2px 2px 15px 2px; /* Folded corner effect */
+            transform: rotate(-1deg);
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: grab;
+        }
+        .note:hover { 
+            z-index: 100; 
+            transform: scale(1.02) rotate(0deg); 
+            box-shadow: 4px 8px 12px rgba(0,0,0,0.15); 
+        }
+        .note:active { cursor: grabbing; }
+        
+        .note-textarea {
+            width: 100%; 
+            height: 100%; 
+            resize: none; 
+            border: none; 
+            background: transparent;
+            font-family: 'Comic Sans MS', 'Marker Felt', sans-serif;
+            font-size: 16px; 
+            color: #4b5563; 
+            outline: none; 
+            padding: 15px;
+            box-sizing: border-box;
+            cursor: text;
+        }
+        
+        .note-delete {
+            position: absolute; 
+            top: -10px; 
+            right: -10px;
+            background: #ef4444; 
+            color: white; 
+            border-radius: 50%;
+            width: 24px; 
+            height: 24px; 
+            text-align: center; 
+            line-height: 24px;
+            cursor: pointer; 
+            font-size: 14px; 
+            font-weight: bold; 
+            display: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            z-index: 200;
+        }
+        .note:hover .note-delete { display: block; }
+        
+        body.read-only .note-textarea { pointer-events: none; }
+        body.read-only .note-delete { display: none !important; }
+
+
         .connector { position: absolute; width: 12px; height: 12px; background: white; border: 2px solid #3b82f6; border-radius: 50%; z-index: 600; opacity: 0; transition: opacity 0.2s, transform 0.2s; cursor: crosshair; pointer-events: auto; }
         .box:hover > .connector { opacity: 1; } .connector:hover { transform: scale(1.4); background: #3b82f6; } .c-top { top: -7px; left: 50%; transform: translateX(-50%); } .c-bottom { bottom: -7px; left: 50%; transform: translateX(-50%); } .c-left { left: -7px; top: 50%; transform: translateY(-50%); } .c-right { right: -7px; top: 50%; transform: translateY(-50%); }
         
@@ -257,9 +593,11 @@
         .resizer.bottom-left { left: 0; bottom: 0; cursor: nesw-resize; }
         .resizer.bottom-left::after { left: 6px; bottom: 6px; transform: scaleX(-1); }
         .box:hover > .resizer { opacity: 1; } 
+        .note:hover > .resizer { opacity: 1; }
         
         /* CLASS TO BLOCK PANNING */
         .no-pan { pointer-events: auto !important; }
+        .no-pan-strict { pointer-events: auto !important; }
 
         body.read-only .actions-balloon .btn-add, body.read-only .actions-balloon .btn-delete, 
         body.read-only .actions-balloon .btn-clone, body.read-only .actions-balloon .btn-font, 
@@ -281,6 +619,7 @@
 <div id="ui-layer">
     <div id="toolbar" class="no-pan">
         <button class="btn-primary" onclick="addRootBox()">+ Nova Caixa</button>
+        <button class="btn-outline btn-postit" onclick="addNote()">+ Nota</button>
         <div style="width: 1px; height: 30px; background: #ddd; margin: 0 5px;"></div>
         <button id="btn-mode" class="btn-outline" onclick="toggleEditMode()" title="Alternar Edição/Leitura">🔓 Edição</button>
         <div style="width: 1px; height: 30px; background: #ddd; margin: 0 5px;"></div>
@@ -358,7 +697,7 @@
     const svgLayer = document.getElementById('connections-layer');
     const tempLine = document.getElementById('temp-line');
 
-    // --- 2. HELPERS ---
+    // --- 2. HELPERS (Math, DOM, Lines) ---
     function screenToWorld(sx, sy) { 
         const rect = world.getBoundingClientRect(); 
         return { x: (sx - rect.left) / state.scale, y: (sy - rect.top) / state.scale }; 
@@ -439,7 +778,7 @@
         checkCascading();
         markUnsaved();
     }
-
+    
     // --- 3. PROJECT MGMT ---
     function markUnsaved() {
         hasUnsavedChanges = true;
@@ -468,6 +807,8 @@
     
     // --- 4. BOX LOGIC ---
     function calcDynamicFont(box) {
+        if(box.classList.contains('note')) return; 
+
         const input = box.querySelector('input.title');
         const textLen = Math.max(1, input.value.length); 
         
@@ -489,6 +830,7 @@
         box.style.setProperty('--static-font-size', (staticBase * manualScale) + 'px');
     }
 
+    // [UPDATED] Update Elastic Parent to consider NOTES as well
     function updateElasticParent(childrenContainer) {
         if (!childrenContainer || !childrenContainer.classList.contains('children-area')) return;
         const parentBox = childrenContainer.closest('.box'); if (!parentBox) return;
@@ -502,7 +844,8 @@
             return;
         }
         
-        const children = Array.from(childrenContainer.children).filter(c => c.classList.contains('box'));
+        // Include notes in children calculation
+        const children = Array.from(childrenContainer.children).filter(c => c.classList.contains('box') || c.classList.contains('note'));
         let maxX = 0; let maxY = 0;
         children.forEach(child => {
             const right = child.offsetLeft + child.offsetWidth; const bottom = child.offsetTop + child.offsetHeight;
@@ -516,6 +859,7 @@
         updateAllLines();
     }
     
+    // [UPDATED] Reparent Box (now handles notes too)
     function reparentBox(box, newParent) {
         const oldParent = box.parentElement;
         const boxRect = box.getBoundingClientRect();
@@ -554,6 +898,64 @@
         const pos = screenToWorld(window.innerWidth/2, window.innerHeight/2); createBox(world, pos.x - 130, pos.y - 110); 
     }
 
+    // --- NOTE LOGIC ---
+    function addNote() {
+        if(!state.isEditMode) return;
+        const pos = screenToWorld(window.innerWidth/2, window.innerHeight/2);
+        createNoteElement('note-' + Date.now(), "Nova Nota", pos.x, pos.y);
+        markUnsaved();
+    }
+    
+    // [NEW] Add note directly inside a box
+    function addNoteToBox(boxId) {
+        if(!state.isEditMode) return;
+        const box = document.getElementById(boxId);
+        const area = box.querySelector('.children-area');
+        // If box collapsed, open it
+        if(area.classList.contains('collapsed')) {
+             const btn = box.querySelector('.actions-balloon .btn-toggle');
+             performToggle(boxId, btn);
+        }
+        createNoteElement('note-' + Date.now(), "Nota Rápida", 20, 20, 150, 150, area);
+        updateElasticParent(area);
+        markUnsaved();
+    }
+
+    function createNoteElement(id, textVal, x, y, w = 150, h = 150, parent = world) {
+        const el = document.createElement('div');
+        el.className = 'note no-pan-strict'; 
+        el.id = id;
+        el.style.left = x + 'px'; 
+        el.style.top = y + 'px';
+        el.style.width = w + 'px'; 
+        el.style.height = h + 'px';
+        
+        el.innerHTML = `
+            <textarea class="note-textarea no-pan-strict" oninput="markUnsaved()">${textVal}</textarea>
+            <div class="note-delete no-pan-strict" onclick="deleteNote('${id}')">×</div>
+            <div class="resizer bottom-right no-pan-strict" onmousedown="initResize(event, '${id}', 'br')"></div>
+        `;
+        
+        // Dragging the note body (not textarea)
+        el.onmousedown = (e) => {
+            if(e.target === el) initDrag(e, id);
+        };
+        
+        parent.appendChild(el);
+        return el;
+    }
+
+    function deleteNote(id) {
+        if(!state.isEditMode) return;
+        const el = document.getElementById(id);
+        if(el) { 
+            const parent = el.parentElement;
+            el.remove(); 
+            if(parent && parent.classList.contains('children-area')) updateElasticParent(parent);
+            markUnsaved(); 
+        }
+    }
+
     function updateBoxSummary(boxIdOrElement) {
         const box = typeof boxIdOrElement === 'string' ? document.getElementById(boxIdOrElement) : boxIdOrElement;
         if (!box) return;
@@ -582,7 +984,7 @@
         const box = document.getElementById(boxId);
         const container = box.querySelector('.task-container');
         
-        // Se estiver visível, esconde. Se estiver escondido, mostra.
+        // Simple toggle visibility
         if (container.style.display === 'none') {
             container.style.display = 'block';
         } else {
@@ -840,6 +1242,7 @@
                     <div class="status-dot-btn dot-red no-pan" onclick="setStatus('${id}', 'red')" title="Crítico"></div>
                     <div class="separator"></div>
                     <button class="icon-btn btn-font no-pan" onclick="toggleTaskView('${id}')" title="Tarefas">📋</button>
+                    <button class="icon-btn btn-font no-pan" onclick="addNoteToBox('${id}')" title="Adicionar Nota">📝</button>
                     <div class="separator"></div>
                     <button class="icon-btn btn-font no-pan" onclick="adjustFontSize('${id}', -0.1)" title="Diminuir Texto">A-</button>
                     <button class="icon-btn btn-font no-pan" onclick="adjustFontSize('${id}', 0.1)" title="Aumentar Texto">A+</button>
@@ -1003,6 +1406,23 @@
         });
     }
 
+    function performAutoSave() {
+        if (!currentDrawingName) return; 
+        const data = serializeCanvas();
+        const db = getDB();
+        const existingIdx = db.findIndex(p => p.name === currentDrawingName);
+        const proj = { 
+            id: existingIdx !== -1 ? db[existingIdx].id : 'proj_' + Date.now(), 
+            name: currentDrawingName, updatedAt: Date.now(), data: data 
+        };
+        if (existingIdx !== -1) db[existingIdx] = proj; else db.push(proj);
+        setDB(db);
+        
+        const now = new Date();
+        const el = document.getElementById('autosave-status');
+        if(el) el.innerText = `Salvo: ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+    }
+
     function getDB() { return JSON.parse(localStorage.getItem('canvas_projects')) || []; }
     function setDB(db) { localStorage.setItem('canvas_projects', JSON.stringify(db)); }
     
@@ -1089,6 +1509,7 @@
     }
     function closeDashboard() { document.getElementById('dashboard-overlay').style.display = 'none'; }
     function newDrawing() { showConfirmToast("Criar novo desenho?", () => { document.querySelectorAll('.box').forEach(b => b.remove()); updateAllLines(true); connections = []; state = { ...state, scale: 1, panning: false, offset: {x:0, y:0} }; updateTransform(); currentDrawingName = null; addRootBox(); closeDashboard(); showToast("Novo desenho criado."); }); }
+    function deleteProject(id) { showConfirmToast("Excluir projeto?", () => { let db = getDB(); db = db.filter(p => p.id !== id); setDB(db); openDashboard(); showToast("Excluído."); }); }
     function saveCurrentDrawing() {
         let name = currentDrawingName; if (!name) { name = prompt("Nome do projeto:", "Projeto"); if (!name) return; currentDrawingName = name; }
         
@@ -1126,16 +1547,18 @@
         if(el) el.innerText = `Salvo: ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
     }
     
-    function loadProject(id) { const proj = getDB().find(p => p.id === id); if (!proj) return; document.querySelectorAll('.box').forEach(b => b.remove()); updateAllLines(true); connections = []; currentDrawingName = proj.name; deserializeCanvas(proj.data); closeDashboard(); showToast(`Carregado: ${proj.name}`); }
+    function loadProject(id) { const proj = getDB().find(p => p.id === id); if (!proj) return; document.querySelectorAll('.box, .note').forEach(b => b.remove()); updateAllLines(true); connections = []; currentDrawingName = proj.name; deserializeCanvas(proj.data); closeDashboard(); showToast(`Carregado: ${proj.name}`); }
 
     function serializeCanvas() {
-        const boxes = [];
+        const items = [];
+        
+        // Save Boxes
         document.querySelectorAll('.box').forEach(box => {
             const parent = box.parentElement.closest('.box');
             // Extract Tasks
             const tasks = [];
             box.querySelectorAll('.task-item').forEach(tItem => {
-                // Check direct ownership
+                // Strict check: only tasks belonging to this box
                 if (tItem.closest('.box') === box) {
                     tasks.push({
                         text: tItem.querySelector('.task-input').value,
@@ -1151,7 +1574,8 @@
             if(box.classList.contains('red-state')) status = 'red';
             else if(box.classList.contains('green-state')) status = 'green';
 
-            boxes.push({
+            items.push({
+                type: 'box',
                 id: box.id, x: box.style.left, y: box.style.top, w: box.style.width, h: box.style.height,
                 mw: box.dataset.mw, mh: box.dataset.mh, title: box.querySelector('input.title').value,
                 status: status,
@@ -1162,45 +1586,78 @@
                 tasks: tasks
             });
         });
-        return { boxes, connections, viewport: state };
+        
+        // Save Notes
+        document.querySelectorAll('.note').forEach(note => {
+            const parent = note.parentElement.closest('.box');
+            items.push({
+                type: 'note',
+                id: note.id,
+                x: note.style.left,
+                y: note.style.top,
+                w: note.style.width,
+                h: note.style.height,
+                text: note.querySelector('.note-textarea').value,
+                parentId: parent ? parent.id : null
+            });
+        });
+
+        return { boxes: items, connections, viewport: state };
     }
     
     function deserializeCanvas(data) {
         state = { ...data.viewport, isEditMode: true }; 
         document.body.classList.remove('read-only'); document.getElementById('btn-mode').innerText = "🔓 Edição"; document.getElementById('btn-mode').classList.remove('locked');
         updateTransform();
+        
         const boxMap = {};
-        data.boxes.forEach(d => {
-            const el = createBoxElement(d.id, d.title);
-            el.style.left = d.x; el.style.top = d.y; el.style.width = d.w; el.style.height = d.h;
-            if(d.mw) el.dataset.mw = d.mw; if(d.mh) el.dataset.mh = d.mh;
-            
-            if(d.status === 'red') el.classList.add('red-state');
-            else if(d.status === 'green') el.classList.add('green-state');
-            
-            if(d.fontScale) el.dataset.fontScale = d.fontScale; else el.dataset.fontScale = 1;
-            
-            if(d.collapsed) {
-                el.classList.add('collapsed-mode');
-                el.querySelector('.actions-balloon .btn-toggle').innerText = '▶';
-            }
-            if(d.showTasks) el.classList.add('show-tasks');
+        
+        // Data contains mixed types now in 'boxes' array or possibly 'items' if we renamed, 
+        // but 'boxes' is legacy name used in previous versions, so we reuse it for generic items.
+        // If 'boxes' is undefined, data structure might be old or empty.
+        const items = data.boxes || [];
 
-            if(d.tasks && d.tasks.length > 0) {
+        items.forEach(d => {
+            if(d.type === 'note') {
+                const el = createNoteElement(d.id, d.text, parseFloat(d.x), parseFloat(d.y), parseFloat(d.w), parseFloat(d.h));
+                boxMap[d.id] = { el, parentId: d.parentId };
+            } else {
+                // It's a box (default)
+                const el = createBoxElement(d.id, d.title);
+                el.style.left = d.x; el.style.top = d.y; el.style.width = d.w; el.style.height = d.h;
+                if(d.mw) el.dataset.mw = d.mw; if(d.mh) el.dataset.mh = d.mh;
+                
+                if(d.status === 'red') el.classList.add('red-state');
+                else if(d.status === 'green') el.classList.add('green-state');
+                
+                if(d.fontScale) el.dataset.fontScale = d.fontScale; else el.dataset.fontScale = 1;
+                
+                if(d.collapsed) {
+                    el.classList.add('collapsed-mode');
+                    el.querySelector('.actions-balloon .btn-toggle').innerText = '▶';
+                }
+                
+                // Show tasks logic - default block now, but respect old toggle if needed
+                // Actually we just ensure container is block
                 const tContainer = el.querySelector('.task-container');
-                // Ensure container is visible since we force block
-                tContainer.style.display = 'block'; 
-                d.tasks.forEach(t => renderTask(tContainer, t.text, t.status, t.owner, t.date));
-                updateBoxSummary(el);
-            }
+                tContainer.style.display = 'block';
 
-            boxMap[d.id] = { el, parentId: d.parentId }; 
+                if(d.tasks && d.tasks.length > 0) {
+                    d.tasks.forEach(t => renderTask(tContainer, t.text, t.status, t.owner, t.date));
+                    updateBoxSummary(el);
+                }
+
+                boxMap[d.id] = { el, parentId: d.parentId }; 
+            }
         });
+        
+        // Re-parent boxes
         Object.values(boxMap).forEach(item => { 
             if (item.parentId && boxMap[item.parentId]) boxMap[item.parentId].el.querySelector('.children-area').appendChild(item.el); 
             else world.appendChild(item.el); 
-            calcDynamicFont(item.el);
+            if(item.el.classList.contains('box')) calcDynamicFont(item.el);
         });
+        
         data.connections.forEach(c => { 
             if(document.getElementById(c.sid) && document.getElementById(c.tid)) addConnection(c.sid, c.spos, c.tid, c.tpos, c.id); 
         });
@@ -1308,7 +1765,8 @@
         if(!state.isEditMode) return;
         
         // Don't drag if clicking in any "no-pan" element (buttons, inputs)
-        if (e.target.closest('.no-pan')) return;
+        // Also note-delete, note-textarea
+        if (e.target.closest('.no-pan') || e.target.closest('.no-pan-strict') || e.target.closest('#toolbar') || e.target.closest('.modal-panel')) return;
 
         e.stopPropagation(); 
         dragItem = document.getElementById(id); dragItem.style.zIndex = 999; 
@@ -1362,7 +1820,12 @@
             if(currentDropTarget) { currentDropTarget.classList.remove('drop-active'); currentDropTarget = null; }
             const target = elementsBelow.find(el => el.classList.contains('children-area'));
             if (target && !dragItem.contains(target)) { currentDropTarget = target; currentDropTarget.classList.add('drop-active'); }
-            updateElasticParent(dragItem.parentElement); updateAllLines();
+            
+            // Only update elastic if dragging a box (notes don't have parents)
+            if(dragItem.classList.contains('box')) {
+                updateElasticParent(dragItem.parentElement); 
+                updateAllLines();
+            }
         }
         if (resizeItem) {
             e.preventDefault();
@@ -1373,12 +1836,12 @@
             let newW, newH, newLeft;
 
             if (state.resizeDir === 'br') {
-                newW = Math.max(200, startInt.w + dx);
-                newH = Math.max(80, startInt.h + dy);
+                newW = Math.max(150, startInt.w + dx); // min size
+                newH = Math.max(150, startInt.h + dy);
                 newLeft = startInt.left; // Left doesn't change
             } else if (state.resizeDir === 'bl') {
-                newW = Math.max(200, startInt.w - dx);
-                newH = Math.max(80, startInt.h + dy);
+                newW = Math.max(150, startInt.w - dx);
+                newH = Math.max(150, startInt.h + dy);
                 newLeft = startInt.left + (startInt.w - newW); // Adjust left to compensate width change
             }
 
@@ -1391,13 +1854,14 @@
             resizeItem.style.height = newH + 'px';
             if (state.resizeDir === 'bl') resizeItem.style.left = newLeft + 'px';
 
-            resizeItem.dataset.mw = newW; 
-            resizeItem.dataset.mh = newH;
-            
-            calcDynamicFont(resizeItem); 
-            updateElasticParent(resizeItem.querySelector('.children-area')); 
-            updateElasticParent(resizeItem.parentElement); 
-            updateAllLines();
+            if(resizeItem.classList.contains('box')) {
+                resizeItem.dataset.mw = newW; 
+                resizeItem.dataset.mh = newH;
+                calcDynamicFont(resizeItem); 
+                updateElasticParent(resizeItem.querySelector('.children-area')); 
+                updateElasticParent(resizeItem.parentElement); 
+                updateAllLines();
+            }
         }
         if (isConnecting) { const off = -50000; tempLine.setAttribute('d', `M ${startInt.sx-off} ${startInt.sy-off} L ${wp.x-off} ${wp.y-off}`); }
     });
@@ -1405,14 +1869,17 @@
     window.addEventListener('mouseup', (e) => {
         if (resizeItem) {
             resizeItem.classList.remove('no-transition');
-            markUnsaved(); // [CHANGE] Resize done
+            markUnsaved(); 
         }
         document.querySelectorAll('.drop-active').forEach(el => el.classList.remove('drop-active'));
         if (dragItem) {
             if (state.dragThresholdMet) {
-                if (currentDropTarget && currentDropTarget !== dragItem.parentElement) reparentBox(dragItem, currentDropTarget);
-                else if (!currentDropTarget && dragItem.parentElement !== world) reparentBox(dragItem, world);
-                markUnsaved(); // [CHANGE] Move done
+                // Re-parent logic for boxes AND NOTES
+                if(dragItem.classList.contains('box') || dragItem.classList.contains('note')) {
+                    if (currentDropTarget && currentDropTarget !== dragItem.parentElement) reparentBox(dragItem, currentDropTarget);
+                    else if (!currentDropTarget && dragItem.parentElement !== world) reparentBox(dragItem, world);
+                }
+                markUnsaved(); 
             }
             dragItem.style.zIndex = '';
         }
@@ -1437,44 +1904,21 @@
     function updateTransform() { 
         world.style.transform = `translate(${state.offset.x}px, ${state.offset.y}px) scale(${state.scale})`; 
         zoomInd.innerText = Math.round(state.scale * 100) + '%'; 
-        
-        let uiScale = 1;
-        if (state.scale <= 0.8 && state.scale > 0.2) {
-            uiScale = 1.5;
-        } else if (state.scale <= 0.2) {
-            uiScale = 7.0;
-        }
+        let uiScale = 1; if (state.scale <= 0.7 && state.scale > 0.4) { uiScale = 1.5; } else if (state.scale <= 0.4) { uiScale = 2.0; }
         document.documentElement.style.setProperty('--ui-scale', uiScale);
     }
     
-    viewport.addEventListener('wheel', (e) => {
-        e.preventDefault();
-        const dir = e.deltaY > 0 ? -1 : 1;
-        let newScale = state.scale + (dir * 0.1 * state.scale);
-        newScale = Math.min(Math.max(0.1, newScale), 5);
-        const rect = viewport.getBoundingClientRect();
-        const mx = e.clientX - rect.left; const my = e.clientY - rect.top; 
-        const worldXBefore = (mx - state.offset.x) / state.scale;
-        const worldYBefore = (my - state.offset.y) / state.scale;
-        state.scale = newScale;
-        state.offset.x = mx - (worldXBefore * state.scale);
-        state.offset.y = my - (worldYBefore * state.scale);
-        updateTransform();
-    }, { passive: false });
+    viewport.addEventListener('wheel', (e) => { e.preventDefault(); const dir = e.deltaY > 0 ? -1 : 1; let newScale = state.scale + (dir * 0.1 * state.scale); newScale = Math.min(Math.max(0.1, newScale), 5); const rect = viewport.getBoundingClientRect(); const mx = e.clientX - rect.left; const my = e.clientY - rect.top; const worldXBefore = (mx - state.offset.x) / state.scale; const worldYBefore = (my - state.offset.y) / state.scale; state.scale = newScale; state.offset.x = mx - (worldXBefore * state.scale); state.offset.y = my - (worldYBefore * state.scale); updateTransform(); }, { passive: false });
 
-    // FIXED: Allow pan even on box body, only block on controls
+    // DRAG LOGIC (UPDATED FOR NOTES AS CHILDREN)
     viewport.addEventListener('mousedown', (e) => {
         if (e.target.closest('.no-pan') || e.target.closest('.no-pan-strict') || e.target.closest('#toolbar') || e.target.closest('.modal-panel')) return;
-
-        const isControl = e.target.closest('button') || e.target.tagName === 'INPUT';
+        const isControl = e.target.closest('button') || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
         if (!isControl && (e.button === 0 || e.button === 1)) {
-            // Check if clicking title bar -> Drag Box instead of Pan
-            if (e.target.closest('.box-title-bar')) return;
-
-            e.preventDefault(); 
-            state.panning = true; 
-            state.panStart = { x: e.clientX - state.offset.x, y: e.clientY - state.offset.y }; 
-            viewport.style.cursor = 'grabbing';
+            if (e.target.closest('.box-title-bar')) return; 
+            // Only block pan if note body (and allow drag)
+            if (e.target.closest('.note')) return; 
+            e.preventDefault(); state.panning = true; state.panStart = { x: e.clientX - state.offset.x, y: e.clientY - state.offset.y }; viewport.style.cursor = 'grabbing';
         }
     });
     window.addEventListener('mousemove', (e) => { if (state.panning) { e.preventDefault(); state.offset.x = e.clientX - state.panStart.x; state.offset.y = e.clientY - state.panStart.y; updateTransform(); } });
@@ -1483,7 +1927,6 @@
 
     // INIT
     addRootBox();
-    // No auto-save timer
 </script>
 </body>
 </html>
