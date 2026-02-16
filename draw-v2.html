@@ -420,13 +420,58 @@ button.btn-pending:hover {
         .no-transition { transition: none !important; }
         .box.selected { border-color: var(--handle-color); z-index: 100; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
         
-        .box-title-bar {
-            height: var(--header-height); background: transparent; border-radius: 10px 10px 0 0; 
-            display: flex; align-items: center; justify-content: center;
-            padding: 25px 15px 15px 15px; 
-            cursor: move; user-select: none; flex-shrink: 0; 
-            position: relative; 
-        }
+/* Cabeçalho agora organiza itens em coluna (Caminho em cima, Título embaixo) */
+.box-title-bar {
+    min-height: var(--header-height);
+    height: auto; 
+    
+    background: rgba(255, 255, 255, 0.95);
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    backdrop-filter: blur(4px);
+    
+    border-radius: 14px 14px 0 0;
+    
+    /* MUDANÇA: Flex Column para empilhar o caminho e o título */
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center;
+    
+    padding: 8px 15px; /* Padding ajustado */
+    cursor: move; 
+    user-select: none; 
+    flex-shrink: 0; 
+    position: relative; 
+    z-index: 50; 
+    will-change: transform;
+    transition: background 0.2s;
+}
+
+/* Novo estilo para a trilha de navegação */
+.context-path {
+    font-size: 10px;
+    color: #64748b;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+    width: 100%;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+    opacity: 0; /* Começa invisível */
+    height: 0;  /* Começa sem ocupar espaço */
+    transition: opacity 0.3s, height 0.3s;
+}
+
+/* Quando tiver conteúdo, aparece */
+.context-path.visible {
+    opacity: 1;
+    height: 14px;
+    margin-bottom: 4px;
+}
         .box-title-bar:active { cursor: grabbing; }
         
         input.title { 
@@ -436,6 +481,14 @@ button.btn-pending:hover {
             cursor: move; text-align: center; font-family: 'Segoe UI', sans-serif;
             pointer-events: none; 
             font-size: var(--static-font-size);
+
+            position: relative; /* Necessário para o translateX funcionar */
+    will-change: transform; /* Otimiza a performance do movimento */
+    transition: font-size 0.2s, padding 0.2s, color 0.3s; /* REMOVA 'transform' daqui para não ter atraso/lag no arrasto */
+    
+    /* Garante que o texto não saia para fora da barra em casos extremos */
+    max-width: 95%; 
+    margin: 0 auto;
         }
         input.title.editing { 
             pointer-events: auto; cursor: text; 
@@ -1100,7 +1153,84 @@ button.btn-pending:hover {
         updateAllLines();
         markUnsaved();
     }
-
+    function updateStickyHeaders() {
+        const toolbarOffset = 70; // Espaço do topo (toolbar)
+        const screenW = window.innerWidth;
+        const paddingX = 40; // Margem lateral para o texto não grudar na borda da tela
+    
+        document.querySelectorAll('.box').forEach(box => {
+            // Ignora caixas fechadas
+            if (box.classList.contains('collapsed-mode')) {
+                 const bar = box.querySelector('.box-title-bar');
+                 const title = box.querySelector('.title');
+                 if(bar) bar.style.transform = 'none';
+                 if(title) title.style.transform = 'none';
+                 return;
+            }
+    
+            const rect = box.getBoundingClientRect();
+            const titleBar = box.querySelector('.box-title-bar');
+            const titleInput = box.querySelector('.title');
+            
+            if (!titleBar || !titleInput) return;
+    
+            // --- 1. CÁLCULO VERTICAL (Barra desce) ---
+            let shiftY = 0;
+            
+            // Se o topo da caixa subiu além da toolbar, mas o fundo ainda está visível
+            if (rect.top < toolbarOffset && rect.bottom > toolbarOffset) {
+                shiftY = toolbarOffset - rect.top;
+                
+                // Limite: Não deixa a barra descer mais que a própria altura da caixa
+                const maxShiftY = rect.height - titleBar.offsetHeight - 10;
+                if (shiftY > maxShiftY) shiftY = maxShiftY;
+            }
+            
+            // Aplica o movimento vertical NA BARRA
+            titleBar.style.transform = `translateY(${shiftY / state.scale}px)`;
+    
+    
+            // --- 2. CÁLCULO HORIZONTAL (Texto segue você) ---
+            let shiftX = 0;
+    
+            // Verifica se a caixa está parcialmente fora da tela horizontalmente
+            const isOverflowingLeft = rect.left < 0;
+            const isOverflowingRight = rect.right > screenW;
+    
+            if (isOverflowingLeft || isOverflowingRight) {
+                // Define a área visível da caixa
+                const visibleLeft = Math.max(0, rect.left);
+                const visibleRight = Math.min(screenW, rect.right);
+                const visibleWidth = visibleRight - visibleLeft;
+    
+                // Só move se tiver espaço suficiente visível para ler algo
+                if (visibleWidth > 100) {
+                    // Onde é o centro "natural" da caixa (onde o texto está agora)
+                    const boxCenterX = rect.left + (rect.width / 2);
+                    
+                    // Onde é o centro da parte "visível" na tela
+                    const visibleCenterX = visibleLeft + (visibleWidth / 2);
+    
+                    // A diferença é o quanto temos que mover
+                    shiftX = visibleCenterX - boxCenterX;
+    
+                    // Limite de segurança: O texto não pode sair de dentro da caixa
+                    // (Impede que o texto flutue para fora se a caixa for estreita demais no zoom)
+                    const safeZone = (rect.width / 2) - (titleInput.offsetWidth / 2) - 20;
+                    
+                    // Clamp (Trava) o movimento dentro da zona segura da caixa
+                    // Isso considera a escala, pois o offsetWidth é em pixels de tela * escala
+                    // Mas aqui trabalhamos com coordenadas de tela, então ok.
+                    if (shiftX > safeZone) shiftX = safeZone;
+                    if (shiftX < -safeZone) shiftX = -safeZone;
+                }
+            }
+    
+            // Aplica o movimento horizontal NO INPUT DE TEXTO
+            // Dividimos pelo scale porque o transform acontece no "mundo" do zoom
+            titleInput.style.transform = `translateX(${shiftX / state.scale}px)`;
+        });
+    }
     // --- JOURNAL LOGIC ---
     function openJournal() {
         const content = document.getElementById('journal-content');
@@ -1259,6 +1389,7 @@ button.btn-pending:hover {
         el.dataset.fontScale = "1"; 
         el.innerHTML = `
             <div class="box-title-bar" onmousedown="initDrag(event, '${id}')" ondblclick="enableTitleEdit('${id}')">
+                <div class="context-path"></div> 
                 <input class="title" value="${titleVal}" placeholder="Nome..." onblur="disableTitleEdit('${id}')" oninput="calcDynamicFont(this.closest('.box')); markUnsaved();" readonly>
                 <div class="task-summary-badge"></div>
                 <div class="actions-balloon no-pan">
@@ -1724,6 +1855,50 @@ button.btn-pending:hover {
         showToast("Página de leitura criada!");
     }
 
+    function updateBreadcrumbs() {
+        const toolbarHeight = 70; // Altura da barra superior
+        
+        document.querySelectorAll('.box').forEach(box => {
+            // Ignora caixas fechadas
+            if (box.classList.contains('collapsed-mode')) return;
+    
+            const pathEl = box.querySelector('.context-path');
+            if (!pathEl) return;
+    
+            let ancestors = [];
+            let currentParent = box.parentElement.closest('.box');
+    
+            // Sobe a hierarquia procurando todos os pais
+            while (currentParent) {
+                const parentRect = currentParent.getBoundingClientRect();
+                const parentTitleVal = currentParent.querySelector('.title').value;
+    
+                // A MÁGICA:
+                // Só adiciona na lista se o topo do pai já passou (subiu) da toolbar.
+                // Ou seja: "Se eu não consigo ver o título do pai, coloque-o na lista".
+                if (parentRect.top < toolbarHeight) {
+                    ancestors.unshift(parentTitleVal); // Adiciona no começo da lista
+                }
+    
+                currentParent = currentParent.parentElement.closest('.box');
+            }
+    
+            // Atualiza o visual
+            if (ancestors.length > 0) {
+                // Cria string tipo "Projeto A > Sprint 1 >"
+                pathEl.innerText = ancestors.join(' > ');
+                pathEl.classList.add('visible');
+                
+                // Ajuste fino: Se o caminho for muito longo, mostra só os últimos 2
+                if (ancestors.length > 3) {
+                     pathEl.innerText = '... > ' + ancestors.slice(-2).join(' > ');
+                }
+            } else {
+                pathEl.classList.remove('visible');
+            }
+        });
+    }
+
     function deleteConnection(connId) {
         if(!state.isEditMode) return;
         showConfirmToast("Remover conexão?", () => {
@@ -2150,48 +2325,42 @@ function getDepth(box) {
     }
     return depth;
 }
+// Aplica o zoom semântico SOMENTE na caixa alvo
+function applySemanticZoomToTarget(box, currentZoom) {
+    if (!box) return;
 
-function applySemanticZoom() {
-    const z = state.scale;
-    const boxes = document.querySelectorAll('.box');
-    
-    // CONFIGURAÇÃO DE NÍVEIS
-    // < 40%: Mostra só a Raiz (Nível 0)
-    // < 70%: Mostra Raiz e Filhos (Nível 0 e 1)
-    // >= 70%: Mostra tudo (Nível 100)
+    // REGRAS DE VISIBILIDADE (Mesmas de antes)
+    // < 40%: Deveria mostrar só a Raiz (Nível 0)
+    // < 70%: Deveria mostrar Raiz e Filhos (Nível 0 e 1)
+    // >= 70%: Mostra tudo
     
     let maxVisibleDepth = 100; 
     
-    if (z < 0.4) {
-        maxVisibleDepth = 0; // Modo Mapa: Só a Raiz
-    } else if (z < 0.7) {
-        maxVisibleDepth = 1; // Modo Visão Geral: Raiz e Filhos imediatos
+    if (currentZoom < 0.4) {
+        maxVisibleDepth = 0; 
+    } else if (currentZoom < 0.7) {
+        maxVisibleDepth = 1; 
     }
 
-    boxes.forEach(box => {
-        const depth = getDepth(box);
-        const area = document.getElementById('area-' + box.id);
-        const btn = box.querySelector('.actions-balloon .btn-toggle');
-        
-        // Verifica se está fechado atualmente (tem a classe collapsed)
-        const isClosed = area.classList.contains('collapsed');
+    const depth = getDepth(box);
+    const area = document.getElementById('area-' + box.id);
+    const btn = box.querySelector('.actions-balloon .btn-toggle');
+    const isClosed = area.classList.contains('collapsed');
 
-        // LÓGICA DE FECHAR (Zoom Out)
-        // Se a profundidade da caixa é maior que o permitido E ela está ABERTA
-        if (depth > maxVisibleDepth && !isClosed) {
-            // Força o fechamento usando a função padrão
-            performToggle(box.id, btn);
-        }
-        
-        // LÓGICA DE ABRIR (Zoom In)
-        // Se a profundidade é permitida E ela está FECHADA
-        else if (depth <= maxVisibleDepth && isClosed) {
-            // Força a abertura
-            performToggle(box.id, btn);
-        }
-    });
+    // APLICAR LÓGICA APENAS NA CAIXA HOVERED
+    
+    // 1. Lógica de FECHAR (Zoom Out)
+    // Se a caixa é profunda demais para o zoom atual e está aberta -> FECHA
+    if (depth > maxVisibleDepth && !isClosed) {
+        performToggle(box.id, btn);
+    }
+    
+    // 2. Lógica de ABRIR (Zoom In)
+    // Se a caixa é permitida neste zoom e está fechada -> ABRE
+    else if (depth <= maxVisibleDepth && isClosed) {
+        performToggle(box.id, btn);
+    }
 }
-
 
     // --- INTERACTIONS ---
     function initDrag(e, id) {
@@ -2334,17 +2503,40 @@ function applySemanticZoom() {
         }
     });
     
-    // --- GRAPHICS & ZOOM ---
     function updateTransform() { 
         world.style.transform = `translate(${state.offset.x}px, ${state.offset.y}px) scale(${state.scale})`; 
         zoomInd.innerText = Math.round(state.scale * 100) + '%'; 
-        let uiScale = 1; if (state.scale <= 0.7 && state.scale > 0.4) { uiScale = 1.5; } else if (state.scale <= 0.4) { uiScale = 2.0; }
-        document.documentElement.style.setProperty('--ui-scale', uiScale);
-    }
+        
+        // --- LÓGICA DE ESCALA AGRESSIVA ---
+        let uiScale = 1; 
+        
+        // Se o zoom for menor que 100%, começamos a aumentar o balão
+        if (state.scale < 1) {
+            // Fórmula: Inverso do zoom multiplicado por um fator de ajuste (0.6)
+            // Isso tenta manter o balão com o mesmo tamanho visual de pixels na tela
+            uiScale = (1 / state.scale) * 0.6;
+            
+            // Travas de segurança:
+            // Mínimo 1x (não diminui se der zoom in)
+            // Máximo 5x (para não cobrir a tela inteira se der muito zoom out)
+            uiScale = Math.max(1, Math.min(5, uiScale));
+        }
+        
+        // Se quiser garantir saltos fixos em vez de crescimento suave, use este bloco (opcional):
+        /*
+        if (state.scale < 0.8) uiScale = 1.5;
+        if (state.scale < 0.5) uiScale = 2.5;
+        if (state.scale < 0.3) uiScale = 4.0;
+        */
     
+        document.documentElement.style.setProperty('--ui-scale', uiScale);
+        
+        updateBreadcrumbs(); 
+    }
     viewport.addEventListener('wheel', (e) => { 
         e.preventDefault(); 
         
+        // 1. Calcula o novo Zoom
         const dir = e.deltaY > 0 ? -1 : 1; 
         let newScale = state.scale + (dir * 0.1 * state.scale); 
         newScale = Math.min(Math.max(0.1, newScale), 5); 
@@ -2362,11 +2554,21 @@ function applySemanticZoom() {
         
         updateTransform(); 
         
-        // CHAMA A FUNÇÃO CORRIGIDA
-        applySemanticZoom(); 
+        // 2. DETECTA O ELEMENTO SOB O MOUSE
+        // Pega o elemento mais profundo na posição do cursor
+        const hoveredElement = document.elementFromPoint(e.clientX, e.clientY);
+        
+        // Verifica se é uma caixa ou está dentro de uma caixa
+        if (hoveredElement) {
+            const targetBox = hoveredElement.closest('.box');
+            
+            // Se encontrou uma caixa sob o mouse, aplica a mágica SÓ NELA
+            if (targetBox) {
+                applySemanticZoomToTarget(targetBox, state.scale);
+            }
+        }
     
     }, { passive: false });
-
     // DRAG LOGIC (UPDATED FOR NOTES AS CHILDREN)
     viewport.addEventListener('mousedown', (e) => {
         if (e.target.closest('.no-pan') || e.target.closest('.no-pan-strict') || e.target.closest('#toolbar') || e.target.closest('.modal-panel')) return;
