@@ -840,6 +840,125 @@ body.filtering .box.highlight-focus { animation: none !important; box-shadow: no
             cursor: text;
         }
 
+/* --- CONTAINER DE CARDS LADO A LADO --- */
+.insights-container {
+    display: flex;
+    flex-direction: row; /* Garante um ao lado do outro */
+    flex-wrap: nowrap;   /* Impede que quebrem para a linha de baixo */
+    gap: 15px;
+    margin-bottom: 25px;
+    overflow-x: auto;    /* Permite scroll horizontal se houver muitos cards */
+    padding: 10px 5px;
+    scroll-behavior: smooth;
+}
+/* --- CONTAINER ESTILIZADO --- */
+.insights-container {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 20px;
+    margin-bottom: 30px;
+    overflow-x: auto;
+    padding: 15px 5px;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+}
+
+/* --- CARD EXECUTIVO --- */
+.insight-card {
+    flex: 0 0 280px;
+    background: linear-gradient(145deg, #ffffff, #f8fafc);
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.insight-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    border-color: #3b82f6;
+}
+
+/* Faixa Lateral de Status */
+.insight-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 6px;
+    border-radius: 16px 0 0 16px;
+}
+
+/* Cores por Tipo */
+.priority-high::before { background: #ef4444; }
+.priority-mid::before { background: #f59e0b; }
+.priority-low::before { background: #3b82f6; }
+.type-label-critical::before { background: #be123c; }
+.type-label-attention::before { background: #b45309; }
+
+/* Conteúdo */
+.insight-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 1;
+}
+
+.insight-type-tag {
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #64748b;
+    margin-bottom: 6px;
+}
+
+.insight-name {
+    font-size: 16px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.2;
+}
+
+.insight-reason {
+    font-size: 12px;
+    color: #475569;
+    font-weight: 500;
+}
+
+/* --- NÚMERO COM ANIMAÇÃO CONSTANTE --- */
+.insight-number {
+    font-size: 42px;
+    font-weight: 900;
+    font-family: 'Inter', sans-serif;
+    letter-spacing: -2px;
+    z-index: 1;
+    
+    /* Animação Infinita: Salto e Pulsação */
+    animation: executiveFloat 3s ease-in-out infinite;
+    will-change: transform, filter;
+}
+
+@keyframes executiveFloat {
+    0%, 100% {
+        transform: translateY(0) scale(1);
+        filter: drop-shadow(0 5px 5px rgba(0,0,0,0.1));
+    }
+    50% {
+        transform: translateY(-12px) scale(1.05);
+        filter: drop-shadow(0 15px 10px rgba(0,0,0,0.15));
+    }
+}
+
+
+
+
 /* --- SUB-CABEÇALHOS DO JORNAL --- */
 .journal-subheader {
     background: #f8fafc; /* Cinza muito claro */
@@ -895,16 +1014,33 @@ body.filtering .box.highlight-focus { animation: none !important; box-shadow: no
     to { opacity: 0.7; transform: translateY(-50%) scale(1); }
 }
 /* --- GRÁFICO GANTT (COM MESES E SCROLL) --- */
+/* --- AJUSTE PARA REDIMENSIONAMENTO MANUAL --- */
+
 .gantt-wrapper {
     margin-bottom: 25px;
     background: white;
     border: 1px solid #cbd5e1;
     border-radius: 8px;
-    overflow: hidden;
-    padding: 0; /* Padding removido para o header colar nas bordas */
     box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
     display: flex;
     flex-direction: column;
+    
+    /* Habilita o arrasto vertical */
+    resize: vertical; 
+    overflow: hidden; /* Obrigatório para o resize funcionar */
+    min-height: 200px; /* Altura mínima para não sumir */
+    max-height: 80vh;  /* Limite máximo para não quebrar o layout */
+}
+
+.gantt-scroll-area {
+    position: relative;
+    width: 100%;
+    /* Flex-grow faz com que a área de scroll acompanhe 
+       o redimensionamento da caixa pai (wrapper) */
+    flex-grow: 1; 
+    overflow-x: auto;
+    overflow-y: auto;
+    background-color: #f8fafc;
 }
 
 .gantt-title-bar {
@@ -921,13 +1057,12 @@ body.filtering .box.highlight-focus { animation: none !important; box-shadow: no
 }
 
 /* Área de Scroll Horizontal */
-.gantt-scroll-area {
-    position: relative;
-    width: 100%;
-    height: 220px; /* Altura fixa */
-    overflow-x: auto; /* SCROLL HORIZONTAL AQUI */
-    overflow-y: auto;
-    background-color: #f8fafc;
+
+
+/* Quando o Jornal estiver em modo fullscreen, o Gantt expande automaticamente */
+.modal-panel.fullscreen .gantt-scroll-area {
+    height: 60vh; /* Ocupa 60% da altura da tela do navegador */
+    max-height: 600px; /* Limite máximo para não empurrar a lista muito para baixo */
 }
 
 /* Container Interno (Cresce conforme o tempo) */
@@ -1047,6 +1182,39 @@ body.filtering .box.highlight-focus { animation: none !important; box-shadow: no
         body.read-only .box-title-bar { cursor: default; }
         
         #file-input { display: none; }
+
+        /* Estado colapsado do container de post-its */
+.task-container.collapsed {
+    display: none !important;
+}
+
+
+/* --- INTERAÇÃO DE COLAPSO NO JORNAL --- */
+
+/* Esconde o conteúdo do grupo */
+.journal-group-content.collapsed {
+    display: none !important;
+}
+
+/* Deixa os cabeçalhos com cara de clicáveis */
+.journal-header, .journal-subheader {
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s ease;
+}
+
+.journal-header:hover { background: #dcfce7 !important; }
+.journal-subheader:hover { background: #f1f5f9 !important; }
+
+/* Espaçamento para o ícone de seta */
+.toggle-icon {
+    display: inline-block;
+    width: 15px;
+    font-size: 10px;
+    transition: transform 0.2s;
+}
+
+
     </style>
 </head>
 <body>
@@ -1199,13 +1367,17 @@ body.filtering .box.highlight-focus { animation: none !important; box-shadow: no
         visualLine.setAttribute("d", pathD);
     }
     
-    function updateAllLines(forceClear = false) {
-        if(forceClear) { 
-            const groups = Array.from(svgLayer.querySelectorAll('g.conn-group'));
-            const dataIds = new Set(connections.map(c => c.id));
-            groups.forEach(g => { if(!dataIds.has(g.id)) g.remove(); });
-        }
-        connections.forEach(updateLine);
+    function updateAllLines() {
+        connections.forEach(c => {
+            const source = document.getElementById(c.sid);
+            const target = document.getElementById(c.tid);
+            
+            // Se ambos os pais estão visíveis, desenha. 
+            // Se um deles está dentro de algo colapsado, podemos simplificar ou pular.
+            if (source && target && source.offsetParent !== null && target.offsetParent !== null) {
+                updateLine(c);
+            }
+        });
     }
 
     function addConnection(sid, spos, tid, tpos, existingId = null) {
@@ -1438,18 +1610,24 @@ body.filtering .box.highlight-focus { animation: none !important; box-shadow: no
     function toggleTaskView(boxId) {
         const box = document.getElementById(boxId);
         const container = box.querySelector('.task-container');
+        const area = box.querySelector('.children-area');
         
-        // Simple toggle visibility
-        if (container.style.display === 'none') {
-            container.style.display = 'block';
-        } else {
-            container.style.display = 'none';
+        // 1. Alterna a classe de visibilidade
+        container.classList.toggle('collapsed');
+        
+        // 2. Feedback visual no botão do balão de ações (opcional)
+        const btn = box.querySelector('.btn-font[onclick*="toggleTaskView"]');
+        if (btn) {
+            btn.style.opacity = container.classList.contains('collapsed') ? '0.5' : '1';
+            btn.title = container.classList.contains('collapsed') ? 'Mostrar Tarefas' : 'Esconder Tarefas';
         }
-        
-        // Atualizar layout
-        updateElasticParent(box.parentElement.closest('.children-area')); 
+    
+        // 3. ATUALIZAÇÃO CRUCIAL: Recalcula o tamanho elástico da caixa
+        // Como os post-its sumiram, a caixa deve encolher
+        updateElasticParent(area); 
         updateAllLines();
-        markUnsaved();
+        
+        markUnsaved(); //
     }
     
     function addTask(boxId) {
@@ -1762,6 +1940,17 @@ function toggleJournalFullscreen() {
 }
 
 
+function toggleJournalGroup(groupId, btn) {
+    const groupContent = document.getElementById(groupId);
+    const isCollapsed = groupContent.classList.toggle('collapsed');
+    
+    // Altera a setinha do botão
+    const icon = btn.querySelector('.toggle-icon');
+    if (icon) {
+        icon.innerText = isCollapsed ? '▶' : '▼';
+    }
+}
+
 function openJournal() {
     const content = document.getElementById('journal-content');
     content.innerHTML = '';
@@ -1769,29 +1958,28 @@ function openJournal() {
     const today = new Date().toISOString().split('T')[0];
     let allTasks = [];
     
-    // 1. Coleta todas as tarefas
+    // 1. Coleta e Filtra tarefas (Respeitando labels ativos)
     document.querySelectorAll('.box').forEach(box => {
         const boxTitle = box.querySelector('input.title').value;
         const taskItems = box.querySelectorAll('.task-item');
         
         taskItems.forEach(item => {
             if (item.closest('.box') !== box) return;
-
             const status = item.dataset.status;
             if(status === 'done') return; 
             
-            const dateVal = item.querySelector('.task-date').value;
-            const isOverdue = dateVal && dateVal < today;
+            const taskLabel = item.querySelector('.task-label').value.trim() || "Geral";
+            if (activeFilterLabels.size > 0 && !activeFilterLabels.has(taskLabel)) return;
 
             allTasks.push({
                 boxId: box.id, 
                 box: boxTitle,
                 text: item.querySelector('.task-input').value,
-                label: item.querySelector('.task-label').value.trim() || "Geral", 
+                label: taskLabel, 
                 owner: item.querySelector('.task-owner').value.trim() || "Sem Dono",
-                date: dateVal, // Importante para o Gantt
+                date: item.querySelector('.task-date').value,
                 status: status,
-                isOverdue: isOverdue
+                isOverdue: (item.querySelector('.task-date').value && item.querySelector('.task-date').value < today)
             });
         });
     });
@@ -1802,44 +1990,55 @@ function openJournal() {
         return;
     }
 
-    // --- NOVO: INJEÇÃO DO GRÁFICO GANTT ---
-    const ganttHTML = renderGanttChart(allTasks);
-    content.innerHTML += ganttHTML;
-    // --------------------------------------
+    // --- RENDERIZA GANTT E INSIGHTS ---
+    content.innerHTML += renderGanttChart(allTasks);
+    content.innerHTML += renderInsightCards(allTasks);
 
-    // 2. Agrupamento e Listagem (Lógica existente melhorada)
+    // 2. Agrupamento Nível 1: LABEL
     const groupedByLabel = allTasks.reduce((acc, t) => {
         if(!acc[t.label]) acc[t.label] = [];
         acc[t.label].push(t);
         return acc;
     }, {});
     
-    const sortedLabels = Object.keys(groupedByLabel).sort();
-
-    sortedLabels.forEach(label => {
+    Object.keys(groupedByLabel).sort().forEach((label, lIdx) => {
         const tasksInLabel = groupedByLabel[label];
+        const labelGroupId = `journal-label-${lIdx}`;
+        
         const groupDiv = document.createElement('div');
         groupDiv.className = 'journal-group';
         
-        // Cabeçalho colorido igual ao do Gráfico para consistência visual
-        // Usamos um gradiente sutil gerado pela mesma função (opcional, aqui pus fixo verde, mas fica a dica)
-        let html = `<div class="journal-header" style="background:#f0fdf4; color:#166534; border-left: 5px solid #166534;">🏷️ ${label} <span style="font-weight:normal; font-size:12px; color:#64748b; margin-left:5px;">(${tasksInLabel.length})</span></div>`;
-        
+        // CABEÇALHO DA LABEL (Clicável)
+        let html = `
+            <div class="journal-header" style="background:#f0fdf4; color:#166534;" onclick="toggleJournalGroup('${labelGroupId}', this)">
+                <span><span class="toggle-icon">▼</span> 🏷️ ${label}</span>
+                <span style="font-weight:normal; font-size:12px; color:#64748b;">(${tasksInLabel.length} tarefas)</span>
+            </div>
+            <div id="${labelGroupId}" class="journal-group-content">`; // Início do conteúdo da label
+
+        // 3. Agrupamento Nível 2: RESPONSÁVEL
         const groupedByOwner = tasksInLabel.reduce((acc, t) => {
             if(!acc[t.owner]) acc[t.owner] = [];
             acc[t.owner].push(t);
             return acc;
         }, {});
 
-        Object.keys(groupedByOwner).sort().forEach(owner => {
+        Object.keys(groupedByOwner).sort().forEach((owner, oIdx) => {
             const ownerTasks = groupedByOwner[owner];
-            html += `<div class="journal-subheader">👤 ${owner}</div>`;
+            const ownerGroupId = `journal-owner-${lIdx}-${oIdx}`;
+            
+            // CABEÇALHO DO RESPONSÁVEL (Clicável)
+            html += `
+                <div class="journal-subheader" onclick="toggleJournalGroup('${ownerGroupId}', this)">
+                    <span><span class="toggle-icon">▼</span> 👤 ${owner}</span>
+                </div>
+                <div id="${ownerGroupId}" class="journal-group-content">`; // Início do conteúdo do responsável
 
+            // LISTA DE TAREFAS
             ownerTasks.forEach(t => {
                 let tagClass = t.status === 'doing' ? 'tag-doing' : 'tag-todo';
                 let tagText = t.status === 'doing' ? 'Fazendo' : 'A Fazer';
                 let overdueHtml = t.isOverdue ? '<span class="journal-tag tag-overdue">🔴 ATRASADO</span>' : '';
-                let dateStr = t.date ? `<span style="color:${t.isOverdue ? '#ef4444' : '#d97706'}; font-weight:bold;">📅 ${t.date}</span>` : '<span style="color:#cbd5e1;">--/--/--</span>';
                 
                 html += `
                     <div class="journal-item">
@@ -1849,15 +2048,17 @@ function openJournal() {
                         </div>
                         <span class="journal-text">${t.text}</span>
                         <div class="journal-meta">
-                            ${dateStr}
                             <span class="journal-context">em: ${t.box}</span>
                             <button class="journal-jump-btn" onclick="focusOnBox('${t.boxId}')">Ir ➔</button>
                         </div>
                     </div>
                 `;
             });
+
+            html += `</div>`; // Fecha conteúdo do responsável
         });
-        
+
+        html += `</div>`; // Fecha conteúdo da label
         groupDiv.innerHTML = html;
         content.appendChild(groupDiv);
     });
@@ -2267,6 +2468,96 @@ setTimeout(repairBoxStructure, 500);
         recursiveClone(original, originalParent, true);
         markUnsaved(); 
         showToast("Caixa duplicada com sucesso!");
+    }
+
+    function renderInsightCards(tasks) {
+        if (tasks.length === 0) return '';
+    
+        const today = new Date();
+        const ownerStats = {};
+        const labelStats = {};
+    
+        tasks.forEach(t => {
+            const owner = t.owner || "Sem Dono";
+            const label = t.label || "Geral";
+            if (!ownerStats[owner]) ownerStats[owner] = { name: owner, total: 0, overdue: 0, nearestDeadline: Infinity };
+            ownerStats[owner].total++;
+            if (t.isOverdue) ownerStats[owner].overdue++;
+            if (!labelStats[label]) labelStats[label] = { name: label, total: 0, overdue: 0, nearestDeadline: Infinity };
+            labelStats[label].total++;
+            if (t.isOverdue) labelStats[label].overdue++;
+    
+            if (t.date) {
+                const daysLeft = Math.ceil((new Date(t.date) - today) / (1000 * 60 * 60 * 24));
+                if (daysLeft < ownerStats[owner].nearestDeadline) ownerStats[owner].nearestDeadline = daysLeft;
+                if (daysLeft < labelStats[label].nearestDeadline) labelStats[label].nearestDeadline = daysLeft;
+            }
+        });
+    
+        const labelList = Object.values(labelStats);
+        const mostCriticalLabel = [...labelList].sort((a,b) => (b.overdue - a.overdue) || (a.nearestDeadline - b.nearestDeadline))[0];
+        const attentionLabel = [...labelList].sort((a,b) => b.total - a.total)[0];
+    
+        const personAnalysis = Object.values(ownerStats).map(s => {
+            let priority = 'low', reason = 'Carga normal';
+            if (s.overdue > 0) { priority = 'high'; reason = `${s.overdue} itens em atraso`; }
+            else if (s.nearestDeadline <= 2) { priority = 'mid'; reason = `Prazo em ${s.nearestDeadline} dia(s)`; }
+            return { ...s, priority, reason };
+        }).sort((a, b) => {
+            const pMap = { 'high': 0, 'mid': 1, 'low': 2 };
+            return pMap[a.priority] - pMap[b.priority];
+        });
+    
+        let html = '';
+    
+        // Card de Área Crítica
+        if (mostCriticalLabel) {
+            html += `
+                <div class="insight-card type-label-critical">
+                    <div class="insight-content">
+                        <div class="insight-type-tag">Foco Crítico</div>
+                        <div class="insight-name">${mostCriticalLabel.name}</div>
+                        <div class="insight-reason">${mostCriticalLabel.overdue > 0 ? 'Atrasos detectados' : 'Prazo iminente'}</div>
+                    </div>
+                    <div class="insight-number">${mostCriticalLabel.overdue || '!'}</div>
+                </div>
+            `;
+        }
+    
+        // Card de Alta Carga
+        if (attentionLabel && attentionLabel !== mostCriticalLabel) {
+            html += `
+                <div class="insight-card type-label-attention">
+                    <div class="insight-content">
+                        <div class="insight-type-tag">Gargalo de Volume</div>
+                        <div class="insight-name">${attentionLabel.name}</div>
+                        <div class="insight-reason">Concentração de tarefas</div>
+                    </div>
+                    <div class="insight-number">${attentionLabel.total}</div>
+                </div>
+            `;
+        }
+    
+        // Cards de Pessoas (Top 2)
+        personAnalysis.slice(0, 2).forEach(s => {
+            html += `
+                <div class="insight-card priority-${s.priority}">
+                    <div class="insight-content">
+                        <div class="insight-type-tag">Intervenção</div>
+                        <div class="insight-name">${s.name}</div>
+                        <div class="insight-reason">${s.reason}</div>
+                    </div>
+                    <div class="insight-number">${s.overdue || s.total}</div>
+                </div>
+            `;
+        });
+    
+        return `
+            <div style="margin-bottom: 12px; font-size: 10px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 2px;">
+                💎 Business Intelligence / Insights Ativos
+            </div>
+            <div class="insights-container">${html}</div>
+        `;
     }
 
     function exportReadOnlyHTML() {
@@ -2855,30 +3146,16 @@ tasks.push({
         const box = document.getElementById(id);
         const area = document.getElementById('area-' + id);
         
-        // Verifica se vamos FECHAR (se não tem a classe ainda, vai ganhar)
         const isGoingToCollapse = !box.classList.contains('collapsed-mode');
     
         if (isGoingToCollapse) {
-            // --- INDO FECHAR ---
-            
-            // 1. Salva a escala atual (que é a de expandido) para usar depois
             box.dataset.scaleExp = box.dataset.fontScale || 1;
-            
-            // 2. Carrega a escala de "fechado" (ou usa 1.0 se nunca foi ajustado)
-            // Dica: Se quiser que o fechado comece sempre maior, troque o '|| 1' por '|| 1.5'
             box.dataset.fontScale = box.dataset.scaleCol || 1; 
-            
         } else {
-            // --- INDO ABRIR ---
-            
-            // 1. Salva a escala atual (que é a de fechado)
             box.dataset.scaleCol = box.dataset.fontScale || 1;
-            
-            // 2. Recupera a escala de "expandido" que estava salva antes
             box.dataset.fontScale = box.dataset.scaleExp || 1;
         }
     
-        // --- Lógica Visual Padrão ---
         area.classList.toggle('collapsed'); 
         box.classList.toggle('collapsed-mode');
         
@@ -2887,6 +3164,17 @@ tasks.push({
         calcDynamicFont(box); 
         updateElasticParent(area); 
         updateAllLines();
+    
+        // --- NOVA LÓGICA: Sincronização com o fim da animação ---
+        // Como a transição CSS no seu arquivo é de 0.8s (800ms), 
+        // chamamos a atualização novamente após esse tempo.
+        setTimeout(() => {
+            updateAllLines();
+            // Chamada extra para garantir que os pais elásticos também se ajustaram
+            if (box.parentElement && box.parentElement.classList.contains('children-area')) {
+                updateElasticParent(box.parentElement);
+            }
+        }, 850); // 850ms para garantir que a animação de 0.8s terminou
     }
     
     function updateChildIndicators() {
@@ -3378,6 +3666,17 @@ setInterval(() => {
     // OU, melhor: atualiza sempre, mas a função updateFilterBar já tem checagem de HTML diff.
     updateFilterBar(); 
 }, 500);
+
+
+// Alerta antes de sair se houver alterações não salvas
+window.addEventListener('beforeunload', (e) => {
+    if (hasUnsavedChanges) {
+        // Cancela o evento (faz com que o navegador mostre a confirmação)
+        e.preventDefault();
+        // O Chrome requer que o valor de retorno seja definido
+        e.returnValue = '';
+    }
+});
 </script>
 </body>
 </html>
