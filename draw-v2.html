@@ -447,48 +447,53 @@ button.btn-pending:hover {
     transition: background 0.2s;
 }
 /* --- BREADCRUMB VERTICAL LATERAL --- */
+/* --- BREADCRUMB LATERAL EMPILHADO --- */
 
 .context-path {
     position: absolute;
-    /* Posiciona do lado de fora da borda esquerda */
+    /* Posiciona colado à esquerda, do lado de fora */
     right: 100%; 
     top: 0;
+    margin-right: 12px; /* Espaço entre a barra e a caixa */
     
-    /* Texto vertical de baixo para cima */
-    writing-mode: vertical-rl;
-    transform: rotate(180deg);
-    
-    /* Estilo do texto */
-    font-size: calc(var(--bread-font-size, 10px) * var(--ui-scale));
-    color: #64748b;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    white-space: nowrap;
-    
-    /* Espaçamento e Alinhamento */
-    padding: 10px 4px;
-    pointer-events: none;
-    
-    /* Estado inicial: Escondido */
-    opacity: 0;
-    transition: opacity 0.3s ease, transform 0.3s ease;
-    
-    /* Garante que não quebre o layout da caixa */
-    height: 100%;
+    /* Configuração de empilhamento vertical */
     display: flex;
-    align-items: center;
-    justify-content: flex-end;
+    flex-direction: column; 
+    align-items: flex-end; /* Alinha os textos à direita, encostando na caixa */
+    gap: 8px; /* Espaço entre cada nome de pai */
+    
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 100;
 }
 
-/* Exibe apenas quando o mouse está sobre a respectiva caixa */
+/* Item individual da trilha (cada nome de pai) */
+.context-item {
+    /* Texto vertical */
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    white-space: nowrap;
+    
+    font-size: calc(var(--bread-font-size, 10px) * var(--ui-scale));
+    color: #64748b;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    
+    /* Efeito de etiqueta */
+    background: rgba(226, 232, 240, 0.6);
+    padding: 8px 4px;
+    border-radius: 4px;
+}
+
+/* REGRA DE OURO: Só aparece na caixa que está com o mouse EXATAMENTE em cima */
+/* O seletor > garante que não apareça nos pais quando você está na filha */
 .box:hover > .box-title-bar > .context-path.visible {
     opacity: 1;
 }
 
-/* Ajuste no título para não colidir com a lateral se necessário */
 .box-title-bar {
-    /* Mantém o resto, mas garante que o overflow não corte o breadcrumb lateral */
     overflow: visible !important;
 }
         .box-title-bar:active { cursor: grabbing; }
@@ -1961,22 +1966,24 @@ button.btn-pending:hover {
         
         showToast("Página de leitura criada!");
     }
+    
     function updateBreadcrumbs() {
         const toolbarHeight = 70; 
         
         document.querySelectorAll('.box').forEach(box => {
-            const pathEl = box.querySelector('.context-path');
-            if (!pathEl) return;
+            const pathContainer = box.querySelector('.context-path');
+            if (!pathContainer) return;
     
+            // Limpa o conteúdo anterior
+            pathContainer.innerHTML = '';
             let ancestors = [];
             let currentParent = box.parentElement.closest('.box');
     
+            // Coleta os nomes dos pais que estão fora da tela
             while (currentParent) {
                 const parentRect = currentParent.getBoundingClientRect();
-                const parentInput = currentParent.querySelector('.title');
-                const parentTitleVal = parentInput ? parentInput.value : '';
+                const parentTitleVal = currentParent.querySelector('.title').value;
     
-                // Se o pai sumiu no topo da tela, ele entra na lista lateral
                 if (parentRect.top < toolbarHeight && parentTitleVal.trim() !== "") {
                     ancestors.unshift(parentTitleVal); 
                 }
@@ -1984,12 +1991,16 @@ button.btn-pending:hover {
             }
     
             if (ancestors.length > 0) {
-                // Unimos com um ponto ou barra para ficar elegante na vertical
-                pathEl.innerText = ancestors.join(' • ');
-                pathEl.classList.add('visible');
+                // Cria um elemento context-item para cada pai na lista
+                ancestors.forEach(name => {
+                    const item = document.createElement('div');
+                    item.className = 'context-item';
+                    item.innerText = name;
+                    pathContainer.appendChild(item);
+                });
+                pathContainer.classList.add('visible');
             } else {
-                pathEl.innerText = '';
-                pathEl.classList.remove('visible');
+                pathContainer.classList.remove('visible');
             }
         });
     }
