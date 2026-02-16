@@ -768,6 +768,27 @@ body.filtering .box.highlight-focus { animation: none !important; box-shadow: no
             cursor: text;
         }
 
+/* --- SUB-CABEÇALHOS DO JORNAL --- */
+.journal-subheader {
+    background: #f8fafc; /* Cinza muito claro */
+    padding: 5px 15px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b; /* Cinza azulado */
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #f1f5f9;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Ajuste para o item não colar na borda quando indentado */
+.journal-item {
+    padding-left: 20px; /* Indentação leve para as tarefas */
+}
+
         /* Ícone de "Conteúdo Oculto" (Pasta) */
 .child-indicator {
     display: none; /* Invisível por padrão */
@@ -801,6 +822,88 @@ body.filtering .box.highlight-focus { animation: none !important; box-shadow: no
     from { opacity: 0; transform: translateY(-50%) scale(0.5); }
     to { opacity: 0.7; transform: translateY(-50%) scale(1); }
 }
+
+/* --- GRÁFICO GANTT NO JORNAL --- */
+.gantt-wrapper {
+    margin-bottom: 25px;
+    background: white;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    overflow: hidden;
+    padding: 15px;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+}
+
+.gantt-title {
+    font-size: 14px;
+    font-weight: 800;
+    color: #334155;
+    margin-bottom: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex; justify-content: space-between;
+}
+
+/* Área de Rolagem do Gráfico */
+.gantt-chart-area {
+    position: relative;
+    width: 100%;
+    height: 180px; /* Altura fixa com scroll */
+    overflow-x: auto;
+    overflow-y: auto;
+    background-image: repeating-linear-gradient(to right, #f1f5f9, #f1f5f9 1px, transparent 1px, transparent 40px);
+    background-color: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+}
+
+/* Linhas do Gráfico */
+.gantt-row {
+    position: relative;
+    height: 30px;
+    margin-bottom: 6px;
+    border-bottom: 1px dashed #f1f5f9;
+    width: 100%; /* Garante que ocupa a largura total calculada */
+}
+
+/* A Barra de Tarefa */
+.gantt-bar {
+    position: absolute;
+    height: 20px;
+    top: 5px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: bold;
+    color: white;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    cursor: pointer;
+    transition: transform 0.1s, z-index 0.1s;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.2);
+}
+
+.gantt-bar:hover {
+    transform: scale(1.05);
+    z-index: 100;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+.gantt-bar-label {
+    font-size: 9px;
+    opacity: 0.9;
+    margin-right: 5px;
+    text-transform: uppercase;
+    background: rgba(0,0,0,0.2);
+    padding: 1px 4px;
+    border-radius: 3px;
+}
+
+
         
         .note-delete {
             position: absolute; 
@@ -933,6 +1036,9 @@ body.filtering .box.highlight-focus { animation: none !important; box-shadow: no
     const SNAP_SIZE = 20;
     
     let state = { scale: 1, panning: false, panStart: { x: 0, y: 0 }, offset: { x: 0, y: 0 }, isEditMode: true, dragThresholdMet: false, dragStartScreen: {x:0, y:0}, resizeDir: null };
+    
+    let globalZ = 1000; // Começa alto para garantir que fique acima do básico
+
     let connections = [];
     let dragItem = null, resizeItem = null, isConnecting = false, startInt = {};
     let currentDropTarget = null;
@@ -1417,73 +1523,177 @@ body.filtering .box.highlight-focus { animation: none !important; box-shadow: no
             titleInput.style.transform = `translateX(${shiftX / state.scale}px)`;
         });
     }
-    function openJournal() {
-        const content = document.getElementById('journal-content');
-        content.innerHTML = '';
+
+
+// --- HELPERS DO GANTT ---
+
+// 1. Gera uma cor consistente a partir de um texto (Label)
+function stringToColorGradient(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    // Gera matiz (Hue) baseada no hash
+    const h = Math.abs(hash % 360);
+    // Retorna um gradiente linear agradável
+    return `linear-gradient(135deg, hsl(${h}, 70%, 50%) 0%, hsl(${h}, 80%, 35%) 100%)`;
+}
+
+// 2. Renderiza o HTML do Gantt
+function renderGanttChart(tasks) {
+    // Filtra apenas tarefas com data definida
+    const validTasks = tasks.filter(t => t.date);
+    
+    if (validTasks.length === 0) return '<div style="padding:20px; text-align:center; color:#94a3b8; font-size:12px;">Defina datas nas tarefas para ver o Cronograma Gantt.</div>';
+
+    // Calcula Min e Max Global
+    let minTime = Infinity;
+    let maxTime = -Infinity;
+
+    // Processa datas (Início = Final - 5 dias)
+    const processedTasks = validTasks.map(t => {
+        const endDate = new Date(t.date);
+        const startDate = new Date(endDate);
+        startDate.setDate(endDate.getDate() - 5); // Regra de 5 dias antes
+
+        if (startDate.getTime() < minTime) minTime = startDate.getTime();
+        if (endDate.getTime() > maxTime) maxTime = endDate.getTime();
+
+        return { ...t, start: startDate, end: endDate };
+    });
+
+    // Adiciona margem de 2 dias nas pontas do gráfico para não colar
+    const dayMs = 86400000;
+    minTime -= dayMs * 2;
+    maxTime += dayMs * 2;
+    const totalDuration = maxTime - minTime;
+
+    // Gera as Barras
+    let barsHtml = '';
+    
+    // Ordena por data de início para ficar visualmente "cascata"
+    processedTasks.sort((a,b) => a.start - b.start);
+
+    processedTasks.forEach(t => {
+        // Cálculos de Posição (%)
+        const startOffset = t.start.getTime() - minTime;
+        const duration = t.end.getTime() - t.start.getTime();
         
-        const today = new Date().toISOString().split('T')[0];
-        let allTasks = [];
+        const leftPercent = (startOffset / totalDuration) * 100;
+        const widthPercent = (duration / totalDuration) * 100;
         
-        document.querySelectorAll('.box').forEach(box => {
-            const boxTitle = box.querySelector('input.title').value;
-            const taskItems = box.querySelectorAll('.task-item');
+        const bgGradient = stringToColorGradient(t.label);
+
+        barsHtml += `
+            <div class="gantt-row">
+                <div class="gantt-bar" 
+                     style="left: ${leftPercent}%; width: ${widthPercent}%; background: ${bgGradient};"
+                     title="De: ${t.start.toLocaleDateString()} Até: ${t.end.toLocaleDateString()} - ${t.text}"
+                     onclick="focusOnBox('${t.boxId}')">
+                    <span class="gantt-bar-label">${t.label}</span>
+                    ${t.text}
+                </div>
+            </div>
+        `;
+    });
+
+    return `
+        <div class="gantt-wrapper">
+            <div class="gantt-title">
+                <span>📅 Cronograma (Entregas)</span>
+                <span style="font-size:10px; font-weight:normal; color:#64748b;">Janela de 5 dias</span>
+            </div>
+            <div class="gantt-chart-area">
+                ${barsHtml}
+            </div>
+        </div>
+    `;
+}
+
+
+
+
+
+
+function openJournal() {
+    const content = document.getElementById('journal-content');
+    content.innerHTML = '';
+    
+    const today = new Date().toISOString().split('T')[0];
+    let allTasks = [];
+    
+    // 1. Coleta todas as tarefas
+    document.querySelectorAll('.box').forEach(box => {
+        const boxTitle = box.querySelector('input.title').value;
+        const taskItems = box.querySelectorAll('.task-item');
+        
+        taskItems.forEach(item => {
+            if (item.closest('.box') !== box) return;
+
+            const status = item.dataset.status;
+            if(status === 'done') return; 
             
-            taskItems.forEach(item => {
-                if (item.closest('.box') !== box) return;
-    
-                const status = item.dataset.status;
-                if(status === 'done') return; 
-                
-                const dateVal = item.querySelector('.task-date').value;
-                const isOverdue = dateVal && dateVal < today;
-    
-                allTasks.push({
-                    boxId: box.id, 
-                    box: boxTitle,
-                    text: item.querySelector('.task-input').value,
-                    // Pega o label. Se vazio, usa "Geral"
-                    label: item.querySelector('.task-label').value || "Geral / Sem Etiqueta", 
-                    owner: item.querySelector('.task-owner').value,
-                    date: dateVal,
-                    status: status,
-                    isOverdue: isOverdue
-                });
+            const dateVal = item.querySelector('.task-date').value;
+            const isOverdue = dateVal && dateVal < today;
+
+            allTasks.push({
+                boxId: box.id, 
+                box: boxTitle,
+                text: item.querySelector('.task-input').value,
+                label: item.querySelector('.task-label').value.trim() || "Geral", 
+                owner: item.querySelector('.task-owner').value.trim() || "Sem Dono",
+                date: dateVal, // Importante para o Gantt
+                status: status,
+                isOverdue: isOverdue
             });
         });
-        
-        if(allTasks.length === 0) {
-            content.innerHTML = '<div style="text-align:center; padding:20px; color:#64748b;">Nenhuma pendência encontrada.</div>';
-            document.getElementById('journal-overlay').style.display = 'flex';
-            return;
-        }
+    });
     
-        // --- AGRUPAMENTO POR LABEL ---
-        const grouped = allTasks.reduce((acc, t) => {
-            if(!acc[t.label]) acc[t.label] = [];
-            acc[t.label].push(t);
+    if(allTasks.length === 0) {
+        content.innerHTML = '<div style="text-align:center; padding:20px; color:#64748b;">Nenhuma pendência encontrada.</div>';
+        document.getElementById('journal-overlay').style.display = 'flex';
+        return;
+    }
+
+    // --- NOVO: INJEÇÃO DO GRÁFICO GANTT ---
+    const ganttHTML = renderGanttChart(allTasks);
+    content.innerHTML += ganttHTML;
+    // --------------------------------------
+
+    // 2. Agrupamento e Listagem (Lógica existente melhorada)
+    const groupedByLabel = allTasks.reduce((acc, t) => {
+        if(!acc[t.label]) acc[t.label] = [];
+        acc[t.label].push(t);
+        return acc;
+    }, {});
+    
+    const sortedLabels = Object.keys(groupedByLabel).sort();
+
+    sortedLabels.forEach(label => {
+        const tasksInLabel = groupedByLabel[label];
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'journal-group';
+        
+        // Cabeçalho colorido igual ao do Gráfico para consistência visual
+        // Usamos um gradiente sutil gerado pela mesma função (opcional, aqui pus fixo verde, mas fica a dica)
+        let html = `<div class="journal-header" style="background:#f0fdf4; color:#166534; border-left: 5px solid #166534;">🏷️ ${label} <span style="font-weight:normal; font-size:12px; color:#64748b; margin-left:5px;">(${tasksInLabel.length})</span></div>`;
+        
+        const groupedByOwner = tasksInLabel.reduce((acc, t) => {
+            if(!acc[t.owner]) acc[t.owner] = [];
+            acc[t.owner].push(t);
             return acc;
         }, {});
-        
-        // Ordena as chaves (labels) alfabeticamente para ficar organizado
-        const sortedLabels = Object.keys(grouped).sort();
-    
-        sortedLabels.forEach(label => {
-            const tasks = grouped[label];
-            const groupDiv = document.createElement('div');
-            groupDiv.className = 'journal-group';
-            
-            // Cabeçalho mostra o Label
-            let html = `<div class="journal-header" style="background:#f0fdf4; color:#166534;">🏷️ ${label} <span style="font-weight:normal; font-size:12px; color:#64748b;">(${tasks.length})</span></div>`;
-            
-            tasks.forEach(t => {
+
+        Object.keys(groupedByOwner).sort().forEach(owner => {
+            const ownerTasks = groupedByOwner[owner];
+            html += `<div class="journal-subheader">👤 ${owner}</div>`;
+
+            ownerTasks.forEach(t => {
                 let tagClass = t.status === 'doing' ? 'tag-doing' : 'tag-todo';
                 let tagText = t.status === 'doing' ? 'Fazendo' : 'A Fazer';
                 let overdueHtml = t.isOverdue ? '<span class="journal-tag tag-overdue">🔴 ATRASADO</span>' : '';
-                let dateStr = t.date ? `<span style="color:${t.isOverdue ? '#ef4444' : '#d97706'};">📅 ${t.date}</span>` : '';
+                let dateStr = t.date ? `<span style="color:${t.isOverdue ? '#ef4444' : '#d97706'}; font-weight:bold;">📅 ${t.date}</span>` : '<span style="color:#cbd5e1;">--/--/--</span>';
                 
-                // Adiciona info do Responsável dentro do item, já que não é mais o título do grupo
-                let ownerBadge = t.owner ? `<span style="font-size:10px; background:#e2e8f0; padding:2px 5px; border-radius:3px; color:#475569;">👤 ${t.owner}</span>` : '';
-    
                 html += `
                     <div class="journal-item">
                         <div style="display:flex; gap:5px; align-items:center;">
@@ -1492,7 +1702,6 @@ body.filtering .box.highlight-focus { animation: none !important; box-shadow: no
                         </div>
                         <span class="journal-text">${t.text}</span>
                         <div class="journal-meta">
-                            ${ownerBadge}
                             ${dateStr}
                             <span class="journal-context">em: ${t.box}</span>
                             <button class="journal-jump-btn" onclick="focusOnBox('${t.boxId}')">Ir ➔</button>
@@ -1500,13 +1709,14 @@ body.filtering .box.highlight-focus { animation: none !important; box-shadow: no
                     </div>
                 `;
             });
-            
-            groupDiv.innerHTML = html;
-            content.appendChild(groupDiv);
         });
         
-        document.getElementById('journal-overlay').style.display = 'flex';
-    }
+        groupDiv.innerHTML = html;
+        content.appendChild(groupDiv);
+    });
+    
+    document.getElementById('journal-overlay').style.display = 'flex';
+}
 
     function downloadJournalCSV() {
         const headers = ["Status", "Atrasado?", "Tarefa", "Responsável", "Data Limite", "Caixa de Origem"];
@@ -1580,14 +1790,19 @@ body.filtering .box.highlight-focus { animation: none !important; box-shadow: no
     }
 
     function createBoxElement(id, titleVal = "Novo Item") {
-        const el = document.createElement('div'); el.className = 'box'; el.id = id;
+        const el = document.createElement('div'); 
+        el.className = 'box'; 
+        el.id = id;
+        
+        // --- CORREÇÃO: A NOVA CAIXA NASCE NO TOPO ---
+        el.style.zIndex = ++globalZ; 
+        
         el.dataset.fontScale = "1"; 
+        
         el.innerHTML = `
-
-
             <div class="context-path"></div> 
+            
             <div class="box-title-bar" onmousedown="initDrag(event, '${id}')" ondblclick="enableTitleEdit('${id}')">
-                
                 <div class="child-indicator" title="Contém itens"></div>
                 <input class="title" value="${titleVal}" placeholder="Nome..." onblur="disableTitleEdit('${id}')" oninput="calcDynamicFont(this.closest('.box')); markUnsaved();" readonly>
                 <div class="task-summary-badge"></div>
@@ -1620,14 +1835,15 @@ body.filtering .box.highlight-focus { animation: none !important; box-shadow: no
             
             <div class="connector c-top no-pan" onmousedown="initConn(event, '${id}', 'top')"></div><div class="connector c-bottom no-pan" onmousedown="initConn(event, '${id}', 'bottom')"></div><div class="connector c-left no-pan" onmousedown="initConn(event, '${id}', 'left')"></div><div class="connector c-right no-pan" onmousedown="initConn(event, '${id}', 'right')"></div>
         `;
+        
         el.addEventListener('mouseover', (e) => {
             e.stopPropagation(); 
             document.querySelectorAll('.hover-focused').forEach(b => b.classList.remove('hover-focused'));
             el.classList.add('hover-focused');
         });
-
-        updateChildIndicators(); // <--- CHAME AQUI
-
+    
+        updateChildIndicators(); 
+    
         return el;
     }
 
@@ -2712,6 +2928,9 @@ function applyFilter(label) {
         else group.classList.add('dimmed');
     });
 }
+// Certifique-se de que esta variável está declarada no início do script:
+// let globalZ = 1000;
+
 function initDrag(e, id) {
     if(spacePressed) return; 
     if(!state.isEditMode) return;
@@ -2722,14 +2941,14 @@ function initDrag(e, id) {
     const box = document.getElementById(id);
     const isCollapsed = box.classList.contains('collapsed-mode');
     
-    // --- LÓGICA NOVA: NAVEGAÇÃO EM CAIXA FECHADA ---
+    // --- LÓGICA DE NAVEGAÇÃO EM CAIXA FECHADA ---
     if (isCollapsed) {
         // Se NÃO estiver segurando Shift...
         if (!e.shiftKey) {
             // E clicou no TEXTO ou no MEIO da barra...
             if (e.target.classList.contains('title') || e.target.classList.contains('box-title-bar')) {
                 // ...NÃO inicia o arrasto da caixa.
-                // Ao não chamar stopPropagation(), o evento sobe para o Viewport e vira PAN (Navegação).
+                // Deixa o evento subir para o Viewport virar PAN (Navegação).
                 return; 
             }
         }
@@ -2738,7 +2957,10 @@ function initDrag(e, id) {
 
     e.stopPropagation(); 
     dragItem = box; 
-    dragItem.style.zIndex = 999; 
+    
+    // --- MUDANÇA AQUI: TRAZ PARA FRENTE ---
+    // Incrementa o contador global e aplica à caixa clicada
+    dragItem.style.zIndex = ++globalZ; 
     
     const wp = screenToWorld(e.clientX, e.clientY);
     state.dragThresholdMet = false;
@@ -2991,7 +3213,7 @@ window.addEventListener('keyup', (e) => { if(!e.shiftKey) document.body.classLis
 
 // Atualiza breadcrumbs e barra de filtros a cada meio segundo
 setInterval(() => {
-    updateBreadcrumbs();
+    //updateBreadcrumbs();
     // Só atualiza a barra se NÃO estivermos filtrando no momento (para não re-renderizar botão enquanto clica)
     // OU, melhor: atualiza sempre, mas a função updateFilterBar já tem checagem de HTML diff.
     updateFilterBar(); 
