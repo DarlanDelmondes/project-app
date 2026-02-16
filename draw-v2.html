@@ -446,31 +446,44 @@ button.btn-pending:hover {
     will-change: transform;
     transition: background 0.2s;
 }
+/* --- BREADCRUMB DINÂMICO --- */
 
-/* Novo estilo para a trilha de navegação */
 .context-path {
-    font-size: 10px;
+    /* MÁGICA AQUI: Tamanho base (10px) multiplicado pela escala da interface.
+       Se você der zoom out, --ui-scale aumenta e o texto cresce. */
+    font-size: calc(10px * var(--ui-scale));
+    line-height: 1.2;
+    
     color: #64748b;
-    font-weight: 600;
+    font-weight: 700; /* Um pouco mais negrito para ler de longe */
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    margin-bottom: 2px;
+    
     width: 100%;
     text-align: center;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     pointer-events: none;
-    opacity: 0; /* Começa invisível */
-    height: 0;  /* Começa sem ocupar espaço */
-    transition: opacity 0.3s, height 0.3s;
+    
+    /* Estado inicial (escondido) */
+    opacity: 0;
+    height: 0;
+    margin-bottom: 0;
+    
+    /* Transição suave para não "pular" quando mudar o tamanho */
+    transition: opacity 0.3s, font-size 0.1s, margin-bottom 0.1s;
 }
 
-/* Quando tiver conteúdo, aparece */
 .context-path.visible {
     opacity: 1;
-    height: 14px;
-    margin-bottom: 4px;
+    
+    /* Altura automática para acomodar o texto grande */
+    height: auto;
+    
+    /* Margem dinâmica: empurra o título para baixo proporcionalmente ao tamanho */
+    margin-bottom: calc(5px * var(--ui-scale));
+    padding-bottom: 2px;
 }
         .box-title-bar:active { cursor: grabbing; }
         
@@ -526,6 +539,15 @@ button.btn-pending:hover {
         
         .box.hover-focused > .box-title-bar .actions-balloon { display: flex; }
         
+        .box.hover-focused {
+            z-index: 9999 !important;
+            border-color: #3b82f6; /* (Opcional) Realça a borda também */
+        }
+        .actions-balloon {
+            /* ... mantenha suas outras propriedades ... */
+            z-index: 10000; 
+        }
+
         .actions-balloon .icon-btn { color: white; width: 28px; height: 28px; font-size: 14px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
         .actions-balloon .icon-btn:hover { background: rgba(255,255,255,0.2); }
         .actions-balloon .btn-delete:hover { background: #ef4444; color: white; }
@@ -1856,11 +1878,11 @@ button.btn-pending:hover {
     }
 
     function updateBreadcrumbs() {
-        const toolbarHeight = 70; // Altura da barra superior
+        const toolbarHeight = 70; 
         
         document.querySelectorAll('.box').forEach(box => {
-            // Ignora caixas fechadas
-            if (box.classList.contains('collapsed-mode')) return;
+            // --- MUDANÇA: Removemos o "if (collapsed) return" daqui ---
+            // Agora o cálculo roda para TODAS as caixas, abertas ou fechadas.
     
             const pathEl = box.querySelector('.context-path');
             if (!pathEl) return;
@@ -1868,16 +1890,15 @@ button.btn-pending:hover {
             let ancestors = [];
             let currentParent = box.parentElement.closest('.box');
     
-            // Sobe a hierarquia procurando todos os pais
             while (currentParent) {
                 const parentRect = currentParent.getBoundingClientRect();
-                const parentTitleVal = currentParent.querySelector('.title').value;
+                // Tenta pegar o título, garantindo que não quebre se não achar
+                const parentInput = currentParent.querySelector('.title');
+                const parentTitleVal = parentInput ? parentInput.value : '...';
     
-                // A MÁGICA:
-                // Só adiciona na lista se o topo do pai já passou (subiu) da toolbar.
-                // Ou seja: "Se eu não consigo ver o título do pai, coloque-o na lista".
+                // Adiciona na lista SE o topo do pai estiver acima da toolbar
                 if (parentRect.top < toolbarHeight) {
-                    ancestors.unshift(parentTitleVal); // Adiciona no começo da lista
+                    ancestors.unshift(parentTitleVal); 
                 }
     
                 currentParent = currentParent.parentElement.closest('.box');
@@ -1885,11 +1906,9 @@ button.btn-pending:hover {
     
             // Atualiza o visual
             if (ancestors.length > 0) {
-                // Cria string tipo "Projeto A > Sprint 1 >"
                 pathEl.innerText = ancestors.join(' > ');
                 pathEl.classList.add('visible');
                 
-                // Ajuste fino: Se o caminho for muito longo, mostra só os últimos 2
                 if (ancestors.length > 3) {
                      pathEl.innerText = '... > ' + ancestors.slice(-2).join(' > ');
                 }
@@ -2325,15 +2344,11 @@ function getDepth(box) {
     }
     return depth;
 }
-// Aplica o zoom semântico SOMENTE na caixa alvo
+
 function applySemanticZoomToTarget(box, currentZoom) {
     if (!box) return;
 
-    // REGRAS DE VISIBILIDADE (Mesmas de antes)
-    // < 40%: Deveria mostrar só a Raiz (Nível 0)
-    // < 70%: Deveria mostrar Raiz e Filhos (Nível 0 e 1)
-    // >= 70%: Mostra tudo
-    
+    // Definição dos níveis de detalhe
     let maxVisibleDepth = 100; 
     
     if (currentZoom < 0.4) {
@@ -2343,21 +2358,17 @@ function applySemanticZoomToTarget(box, currentZoom) {
     }
 
     const depth = getDepth(box);
-    const area = document.getElementById('area-' + box.id);
     const btn = box.querySelector('.actions-balloon .btn-toggle');
+    const area = document.getElementById('area-' + box.id);
     const isClosed = area.classList.contains('collapsed');
 
-    // APLICAR LÓGICA APENAS NA CAIXA HOVERED
+    // --- LÓGICA ALTERADA: APENAS EXPANDIR ---
+
+    // Removemos o bloco "if (depth > maxVisibleDepth...)" que fechava as caixas.
     
-    // 1. Lógica de FECHAR (Zoom Out)
-    // Se a caixa é profunda demais para o zoom atual e está aberta -> FECHA
-    if (depth > maxVisibleDepth && !isClosed) {
-        performToggle(box.id, btn);
-    }
-    
-    // 2. Lógica de ABRIR (Zoom In)
-    // Se a caixa é permitida neste zoom e está fechada -> ABRE
-    else if (depth <= maxVisibleDepth && isClosed) {
+    // Mantemos apenas a lógica de ABRIR (Zoom In):
+    // Se a caixa é permitida neste nível de zoom (depth <= max) E está FECHADA
+    if (depth <= maxVisibleDepth && isClosed) {
         performToggle(box.id, btn);
     }
 }
