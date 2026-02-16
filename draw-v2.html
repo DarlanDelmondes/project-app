@@ -446,16 +446,14 @@ button.btn-pending:hover {
     will-change: transform;
     transition: background 0.2s;
 }
+/* Estado base: Totalmente escondido e sem ocupar espaço */
 .context-path {
-    /* MANTÉM DINÂMICO: mas agora com um multiplicador menor (0.4) para garantir que seja menor */
     font-size: calc(var(--bread-font-size, 10px) * var(--ui-scale));
     line-height: 1.2;
-    
     color: #64748b;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    
     width: 100%;
     text-align: center;
     white-space: nowrap;
@@ -463,24 +461,27 @@ button.btn-pending:hover {
     text-overflow: ellipsis;
     pointer-events: none;
     
-    /* ESTADO INICIAL: Invisível mesmo que tenha a classe 'visible' */
     opacity: 0;
-    height: 0;
+    max-height: 0;
     margin-bottom: 0;
-    transform: translateY(-5px); /* Pequeno deslocamento para efeito de entrada */
-    
-    transition: opacity 0.2s ease, transform 0.2s ease, font-size 0.2s;
+    transform: translateY(-5px);
+    transition: opacity 0.2s ease, transform 0.2s ease, max-height 0.2s ease;
 }
 
-/* SÓ APARECE NO HOVER: 
-   A classe .visible (do JS) autoriza a existência, 
-   mas o :hover da .box-title-bar é quem revela o texto */
-.box:hover .context-path.visible {
+/* HOVER ESTRITO: 
+   O seletar :hover direto na .box garante que ao passar o mouse 
+   apenas o caminho DAQUELA caixa apareça. 
+   O uso de 'max-height' em vez de 'height: auto' permite animação suave. */
+.box:hover > .box-title-bar > .context-path.visible {
     opacity: 1;
-    height: auto;
-    min-height: calc(var(--bread-font-size, 10px) * var(--ui-scale) * 1.2);
+    max-height: 40px; /* Valor alto o suficiente para caber o texto */
     margin-bottom: calc(4px * var(--ui-scale));
     transform: translateY(0);
+}
+
+/* Previne que o hover na filha ative o breadcrumb do pai ao mesmo tempo */
+.box:focus-within > .box-title-bar > .context-path.visible {
+    opacity: 1;
 }
         .box-title-bar:active { cursor: grabbing; }
         
@@ -1952,43 +1953,41 @@ button.btn-pending:hover {
         
         showToast("Página de leitura criada!");
     }
-
     function updateBreadcrumbs() {
         const toolbarHeight = 70; 
         
+        // Pegamos todas as caixas
         document.querySelectorAll('.box').forEach(box => {
-            // --- MUDANÇA: Removemos o "if (collapsed) return" daqui ---
-            // Agora o cálculo roda para TODAS as caixas, abertas ou fechadas.
-    
             const pathEl = box.querySelector('.context-path');
             if (!pathEl) return;
     
             let ancestors = [];
+            // Começa a busca a partir do pai da caixa atual
             let currentParent = box.parentElement.closest('.box');
     
             while (currentParent) {
                 const parentRect = currentParent.getBoundingClientRect();
-                // Tenta pegar o título, garantindo que não quebre se não achar
                 const parentInput = currentParent.querySelector('.title');
-                const parentTitleVal = parentInput ? parentInput.value : '...';
+                const parentTitleVal = parentInput ? parentInput.value : '';
     
-                // Adiciona na lista SE o topo do pai estiver acima da toolbar
-                if (parentRect.top < toolbarHeight) {
+                // Regra: se o título do pai sumiu no topo da tela, ele entra na trilha
+                if (parentRect.top < toolbarHeight && parentTitleVal.trim() !== "") {
                     ancestors.unshift(parentTitleVal); 
                 }
-    
                 currentParent = currentParent.parentElement.closest('.box');
             }
     
-            // Atualiza o visual
             if (ancestors.length > 0) {
                 pathEl.innerText = ancestors.join(' > ');
                 pathEl.classList.add('visible');
                 
-                if (ancestors.length > 3) {
+                // Redução inteligente para trilhas longas
+                if (ancestors.length > 2) {
                      pathEl.innerText = '... > ' + ancestors.slice(-2).join(' > ');
                 }
             } else {
+                // Limpa o texto e remove a classe se não houver contexto
+                pathEl.innerText = '';
                 pathEl.classList.remove('visible');
             }
         });
