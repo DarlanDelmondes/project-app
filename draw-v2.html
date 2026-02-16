@@ -1,0 +1,2389 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvas v75 - Final Integrated System</title>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --grid-color: #cbd5e1;
+            --box-border: #94a3b8;
+            --handle-color: #3b82f6;
+            
+            /* CORES */
+            --color-wine: #680e2a;   
+            --color-forest: #064e3b; 
+            
+            /* Button States */
+            --btn-save-default: #2563eb;
+            --btn-save-pending: #f59e0b;
+            --btn-save-hover-pending: #d97706;
+
+            /* UI Scaling (Controlled by JS) */
+            --ui-scale: 1;
+        }
+
+        body, html { 
+            margin: 0; 
+            padding: 0; 
+            width: 100%; 
+            height: 100%; 
+            overflow: hidden; 
+            font-family: 'Segoe UI', sans-serif; 
+            background-color: var(--bg-color); 
+        }
+
+        /* --- UI Toolbar --- */
+        #ui-layer { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 0; 
+            z-index: 9999; 
+        }
+        
+        #toolbar {
+            position: absolute; 
+            top: 20px; 
+            left: 20px;
+            background: white; 
+            padding: 10px; 
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
+            display: flex; 
+            gap: 10px; 
+            align-items: center;
+            pointer-events: auto; 
+            flex-wrap: wrap; 
+            max-width: 90vw;
+        }
+
+        button { font-family: 'Segoe UI', sans-serif; }
+        
+        button.btn-primary { 
+            background-color: var(--btn-save-default); 
+            color: white; 
+            border: none; 
+            padding: 8px 16px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-weight: 600; 
+            white-space: nowrap; 
+            transition: background 0.3s; 
+        }
+        button.btn-primary:hover { 
+            background-color: #1d4ed8; 
+        }
+        
+/* --- ESTILO DO BOTÃO PENDENTE (SALVAR) --- */
+
+button.btn-pending { 
+    /* Degradê Laranja/Ambar Moderno */
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important; 
+    color: white !important; 
+    
+    /* Formato Pílula (Bem arredondado) */
+    border-radius: 50px !important; 
+    
+    /* Sem borda, mas com profundidade via sombra */
+    border: none !important; 
+    box-shadow: 0 4px 15px rgba(245, 158, 11, 0.35);
+    
+    /* Ajustes de Texto e Espaçamento */
+    padding: 8px 24px !important; /* Mais largo para ficar elegante */
+    font-weight: 700 !important;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    font-size: 12px;
+    
+    /* Animação Suave */
+    animation: softGlow 2s infinite;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+button.btn-pending:hover { 
+    /* Efeito de "Levantar" ao passar o mouse */
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(245, 158, 11, 0.5);
+    background: linear-gradient(135deg, #fbbf24 0%, #b45309 100%) !important; 
+}
+
+/* Animação de Pulso mais sofisticada (brilho externo) */
+@keyframes softGlow { 
+    0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); } 
+    70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); } 
+    100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); } 
+}
+
+        button.btn-dark { 
+            background-color: #1e293b; 
+            color: white; 
+            border: none; 
+            padding: 8px 16px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-weight: 600; 
+            white-space: nowrap;
+        }
+        button.btn-dark:hover { 
+            background-color: #334155; 
+        }
+        
+        button.btn-outline { 
+            background-color: white; 
+            color: #334155; 
+            border: 1px solid #cbd5e1; 
+            padding: 8px 16px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-weight: 600; 
+            white-space: nowrap;
+        }
+        button.btn-outline:hover { 
+            background-color: #f1f5f9; 
+        }
+        
+        /* Post-it Button Style */
+        .btn-postit {
+            background-color: #fef9c3;
+            color: #854d0e;
+            border: 1px solid #fde047;
+        }
+        .btn-postit:hover {
+            background-color: #fde047;
+        }
+        
+        #btn-mode.locked { 
+            background-color: #ef4444; 
+            color: white; 
+            border: none; 
+        }
+        
+        .icon-btn { 
+            border: none; 
+            background: transparent; 
+            cursor: pointer; 
+            color: #64748b; 
+            padding: 4px; 
+            border-radius: 4px; 
+            transition: color 0.2s, background 0.2s; 
+        }
+        .icon-btn:hover { 
+            background: #e2e8f0; 
+            color: #0f172a; 
+        }
+        .btn-delete:hover { 
+            color: #ef4444; 
+            background: #fee2e2; 
+        }
+
+        #autosave-status { 
+            font-size: 11px; 
+            color: #64748b; 
+            margin-left: 5px; 
+            min-width: 80px; 
+            text-align: right; 
+        }
+
+        /* --- TOAST --- */
+        #toast-container { 
+            position: fixed; 
+            bottom: 30px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            z-index: 20000; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 10px; 
+            pointer-events: none; 
+            align-items: center; 
+        }
+        .toast { 
+            background: #1e293b; 
+            color: #f8fafc; 
+            padding: 12px 24px; 
+            border-radius: 50px; 
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3); 
+            display: flex; 
+            align-items: center; 
+            gap: 15px; 
+            font-size: 14px; 
+            font-weight: 500; 
+            pointer-events: auto; 
+            animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            opacity: 0.95; 
+        }
+        .toast-action-btn { 
+            background: rgba(255,255,255,0.15); 
+            border: none; 
+            color: #fbbf24; 
+            padding: 6px 14px; 
+            border-radius: 20px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            font-size: 12px; 
+            transition: background 0.2s; 
+            text-transform: uppercase; 
+        }
+        .toast-action-btn:hover { background: rgba(255,255,255,0.3); }
+        .toast-btn-yes { color: #4ade80; background: rgba(74, 222, 128, 0.1); } 
+        .toast-btn-yes:hover { background: rgba(74, 222, 128, 0.2); }
+        .toast-btn-no { color: #f87171; background: rgba(248, 113, 113, 0.1); } 
+        .toast-btn-no:hover { background: rgba(248, 113, 113, 0.2); }
+        
+        @keyframes slideUp { 
+            from { opacity: 0; transform: translateY(20px); } 
+            to { opacity: 0.95; transform: translateY(0); } 
+        }
+        @keyframes fadeOut { 
+            to { opacity: 0; transform: translateY(-10px); } 
+        }
+
+        /* --- DASHBOARD & JOURNAL OVERLAYS --- */
+        .modal-overlay { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100vw; 
+            height: 100vh; 
+            background: rgba(0, 0, 0, 0.5); 
+            backdrop-filter: blur(4px); 
+            z-index: 10000; 
+            display: none; 
+            justify-content: center; 
+            align-items: center; 
+            pointer-events: auto; 
+        }
+        .modal-panel { 
+            background: white; 
+            width: 700px; 
+            max-height: 85vh; 
+            border-radius: 12px; 
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); 
+            display: flex; 
+            flex-direction: column; 
+            overflow: hidden; 
+        }
+        .dash-header { 
+            padding: 20px; 
+            border-bottom: 1px solid #e2e8f0; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
+        .dash-title { font-size: 20px; font-weight: bold; color: #1e293b; }
+        .dash-close { cursor: pointer; font-size: 24px; color: #64748b; }
+        .dash-content { padding: 20px; overflow-y: auto; background: #f8fafc; flex-grow: 1; }
+        
+        .project-card { 
+            background: white; 
+            border: 1px solid #e2e8f0; 
+            border-radius: 8px; 
+            padding: 15px; 
+            margin-bottom: 10px; 
+            display: flex; 
+            align-items: center; 
+            transition: transform 0.1s, box-shadow 0.1s; 
+        }
+        .project-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .p-info { flex-grow: 1; } 
+        .p-name { font-weight: bold; color: #334155; font-size: 16px; } 
+        .p-date { font-size: 12px; color: #94a3b8; } 
+        .p-actions { display: flex; gap: 10px; }
+        .btn-load { background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+        .btn-trash { background: #fee2e2; color: #ef4444; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+
+        /* --- JOURNAL STYLES --- */
+        .journal-group { 
+            margin-bottom: 20px; 
+            background: white; 
+            border-radius: 8px; 
+            border: 1px solid #e2e8f0; 
+            overflow: hidden; 
+        }
+        .journal-header { 
+            background: #f1f5f9; 
+            padding: 10px 15px; 
+            font-weight: bold; 
+            color: #334155; 
+            border-bottom: 1px solid #e2e8f0; 
+            display: flex; 
+            justify-content: space-between; 
+        }
+        .journal-item { 
+            padding: 10px 15px; 
+            border-bottom: 1px solid #f1f5f9; 
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+        }
+        .journal-item:last-child { border-bottom: none; }
+        
+        .journal-tag { 
+            font-size: 10px; 
+            padding: 2px 6px; 
+            border-radius: 4px; 
+            font-weight: bold; 
+            text-transform: uppercase; 
+        }
+        .tag-todo { background: #f3f4f6; color: #64748b; border: 1px solid #cbd5e1; }
+        .tag-doing { background: #fef3c7; color: #d97706; border: 1px solid #fcd34d; }
+        .tag-overdue { background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; }
+
+        .journal-text { flex-grow: 1; font-size: 14px; color: #1e293b; }
+        .journal-meta { font-size: 12px; color: #64748b; display: flex; gap: 10px; align-items: center;}
+        .journal-context { font-size: 11px; color: #94a3b8; font-style: italic; }
+        .journal-jump-btn { 
+            background: #e0f2fe; 
+            color: #0369a1; 
+            border: none; 
+            border-radius: 4px; 
+            padding: 4px 8px; 
+            font-size: 11px; 
+            cursor: pointer; 
+            font-weight: bold; 
+        }
+        .journal-jump-btn:hover { background: #bae6fd; }
+
+        /* --- Viewport & Grid --- */
+        #viewport { width: 100vw; height: 100vh; overflow: hidden; cursor: grab; } 
+        #viewport:active { cursor: grabbing; }
+        #world { position: absolute; top: 0; left: 0; width: 0; height: 0; transform-origin: 0 0; }
+        .grid-background { 
+            position: absolute; 
+            top: -50000px; 
+            left: -50000px; 
+            width: 100000px; 
+            height: 100000px; 
+            background-image: radial-gradient(var(--grid-color) 1px, transparent 1px); 
+            background-size: 40px 40px; 
+            z-index: -1; 
+            pointer-events: none; 
+        }
+        
+        #connections-layer { 
+            position: absolute; 
+            top: -50000px; 
+            left: -50000px; 
+            width: 100000px; 
+            height: 100000px; 
+            z-index: 500; 
+            pointer-events: none; 
+            overflow: visible; 
+        }
+        .conn-visual { fill: none; stroke: #64748b; stroke-width: 2px; pointer-events: none; transition: stroke 0.2s, stroke-width 0.2s; }
+        .conn-hitbox { fill: none; stroke: transparent; stroke-width: 25px; cursor: pointer; pointer-events: stroke; }
+        .conn-group:hover .conn-visual { stroke: #3b82f6; }
+        .drag-line { stroke: #3b82f6; stroke-width: 4; stroke-dasharray: 5,5; opacity: 0.8; }
+        .proxy-line { stroke-dasharray: 4,4; } 
+        .no-pan { pointer-events: auto !important; }
+        /* Strict class for elements that MUST capture click (like inputs) */
+        .no-pan-strict { pointer-events: auto !important; }
+
+        /* --- BOX STYLES --- */
+        .box {
+            position: absolute; 
+            background: white; 
+            border: 2px solid var(--box-border); 
+            border-radius: 16px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
+            display: flex; 
+            flex-direction: column; 
+            z-index: 10;
+            min-width: 200px; 
+            min-height: 180px; 
+            
+            --dynamic-font-size: 24px; 
+            --static-font-size: 16px; 
+            
+            --header-height: 36px;
+            cursor: grab; 
+            transition: box-shadow 0.2s, border-color 0.2s, background-color 0.2s, width 0.8s cubic-bezier(0.25, 0.8, 0.25, 1), height 0.8s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        
+        /* Focus Animation when jumping from Journal */
+        .box.highlight-focus { 
+            animation: flashFocus 1.5s ease-out infinite; 
+            box-shadow: 0 0 0 8px rgba(59, 130, 246, 0.4); 
+            border-color: #3b82f6; 
+            z-index: 2000; 
+        }
+        @keyframes flashFocus { 
+            0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); } 
+            50% { box-shadow: 0 0 0 15px rgba(59, 130, 246, 0); } 
+            100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); } 
+        }
+
+        .no-transition { transition: none !important; }
+        .box.selected { border-color: var(--handle-color); z-index: 100; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
+        
+        .box-title-bar {
+            height: var(--header-height); background: transparent; border-radius: 10px 10px 0 0; 
+            display: flex; align-items: center; justify-content: center;
+            padding: 25px 15px 15px 15px; 
+            cursor: move; user-select: none; flex-shrink: 0; 
+            position: relative; 
+        }
+        .box-title-bar:active { cursor: grabbing; }
+        
+        input.title { 
+            width: 90%; border: none; font-weight: bold; background: transparent; outline: none; 
+            font-size: 16px; color: #1e293b; 
+            transition: font-size 0.2s, color 0.3s ease; 
+            cursor: move; text-align: center; font-family: 'Segoe UI', sans-serif;
+            pointer-events: none; 
+            font-size: var(--static-font-size);
+        }
+        input.title.editing { 
+            pointer-events: auto; cursor: text; 
+            background: rgba(255,255,255,0.8); border-radius: 4px; 
+            box-shadow: inset 0 0 0 1px #cbd5e1; user-select: text; 
+            color: #1e293b !important;
+        }
+
+        /* --- BALÃO DE AÇÕES --- */
+        .actions-balloon {
+            position: absolute; 
+            top: -35px; 
+            right: 10px; 
+            background: #1e293b; 
+            border-radius: 50px; 
+            padding: 8px 12px; 
+            display: none; 
+            align-items: center; 
+            gap: 8px;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+            font-size: 14px; 
+            z-index: 20; 
+            
+            /* SCALING LOGIC */
+            transform-origin: bottom right; 
+            transform: scale(var(--ui-scale));
+            
+            animation: popIn 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        @keyframes popIn { 
+            from { transform: scale(0); opacity: 0; } 
+            to { transform: scale(var(--ui-scale)); opacity: 1; } 
+        }
+        
+        .box.hover-focused > .box-title-bar .actions-balloon { display: flex; }
+        
+        .actions-balloon .icon-btn { color: white; width: 28px; height: 28px; font-size: 14px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+        .actions-balloon .icon-btn:hover { background: rgba(255,255,255,0.2); }
+        .actions-balloon .btn-delete:hover { background: #ef4444; color: white; }
+        .actions-balloon .btn-font { font-family: serif; font-weight: bold; width: 24px; height: 24px; }
+        
+        .status-dot-btn { width: 16px; height: 16px; border-radius: 50%; cursor: pointer; border: 2px solid rgba(255,255,255,0.5); transition: transform 0.1s; }
+        .status-dot-btn:hover { transform: scale(1.2); border-color: white; }
+        .dot-neutral { background: #e2e8f0; border-color: #94a3b8; }
+        .dot-green { background: var(--color-forest); } 
+        .dot-red { background: var(--color-wine); }
+        .separator { width: 1px; height: 20px; background: rgba(255,255,255,0.3); }
+
+        .box-body { padding: 0 15px 15px 15px; display: flex; flex-direction: column; gap: 10px; flex-grow: 1; position: relative; }
+        .children-area { flex-grow: 1; position: relative; margin-top: 5px; background: rgba(240,240,240,0.4); border-radius: 12px; border: 1px dashed #cbd5e1; width: 100%; height: 100%; min-height: 60px; padding: 20px; box-sizing: border-box; transition: opacity 0.2s, transform 0.2s, background-color 0.2s, border-color 0.2s; opacity: 1; transform: scale(1); }
+        .children-area.collapsed { display: none; }
+        .children-area.drop-active { background-color: rgba(59, 130, 246, 0.1); border-color: #3b82f6; box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0.3); }
+        
+        /* ESTADOS DE COR */
+        .box.red-state { border-color: var(--color-wine) !important; background-color: var(--color-wine) !important; box-shadow: 0 0 0 3px rgba(104, 14, 42, 0.3); }
+        .box.red-state > .box-title-bar > input.title { color: white !important; font-weight: 800; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+        
+        .box.green-state { border-color: var(--color-forest) !important; background-color: #dcfce7 !important; box-shadow: 0 0 0 3px rgba(6, 78, 59, 0.3); }
+        .box.green-state > .box-title-bar > input.title { color: var(--color-forest) !important; font-weight: 800; }
+
+        .box.alert-state { box-shadow: 0 0 0 6px rgba(136, 19, 55, 0.4); border-color: var(--color-wine); }
+        
+        /* MODO COLAPSADO */
+        .box.collapsed-mode .box-body { display: none; }
+        .box.collapsed-mode .box-title-bar { height: 100%; padding: 0; align-items: center; justify-content: center; }
+        .box.collapsed-mode input.title { font-size: var(--dynamic-font-size); color: inherit; } 
+        .box.collapsed-mode.red-state > .box-title-bar > input.title { color: white !important; }
+
+        /* TAREFAS */
+        .task-container { 
+            display: block; 
+            margin-bottom: 10px; background: rgba(255,255,255,0.6); padding: 8px; border-radius: 8px; border: 1px solid #cbd5e1; 
+        }
+        
+        .task-item { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+        
+        .task-status-toggle { width: 14px; height: 14px; border-radius: 50%; border: 1px solid #94a3b8; cursor: pointer; flex-shrink: 0; background: white; }
+        .task-status-toggle.doing { background: #fbbf24; border-color: #d97706; }
+        .task-status-toggle.done { background: #4ade80; border-color: #16a34a; }
+        
+        .task-input { flex-grow: 1; border: none; background: transparent; font-size: 13px; color: #334155; padding: 2px; border-bottom: 1px solid transparent; }
+        .task-input:focus { border-bottom: 1px solid #3b82f6; outline: none; background: rgba(255,255,255,0.8); }
+        
+        .task-owner { width: 60px; border: none; background: transparent; font-size: 11px; color: #64748b; border-bottom: 1px dotted #cbd5e1; margin-left: 2px; }
+        .task-date { width: 90px; border: none; background: transparent; font-size: 11px; color: #64748b; }
+        /* OVERDUE STYLE */
+        .task-date.overdue { color: #ef4444; font-weight: bold; border-bottom: 1px solid #ef4444; }
+
+        .task-owner:focus, .task-date:focus { background: white; outline: none; border-bottom: 1px solid #3b82f6; color: #0f172a; }
+
+        .task-item.done .task-input { text-decoration: line-through; color: #94a3b8; }
+        .task-del-btn { border: none; background: transparent; color: #ef4444; cursor: pointer; font-size: 14px; opacity: 0; transition: opacity 0.2s; padding: 0 4px; }
+        .task-item:hover .task-del-btn { opacity: 1; }
+        .add-task-btn { font-size: 11px; color: #64748b; background: none; border: 1px dashed #cbd5e1; border-radius: 4px; cursor: pointer; padding: 4px; width: 100%; text-align: center; margin-top: 4px; }
+        .add-task-btn:hover { background: #f1f5f9; color: #334155; border-color: #94a3b8; }
+
+        .task-summary-badge {
+            position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%);
+            background: #fef3c7; color: #d97706; border: 1px solid #d97706;
+            font-size: 10px; font-weight: bold; padding: 2px 8px; border-radius: 10px;
+            white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: none; pointer-events: none;
+        }
+        .task-summary-badge.all-done { background: #dcfce7; color: #166534; border-color: #166534; }
+        .box.collapsed-mode .task-summary-badge { display: block; }
+        .task-summary-badge:empty { display: none !important; }
+
+        /* --- POST-IT NOTE STYLES --- */
+        .note {
+            position: absolute; 
+            background: #fef9c3; /* Yellow-100 */
+            border: 1px solid #fde047; /* Yellow-300 */
+            box-shadow: 2px 4px 6px rgba(0,0,0,0.1);
+            display: flex; 
+            flex-direction: column; 
+            z-index: 5;
+            min-width: 150px; 
+            min-height: 150px;
+            border-radius: 2px 2px 15px 2px; /* Folded corner effect */
+            transform: rotate(-1deg);
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: grab;
+        }
+        .note:hover { 
+            z-index: 100; 
+            transform: scale(1.02) rotate(0deg); 
+            box-shadow: 4px 8px 12px rgba(0,0,0,0.15); 
+        }
+        .note:active { cursor: grabbing; }
+        
+        .note-textarea {
+            width: 100%; 
+            height: 100%; 
+            resize: none; 
+            border: none; 
+            background: transparent;
+            font-family: 'Comic Sans MS', 'Marker Felt', sans-serif;
+            font-size: 16px; 
+            color: #4b5563; 
+            outline: none; 
+            padding: 15px;
+            box-sizing: border-box;
+            cursor: text;
+        }
+        
+        .note-delete {
+            position: absolute; 
+            top: -10px; 
+            right: -10px;
+            background: #ef4444; 
+            color: white; 
+            border-radius: 50%;
+            width: 24px; 
+            height: 24px; 
+            text-align: center; 
+            line-height: 24px;
+            cursor: pointer; 
+            font-size: 14px; 
+            font-weight: bold; 
+            display: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            z-index: 200;
+        }
+        .note:hover .note-delete { display: block; }
+        
+        body.read-only .note-textarea { pointer-events: none; }
+        body.read-only .note-delete { display: none !important; }
+
+
+        .connector { position: absolute; width: 12px; height: 12px; background: white; border: 2px solid #3b82f6; border-radius: 50%; z-index: 600; opacity: 0; transition: opacity 0.2s, transform 0.2s; cursor: crosshair; pointer-events: auto; }
+        .box:hover > .connector { opacity: 1; } .connector:hover { transform: scale(1.4); background: #3b82f6; } .c-top { top: -7px; left: 50%; transform: translateX(-50%); } .c-bottom { bottom: -7px; left: 50%; transform: translateX(-50%); } .c-left { left: -7px; top: 50%; transform: translateY(-50%); } .c-right { right: -7px; top: 50%; transform: translateY(-50%); }
+        
+        /* RESIZERS */
+        .resizer { width: 35px; height: 35px; position: absolute; z-index: 102; opacity: 0; pointer-events: auto; }
+        .resizer::after { content: ''; position: absolute; border-left: 10px solid transparent; border-bottom: 10px solid #94a3b8; }
+        .resizer.bottom-right { right: 0; bottom: 0; cursor: nwse-resize; }
+        .resizer.bottom-right::after { right: 6px; bottom: 6px; }
+        .resizer.bottom-left { left: 0; bottom: 0; cursor: nesw-resize; }
+        .resizer.bottom-left::after { left: 6px; bottom: 6px; transform: scaleX(-1); }
+        .box:hover > .resizer { opacity: 1; } 
+        .note:hover > .resizer { opacity: 1; }
+        
+        /* CLASS TO BLOCK PANNING */
+        .no-pan { pointer-events: auto !important; }
+        .no-pan-strict { pointer-events: auto !important; }
+
+        body.read-only .actions-balloon .btn-add, body.read-only .actions-balloon .btn-delete, 
+        body.read-only .actions-balloon .btn-clone, body.read-only .actions-balloon .btn-font, 
+        body.read-only .actions-balloon .status-dot-btn, body.read-only .actions-balloon .separator,
+        body.read-only .add-task-btn, body.read-only .task-del-btn { display: none !important; }
+        
+        body.read-only .task-input, body.read-only .task-owner, body.read-only .task-date { pointer-events: none !important; }
+        body.read-only .connector { display: none !important; }
+        body.read-only .resizer { display: none !important; }
+        body.read-only input { pointer-events: none; }
+        body.read-only .box { cursor: default; }
+        body.read-only .box-title-bar { cursor: default; }
+        
+        #file-input { display: none; }
+    </style>
+</head>
+<body>
+
+<div id="ui-layer">
+    <div id="toolbar" class="no-pan">
+        <button class="btn-primary" onclick="addRootBox()">+ Nova Caixa</button>
+        <button class="btn-outline btn-postit" onclick="addNote()">+ Nota</button>
+        <div style="width: 1px; height: 30px; background: #ddd; margin: 0 5px;"></div>
+        <button id="btn-mode" class="btn-outline" onclick="toggleEditMode()" title="Alternar Edição/Leitura">🔓 Edição</button>
+        <div style="width: 1px; height: 30px; background: #ddd; margin: 0 5px;"></div>
+        <button class="btn-dark" onclick="openDashboard()">📂 Projetos</button>
+        <button class="btn-dark" onclick="openJournal()">📰 Jornal</button>
+        <button id="btn-save" class="btn-primary" onclick="saveCurrentDrawing()">💾 Salvar</button>
+        <div id="last-saved-msg"></div>
+        <div style="width: 1px; height: 30px; background: #ddd; margin: 0 5px;"></div>
+        <button class="btn-outline" onclick="exportJSON()" title="Baixar .json">⬇ JSON</button>
+        <button class="btn-outline" onclick="document.getElementById('file-input').click()" title="Carregar .json">⬆ Abrir</button>
+        <input type="file" id="file-input" accept=".json" onchange="importJSON(this)">
+        <button class="btn-outline" onclick="downloadSVG()" title="Baixar Vetor SVG">📐 SVG</button>
+        <button class="btn-dark" onclick="exportReadOnlyHTML()" title="Gerar página somente leitura">📄 Web View</button>
+        <div style="width: 1px; height: 30px; background: #ddd; margin: 0 5px;"></div>
+        <span style="font-size: 12px; color: #555;">Zoom: </span>
+        <span id="zoom-indicator">100%</span>
+        <button class="icon-btn" onclick="resetView()">⟲</button>
+        <button class="icon-btn" onclick="fitToScreen()" title="Centralizar Tudo">🎯</button>
+    </div>
+</div>
+
+<div id="toast-container"></div>
+
+<div id="dashboard-overlay" class="modal-overlay">
+    <div id="dashboard-panel" class="modal-panel no-pan">
+        <div class="dash-header"><span class="dash-title">Gerenciador de Desenhos</span><span class="dash-close" onclick="closeDashboard()">×</span></div>
+        <div class="dash-content" id="projects-list"></div>
+        <div style="padding: 15px; border-top: 1px solid #e2e8f0; text-align: right;"><button class="btn-primary" onclick="newDrawing()">+ Novo Desenho em Branco</button></div>
+    </div>
+</div>
+
+<div id="journal-overlay" class="modal-overlay">
+    <div class="modal-panel no-pan" style="width: 800px;">
+        <div class="dash-header">
+            <div>
+                <span class="dash-title">📰 Jornal de Pendências</span>
+                <button class="btn-outline" style="font-size:12px; margin-left:15px;" onclick="downloadJournalCSV()">⬇ CSV</button>
+            </div>
+            <span class="dash-close" onclick="closeJournal()">×</span>
+        </div>
+        <div class="dash-content" id="journal-content">
+            </div>
+        <div style="padding: 15px; border-top: 1px solid #e2e8f0; text-align: right; color: #64748b; font-size: 12px;">
+            Exibindo apenas tarefas não concluídas, agrupadas por responsável.
+        </div>
+    </div>
+</div>
+
+<div id="viewport">
+    <div id="world">
+        <div class="grid-background"></div>
+        <svg id="connections-layer">
+            <defs><marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#64748b" /></marker></defs>
+            <path id="temp-line" class="drag-line" d="" fill="none" style="display: none;"></path>
+        </svg>
+    </div>
+</div>
+
+<script>
+    // --- 1. VARIABLES & CONSTANTS ---
+    const ns = "http://www.w3.org/2000/svg";
+    const SNAP_SIZE = 20;
+    
+    let state = { scale: 1, panning: false, panStart: { x: 0, y: 0 }, offset: { x: 0, y: 0 }, isEditMode: true, dragThresholdMet: false, dragStartScreen: {x:0, y:0}, resizeDir: null };
+    let connections = [];
+    let dragItem = null, resizeItem = null, isConnecting = false, startInt = {};
+    let currentDropTarget = null;
+    let spacePressed = false;
+    let currentDrawingName = null;
+    let undoStack = null;
+    let hasUnsavedChanges = false;
+
+    const viewport = document.getElementById('viewport');
+    const world = document.getElementById('world');
+    const zoomInd = document.getElementById('zoom-indicator');
+    const svgLayer = document.getElementById('connections-layer');
+    const tempLine = document.getElementById('temp-line');
+
+    // --- 2. HELPERS (Math, DOM, Lines) ---
+    function screenToWorld(sx, sy) { 
+        const rect = world.getBoundingClientRect(); 
+        return { x: (sx - rect.left) / state.scale, y: (sy - rect.top) / state.scale }; 
+    }
+    
+    function getConnPos(el, pos) {
+        const r = el.getBoundingClientRect(); let x=r.left+r.width/2, y=r.top+r.height/2;
+        if(pos==='top') y=r.top; if(pos==='bottom') y=r.bottom; if(pos==='left') x=r.left; if(pos==='right') x=r.right;
+        return screenToWorld(x,y);
+    }
+    
+    function findVisibleNode(id) {
+        let currentEl = document.getElementById(id); if (!currentEl) return null;
+        while (currentEl) {
+            const parentArea = currentEl.parentElement;
+            if (parentArea && parentArea.classList.contains('children-area')) { if (parentArea.classList.contains('collapsed')) { currentEl = parentArea.closest('.box'); continue; } }
+            return currentEl;
+        }
+        return null;
+    }
+
+    function updateLine(c) {
+        const vSource = findVisibleNode(c.sid); const vTarget = findVisibleNode(c.tid);
+        const group = document.getElementById(c.id); if (!group) return;
+        
+        if (!vSource || !vTarget || vSource === vTarget) { group.style.display = 'none'; return; }
+        group.style.display = 'block';
+        
+        const visualLine = group.querySelector('.conn-visual');
+        if (vSource.id !== c.sid || vTarget.id !== c.tid) visualLine.classList.add('proxy-line'); else visualLine.classList.remove('proxy-line');
+        
+        const ps = getConnPos(vSource, c.spos); const pt = getConnPos(vTarget, c.tpos);
+        const off = -50000;
+        const x1=ps.x-off, y1=ps.y-off, x2=pt.x-off, y2=pt.y-off;
+        
+        if (vTarget) {
+            const tAvg = (vTarget.offsetWidth + vTarget.offsetHeight) / 2;
+            const thickness = Math.max(3, Math.min(30, tAvg / 15)); 
+            visualLine.setAttribute("stroke-width", thickness);
+        }
+
+        const dVal = Math.sqrt(Math.pow(x2-x1,2)+Math.pow(y2-y1,2)); const cp = Math.max(dVal*0.5, 80);
+        let cx1=x1, cy1=y1, cx2=x2, cy2=y2;
+        if(c.spos==='top') cy1-=cp; if(c.spos==='bottom') cy1+=cp; if(c.spos==='left') cx1-=cp; if(c.spos==='right') cx1+=cp;
+        if(c.tpos==='top') cy2-=cp; if(c.tpos==='bottom') cy2+=cp; if(c.tpos==='left') cx2-=cp; if(c.tpos==='right') cx2+=cp;
+        
+        const pathD = `M ${x1} ${y1} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${x2} ${y2}`;
+        group.querySelector('.conn-hitbox').setAttribute("d", pathD);
+        visualLine.setAttribute("d", pathD);
+    }
+    
+    function updateAllLines(forceClear = false) {
+        if(forceClear) { 
+            const groups = Array.from(svgLayer.querySelectorAll('g.conn-group'));
+            const dataIds = new Set(connections.map(c => c.id));
+            groups.forEach(g => { if(!dataIds.has(g.id)) g.remove(); });
+        }
+        connections.forEach(updateLine);
+    }
+
+    function addConnection(sid, spos, tid, tpos, existingId = null) {
+        const id = existingId || 'c-' + Date.now();
+        const g = document.createElementNS(ns, "g");
+        g.id = id; g.classList.add('conn-group');
+        
+        const hit = document.createElementNS(ns, "path");
+        hit.setAttribute("class", "conn-hitbox");
+        hit.addEventListener('dblclick', function() { handleConnectionDblClick(id, sid, tid); });
+        
+        const vis = document.createElementNS(ns, "path");
+        vis.setAttribute("class", "conn-visual");
+        vis.setAttribute("marker-end", "url(#arrowhead)");
+
+        g.appendChild(hit); g.appendChild(vis); svgLayer.appendChild(g);
+        
+        if (!connections.find(c => c.id === id)) connections.push({ id, sid, spos, tid, tpos });
+        updateLine(connections[connections.length-1]); 
+        checkCascading();
+        markUnsaved();
+    }
+    
+    // --- 3. PROJECT MGMT ---
+    function markUnsaved() {
+        hasUnsavedChanges = true;
+        const btn = document.getElementById('btn-save');
+        btn.innerHTML = "⚠️ Salvar (Pendente)";
+        btn.classList.add('btn-pending');
+        btn.classList.remove('btn-primary');
+    }
+
+    function markSaved() {
+        hasUnsavedChanges = false;
+        const btn = document.getElementById('btn-save');
+        btn.innerHTML = "💾 Salvar";
+        btn.classList.remove('btn-pending');
+        btn.classList.add('btn-primary');
+    }
+    
+    function deleteProject(id) {
+        if(!confirm("Tem certeza que deseja excluir este projeto?")) return;
+        let db = getDB();
+        db = db.filter(p => p.id !== id);
+        setDB(db);
+        openDashboard();
+        showToast("Projeto excluído.");
+    }
+    
+    // --- 4. BOX LOGIC ---
+    function calcDynamicFont(box) {
+        if(box.classList.contains('note')) return; 
+
+        const input = box.querySelector('input.title');
+        const textLen = Math.max(1, input.value.length); 
+        
+        const w = box.offsetWidth || parseFloat(box.style.width); 
+        const h = box.offsetHeight || parseFloat(box.style.height);
+        const area = w * h;
+        
+        const manualScale = parseFloat(box.dataset.fontScale) || 1;
+
+        let sizeBasedOnGeom = Math.sqrt(area) * 0.12;
+        const maxSizeForWidth = (w * 0.9) / (textLen * 0.6);
+        let finalSize = Math.min(sizeBasedOnGeom, maxSizeForWidth);
+        finalSize = Math.max(14, finalSize);
+        finalSize = finalSize * manualScale;
+        
+        box.style.setProperty('--dynamic-font-size', finalSize + 'px');
+        
+        const staticBase = 16;
+        box.style.setProperty('--static-font-size', (staticBase * manualScale) + 'px');
+    }
+
+    // [UPDATED] Update Elastic Parent to consider NOTES as well
+    function updateElasticParent(childrenContainer) {
+        if (!childrenContainer || !childrenContainer.classList.contains('children-area')) return;
+        const parentBox = childrenContainer.closest('.box'); if (!parentBox) return;
+        
+        if (childrenContainer.classList.contains('collapsed')) {
+            const manualW = parseFloat(parentBox.dataset.mw) || 200;
+            parentBox.style.width = Math.max(200, manualW) + 'px';
+            parentBox.style.height = Math.max(80, parseFloat(parentBox.dataset.mh) || 80) + 'px';
+            calcDynamicFont(parentBox);
+            const gp = parentBox.parentElement; if (gp && gp.classList.contains('children-area')) updateElasticParent(gp); 
+            return;
+        }
+        
+        // Include notes in children calculation
+        const children = Array.from(childrenContainer.children).filter(c => c.classList.contains('box') || c.classList.contains('note'));
+        let maxX = 0; let maxY = 0;
+        children.forEach(child => {
+            const right = child.offsetLeft + child.offsetWidth; const bottom = child.offsetTop + child.offsetHeight;
+            if (right > maxX) maxX = right; if (bottom > maxY) maxY = bottom;
+        });
+        const neededW = maxX + 40; const neededH = maxY + 120 + 40;
+        const manualW = parseFloat(parentBox.dataset.mw) || 240; const manualH = parseFloat(parentBox.dataset.mh) || 220;
+        parentBox.style.width = Math.max(neededW, manualW) + 'px'; parentBox.style.height = Math.max(neededH, manualH) + 'px';
+        calcDynamicFont(parentBox);
+        const gp = parentBox.parentElement; if (gp && gp.classList.contains('children-area')) updateElasticParent(gp);
+        updateAllLines();
+    }
+    
+    // [UPDATED] Reparent Box (now handles notes too)
+    function reparentBox(box, newParent) {
+        const oldParent = box.parentElement;
+        const boxRect = box.getBoundingClientRect();
+        const newParentRect = newParent === world ? world.getBoundingClientRect() : newParent.getBoundingClientRect();
+        
+        let rawLeft = (boxRect.left - newParentRect.left) / state.scale;
+        let rawTop = (boxRect.top - newParentRect.top) / state.scale;
+        
+        let snapLeft = Math.round(rawLeft / SNAP_SIZE) * SNAP_SIZE;
+        let snapTop = Math.round(rawTop / SNAP_SIZE) * SNAP_SIZE;
+
+        newParent.appendChild(box); 
+        box.style.left = snapLeft + 'px'; 
+        box.style.top = snapTop + 'px';
+        
+        if(oldParent && oldParent.classList.contains('children-area')) updateElasticParent(oldParent);
+        if(newParent && newParent.classList.contains('children-area')) updateElasticParent(newParent);
+        updateAllLines();
+        markUnsaved();
+    }
+
+    function createBox(parent, x, y) {
+        const id = 'box-' + Date.now() + Math.random().toString(36).substr(2, 4);
+        const el = createBoxElement(id);
+        el.style.left = x + 'px'; el.style.top = y + 'px';
+        let w = '200px'; let h = '180px'; if(parent !== world) { w = '200px'; h = '160px'; }
+        el.style.width = w; el.style.height = h; el.dataset.mw = parseFloat(w); el.dataset.mh = parseFloat(h);
+        el.dataset.status = 'neutral'; 
+        parent.appendChild(el); calcDynamicFont(el);
+        if (parent !== world) setTimeout(() => updateElasticParent(parent), 0);
+        markUnsaved();
+    }
+    
+    function addRootBox() { 
+        if(!state.isEditMode) return;
+        const pos = screenToWorld(window.innerWidth/2, window.innerHeight/2); createBox(world, pos.x - 130, pos.y - 110); 
+    }
+
+    // --- NOTE LOGIC ---
+    function addNote() {
+        if(!state.isEditMode) return;
+        const pos = screenToWorld(window.innerWidth/2, window.innerHeight/2);
+        createNoteElement('note-' + Date.now(), "Nova Nota", pos.x, pos.y);
+        markUnsaved();
+    }
+    
+    // [NEW] Add note directly inside a box
+    function addNoteToBox(boxId) {
+        if(!state.isEditMode) return;
+        const box = document.getElementById(boxId);
+        const area = box.querySelector('.children-area');
+        // If box collapsed, open it
+        if(area.classList.contains('collapsed')) {
+             const btn = box.querySelector('.actions-balloon .btn-toggle');
+             performToggle(boxId, btn);
+        }
+        createNoteElement('note-' + Date.now(), "Nota Rápida", 20, 20, 150, 150, area);
+        updateElasticParent(area);
+        markUnsaved();
+    }
+
+    function createNoteElement(id, textVal, x, y, w = 150, h = 150, parent = world) {
+        const el = document.createElement('div');
+        el.className = 'note no-pan-strict'; 
+        el.id = id;
+        el.style.left = x + 'px'; 
+        el.style.top = y + 'px';
+        el.style.width = w + 'px'; 
+        el.style.height = h + 'px';
+        
+        el.innerHTML = `
+            <textarea class="note-textarea no-pan-strict" oninput="markUnsaved()">${textVal}</textarea>
+            <div class="note-delete no-pan-strict" onclick="deleteNote('${id}')">×</div>
+            <div class="resizer bottom-right no-pan-strict" onmousedown="initResize(event, '${id}', 'br')"></div>
+        `;
+        
+        // Dragging the note body (not textarea)
+        el.onmousedown = (e) => {
+            if(e.target === el) initDrag(e, id);
+        };
+        
+        parent.appendChild(el);
+        return el;
+    }
+
+    function deleteNote(id) {
+        if(!state.isEditMode) return;
+        const el = document.getElementById(id);
+        if(el) { 
+            const parent = el.parentElement;
+            el.remove(); 
+            if(parent && parent.classList.contains('children-area')) updateElasticParent(parent);
+            markUnsaved(); 
+        }
+    }
+
+    function updateBoxSummary(boxIdOrElement) {
+        const box = typeof boxIdOrElement === 'string' ? document.getElementById(boxIdOrElement) : boxIdOrElement;
+        if (!box) return;
+        const tasks = box.querySelectorAll('.task-item');
+        const badge = box.querySelector('.task-summary-badge');
+        
+        if (tasks.length === 0) {
+            badge.innerText = "";
+            return;
+        }
+        
+        const total = tasks.length;
+        const done = box.querySelectorAll('.task-item[data-status="done"]').length;
+        const pending = total - done;
+        
+        if (pending === 0) {
+            badge.innerText = "✓ Completo";
+            badge.classList.add('all-done');
+        } else {
+            badge.innerText = `${pending}/${total} Pendentes`;
+            badge.classList.remove('all-done');
+        }
+    }
+
+    function toggleTaskView(boxId) {
+        const box = document.getElementById(boxId);
+        const container = box.querySelector('.task-container');
+        
+        // Simple toggle visibility
+        if (container.style.display === 'none') {
+            container.style.display = 'block';
+        } else {
+            container.style.display = 'none';
+        }
+        
+        // Atualizar layout
+        updateElasticParent(box.parentElement.closest('.children-area')); 
+        updateAllLines();
+        markUnsaved();
+    }
+    
+    function addTask(boxId) {
+        const box = document.getElementById(boxId);
+        const container = box.querySelector('.task-container');
+        renderTask(container, "Nova tarefa", "todo", "", "");
+        // Garantir que está visível ao adicionar
+        container.style.display = 'block';
+        
+        updateBoxSummary(box);
+        updateElasticParent(box.parentElement.closest('.children-area'));
+        updateAllLines();
+        markUnsaved();
+    }
+    
+    function checkTaskOverdue(inputDate) {
+        const today = new Date().toISOString().split('T')[0];
+        const val = inputDate.value;
+        const taskItem = inputDate.closest('.task-item');
+        
+        if (val && val < today && taskItem.dataset.status !== 'done') {
+            inputDate.classList.add('overdue');
+        } else {
+            inputDate.classList.remove('overdue');
+        }
+        markUnsaved();
+    }
+
+    function renderTask(container, text, status, owner = "", date = "") {
+        const div = document.createElement('div');
+        div.className = `task-item ${status === 'done' ? 'done' : ''} no-pan`; 
+        div.dataset.status = status;
+        
+        let statusClass = '';
+        if(status === 'doing') statusClass = 'doing';
+        if(status === 'done') statusClass = 'done';
+        
+        div.innerHTML = `
+            <div class="task-status-toggle ${statusClass} no-pan" onclick="cycleTaskStatus(this)"></div>
+            <input class="task-input no-pan" value="${text}" placeholder="Tarefa..." oninput="markUnsaved()">
+            <input class="task-owner no-pan" value="${owner}" placeholder="Resp." title="Responsável" oninput="markUnsaved()">
+            <input class="task-date no-pan" type="date" value="${date}" title="Data Limite" onchange="checkTaskOverdue(this)">
+            <button class="task-del-btn no-pan" onclick="removeTask(this)">×</button>
+        `;
+        container.insertBefore(div, container.lastElementChild); 
+        
+        // Initial check for loaded tasks
+        const dateInput = div.querySelector('.task-date');
+        checkTaskOverdue(dateInput);
+    }
+    
+    function cycleTaskStatus(btn) {
+        const item = btn.parentElement;
+        const boxId = item.closest('.box').id;
+        const current = item.dataset.status;
+        let next = 'todo';
+        if(current === 'todo') next = 'doing';
+        else if(current === 'doing') next = 'done';
+        else if(current === 'done') next = 'todo';
+        
+        item.dataset.status = next;
+        btn.className = `task-status-toggle ${next === 'done' ? 'done' : (next === 'doing' ? 'doing' : '')} no-pan`;
+        if(next === 'done') item.classList.add('done'); else item.classList.remove('done');
+        
+        // Re-check overdue status when status changes (if done, remove red)
+        const dateInput = item.querySelector('.task-date');
+        checkTaskOverdue(dateInput);
+        
+        updateBoxSummary(boxId);
+        markUnsaved();
+    }
+    
+    function removeTask(btn) {
+        const item = btn.parentElement;
+        const box = item.closest('.box');
+        item.remove();
+        updateBoxSummary(box.id);
+        updateAllLines();
+        markUnsaved();
+    }
+
+    // --- JOURNAL LOGIC ---
+    function openJournal() {
+        const content = document.getElementById('journal-content');
+        content.innerHTML = '';
+        
+        const today = new Date().toISOString().split('T')[0];
+        let allTasks = [];
+        
+        document.querySelectorAll('.box').forEach(box => {
+            const boxTitle = box.querySelector('input.title').value;
+            const taskItems = box.querySelectorAll('.task-item');
+            
+            taskItems.forEach(item => {
+                if (item.closest('.box') !== box) return;
+
+                const status = item.dataset.status;
+                if(status === 'done') return; 
+                
+                const dateVal = item.querySelector('.task-date').value;
+                const isOverdue = dateVal && dateVal < today;
+
+                allTasks.push({
+                    boxId: box.id, 
+                    box: boxTitle,
+                    text: item.querySelector('.task-input').value,
+                    owner: item.querySelector('.task-owner').value || "Sem Responsável",
+                    date: dateVal,
+                    status: status,
+                    isOverdue: isOverdue
+                });
+            });
+        });
+        
+        if(allTasks.length === 0) {
+            content.innerHTML = '<div style="text-align:center; padding:20px; color:#64748b;">Nenhuma pendência encontrada.</div>';
+            document.getElementById('journal-overlay').style.display = 'flex';
+            return;
+        }
+
+        const grouped = allTasks.reduce((acc, t) => {
+            if(!acc[t.owner]) acc[t.owner] = [];
+            acc[t.owner].push(t);
+            return acc;
+        }, {});
+        
+        for (const [owner, tasks] of Object.entries(grouped)) {
+            const groupDiv = document.createElement('div');
+            groupDiv.className = 'journal-group';
+            
+            let html = `<div class="journal-header">${owner} <span style="font-weight:normal; font-size:12px; color:#64748b;">(${tasks.length})</span></div>`;
+            
+            tasks.forEach(t => {
+                let tagClass = t.status === 'doing' ? 'tag-doing' : 'tag-todo';
+                let tagText = t.status === 'doing' ? 'Fazendo' : 'A Fazer';
+                
+                let overdueHtml = t.isOverdue ? '<span class="journal-tag tag-overdue">🔴 ATRASADO</span>' : '';
+                
+                let dateStr = t.date ? `<span style="color:${t.isOverdue ? '#ef4444' : '#d97706'};">📅 ${t.date}</span>` : '';
+                
+                html += `
+                    <div class="journal-item">
+                        <div style="display:flex; gap:5px; align-items:center;">
+                            <span class="journal-tag ${tagClass}">${tagText}</span>
+                            ${overdueHtml}
+                        </div>
+                        <span class="journal-text">${t.text}</span>
+                        <div class="journal-meta">
+                            ${dateStr}
+                            <span class="journal-context">em: ${t.box}</span>
+                            <button class="journal-jump-btn" onclick="focusOnBox('${t.boxId}')">Ir ➔</button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            groupDiv.innerHTML = html;
+            content.appendChild(groupDiv);
+        }
+        
+        document.getElementById('journal-overlay').style.display = 'flex';
+    }
+
+    function downloadJournalCSV() {
+        const headers = ["Status", "Atrasado?", "Tarefa", "Responsável", "Data Limite", "Caixa de Origem"];
+        let csvContent = "\uFEFF" + headers.join(",") + "\n"; 
+        const today = new Date().toISOString().split('T')[0];
+
+        document.querySelectorAll('.box').forEach(box => {
+            const boxTitle = box.querySelector('input.title').value.replace(/"/g, '""'); 
+            const taskItems = box.querySelectorAll('.task-item');
+
+            taskItems.forEach(item => {
+                if (item.closest('.box') !== box) return;
+
+                const status = item.dataset.status;
+                if(status === 'done') return;
+
+                const text = item.querySelector('.task-input').value.replace(/"/g, '""');
+                const owner = (item.querySelector('.task-owner').value || "").replace(/"/g, '""');
+                const date = item.querySelector('.task-date').value;
+                const isOverdue = date && date < today ? "SIM" : "NÃO";
+
+                let statusLabel = status === 'doing' ? 'Fazendo' : 'A Fazer';
+
+                csvContent += `"${statusLabel}","${isOverdue}","${text}","${owner}","${date}","${boxTitle}"\n`;
+            });
+        });
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        if (link.download !== undefined) {
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", "jornal_pendencias.csv");
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    }
+
+    function closeJournal() {
+        document.getElementById('journal-overlay').style.display = 'none';
+    }
+
+    // --- FOCUS ANIMATION ---
+    async function focusOnBox(id) {
+        closeJournal();
+        await revealHierarchy(id); 
+        
+        const box = document.getElementById(id);
+        if (!box) return;
+
+        const rect = box.getBoundingClientRect();
+        const boxWx = (rect.left - state.offset.x) / state.scale + (rect.width / 2 / state.scale);
+        const boxWy = (rect.top - state.offset.y) / state.scale + (rect.height / 2 / state.scale);
+
+        const screenCx = window.innerWidth / 2;
+        const screenCy = window.innerHeight / 2;
+
+        const newScale = 1.2; 
+        const newOffX = screenCx - (boxWx * newScale);
+        const newOffY = screenCy - (boxWy * newScale);
+
+        state.scale = newScale;
+        state.offset.x = newOffX;
+        state.offset.y = newOffY;
+        updateTransform();
+
+        box.classList.add('highlight-focus');
+        setTimeout(() => box.classList.remove('highlight-focus'), 3000);
+    }
+
+    function createBoxElement(id, titleVal = "Novo Item") {
+        const el = document.createElement('div'); el.className = 'box'; el.id = id;
+        el.dataset.fontScale = "1"; 
+        el.innerHTML = `
+            <div class="box-title-bar" onmousedown="initDrag(event, '${id}')" ondblclick="enableTitleEdit('${id}')">
+                <input class="title" value="${titleVal}" placeholder="Nome..." onblur="disableTitleEdit('${id}')" oninput="calcDynamicFont(this.closest('.box')); markUnsaved();" readonly>
+                <div class="task-summary-badge"></div>
+                <div class="actions-balloon no-pan">
+                    <div class="status-dot-btn dot-neutral no-pan" onclick="setStatus('${id}', 'neutral')" title="Normal"></div>
+                    <div class="status-dot-btn dot-green no-pan" onclick="setStatus('${id}', 'green')" title="Ok"></div>
+                    <div class="status-dot-btn dot-red no-pan" onclick="setStatus('${id}', 'red')" title="Crítico"></div>
+                    <div class="separator"></div>
+                    <button class="icon-btn btn-font no-pan" onclick="toggleTaskView('${id}')" title="Tarefas">📋</button>
+                    <button class="icon-btn btn-font no-pan" onclick="addNoteToBox('${id}')" title="Adicionar Nota">📝</button>
+                    <div class="separator"></div>
+                    <button class="icon-btn btn-font no-pan" onclick="adjustFontSize('${id}', -0.1)" title="Diminuir Texto">A-</button>
+                    <button class="icon-btn btn-font no-pan" onclick="adjustFontSize('${id}', 0.1)" title="Aumentar Texto">A+</button>
+                    <div class="separator"></div>
+                    <button class="icon-btn btn-add no-pan" onclick="addChild('${id}')" title="Adicionar Filho">＋</button>
+                    <button class="icon-btn btn-clone no-pan" onclick="duplicateBox('${id}')" title="Duplicar">❐</button>
+                    <button class="icon-btn btn-toggle no-pan" onclick="handleSmartToggle('${id}', this)" title="Colapsar">▼</button>
+                    <button class="icon-btn btn-delete no-pan" onclick="deleteBox('${id}')" title="Excluir">×</button>
+                </div>
+            </div>
+            <div class="box-body">
+                <div class="task-container no-pan">
+                    <button class="add-task-btn no-pan" onclick="addTask('${id}')">+ Nova Tarefa</button>
+                </div>
+                <div class="children-area" id="area-${id}"></div>
+            </div>
+            
+            <div class="resizer bottom-right no-pan" onmousedown="initResize(event, '${id}', 'br')"></div>
+            <div class="resizer bottom-left no-pan" onmousedown="initResize(event, '${id}', 'bl')"></div>
+            
+            <div class="connector c-top no-pan" onmousedown="initConn(event, '${id}', 'top')"></div><div class="connector c-bottom no-pan" onmousedown="initConn(event, '${id}', 'bottom')"></div><div class="connector c-left no-pan" onmousedown="initConn(event, '${id}', 'left')"></div><div class="connector c-right no-pan" onmousedown="initConn(event, '${id}', 'right')"></div>
+        `;
+        el.addEventListener('mouseover', (e) => {
+            e.stopPropagation(); 
+            document.querySelectorAll('.hover-focused').forEach(b => b.classList.remove('hover-focused'));
+            el.classList.add('hover-focused');
+        });
+        return el;
+    }
+
+    function downloadSVG() {
+        // Seleciona tudo que é relevante: Caixas e Notas
+        const elements = document.querySelectorAll('.box, .note');
+        if (elements.length === 0) { showToast("Canvas vazio."); return; }
+    
+        showToast("Calculando tamanho real...");
+    
+        // 1. CALCULAR LIMITES USANDO COORDENADAS REAIS (E não visuais)
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    
+        elements.forEach(el => {
+            // Pega os valores brutos de estilo (ex: "1050px" -> 1050)
+            // Isso ignora o zoom atual e pega a posição real no mundo
+            const x = parseFloat(el.style.left || 0);
+            const y = parseFloat(el.style.top || 0);
+            const w = parseFloat(el.style.width || el.offsetWidth);
+            const h = parseFloat(el.style.height || el.offsetHeight);
+    
+            if (x < minX) minX = x;
+            if (y < minY) minY = y;
+            if (x + w > maxX) maxX = x + w;
+            if (y + h > maxY) maxY = y + h;
+        });
+    
+        // Se algo der errado, valores padrão
+        if (minX === Infinity) { minX = 0; minY = 0; maxX = 1000; maxY = 1000; }
+    
+        // 2. ADICIONAR MARGEM DE SEGURANÇA (PADDING)
+        // Isso é importante para não cortar:
+        // - Sombras das caixas
+        // - Conexões curvas que fazem "barriga" para fora
+        // - O balão de ações se estiver visível
+        const padding = 150; 
+        minX -= padding;
+        minY -= padding;
+        maxX += padding;
+        maxY += padding;
+    
+        const width = maxX - minX;
+        const height = maxY - minY;
+    
+        // 3. CLONAR E LIMPAR O MUNDO
+        const worldNode = document.getElementById('world');
+        const worldClone = worldNode.cloneNode(true);
+        
+        // Resetar transformação no clone para garantir que 1px = 1px
+        worldClone.style.transform = "none";
+        worldClone.style.left = "0px";
+        worldClone.style.top = "0px";
+    
+        // Remover UI indesejada
+        const uiSelectors = ['.grid-background', '.resizer', '.connector', '.actions-balloon', '.task-del-btn', '.add-task-btn', '.btn-toggle'];
+        uiSelectors.forEach(sel => worldClone.querySelectorAll(sel).forEach(el => el.remove()));
+    
+        // 4. FIXAR VALORES DE INPUTS E TEXTAREAS
+        const originalInputs = worldNode.querySelectorAll('input, textarea');
+        const clonedInputs = worldClone.querySelectorAll('input, textarea');
+        
+        originalInputs.forEach((el, i) => {
+            if (clonedInputs[i]) {
+                clonedInputs[i].setAttribute('value', el.value);
+                if (el.tagName === 'TEXTAREA') {
+                    clonedInputs[i].textContent = el.value; 
+                }
+            }
+        });
+    
+        // 5. PREPARAR CSS (Com CDATA para evitar erro de XML)
+        let cssStyles = "";
+        document.querySelectorAll('style').forEach(style => {
+            cssStyles += style.innerHTML;
+        });
+        
+        const cssBlock = `<![CDATA[
+            ${cssStyles}
+            /* Força reset de transformações e visibilidade */
+            .box, .note { position: absolute; transform: none !important; box-sizing: border-box; }
+            body { background: transparent; margin: 0; padding: 0; }
+            input, textarea { background: transparent; border: none; }
+            /* Remove barras de rolagem no SVG */
+            ::-webkit-scrollbar { display: none; }
+        ]]>`;
+    
+        // 6. SERIALIZAR PARA XML (O SEGREDO PARA NÃO DAR ERRO)
+        const serializer = new XMLSerializer();
+        let serializedContent = serializer.serializeToString(worldClone);
+        
+        // Substituir entidades problemáticas
+        serializedContent = serializedContent.replace(/&nbsp;/g, '&#160;');
+    
+        // 7. MONTAR O SVG FINAL
+        // viewBox usa as coordenadas minX/minY calculadas. 
+        // Isso faz a "câmera" do SVG começar exatamente onde seu desenho começa.
+        const svgData = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${minX} ${minY} ${width} ${height}">
+            <style type="text/css">
+                ${cssBlock}
+            </style>
+            <foreignObject x="${minX}" y="${minY}" width="${width}" height="${height}" style="overflow: visible;">
+                <div xmlns="http://www.w3.org/1999/xhtml" style="position: relative; width: 100%; height: 100%; font-family: 'Segoe UI', sans-serif;">
+                    ${serializedContent}
+                </div>
+            </foreignObject>
+        </svg>`;
+    
+        // 8. DOWNLOAD
+        try {
+            const blob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `${currentDrawingName || 'blueprint'}_full.svg`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast("SVG Completo baixado!");
+        } catch (e) {
+            console.error(e);
+            showToast("Erro ao gerar SVG.");
+        }
+    }
+    
+    function enableTitleEdit(id) {
+        if (!state.isEditMode) return;
+        const box = document.getElementById(id);
+        const input = box.querySelector('input.title');
+        input.removeAttribute('readonly');
+        input.classList.add('editing');
+        input.focus();
+        input.select();
+    }
+    
+    function disableTitleEdit(id) {
+        const box = document.getElementById(id);
+        const input = box.querySelector('input.title');
+        input.setAttribute('readonly', 'true');
+        input.classList.remove('editing');
+        window.getSelection().removeAllRanges();
+    }
+
+    function deleteBox(id) {
+        if(!state.isEditMode) return;
+        showConfirmToast("Excluir esta caixa?", () => {
+            undoStack = serializeCanvas();
+            const box = document.getElementById(id); if (!box) return;
+            const parentArea = box.parentElement;
+            const boxesToDelete = [box, ...box.querySelectorAll('.box')];
+            const idsToDelete = new Set(boxesToDelete.map(b => b.id));
+            
+            const connsToRemove = connections.filter(c => idsToDelete.has(c.sid) || idsToDelete.has(c.tid));
+            connsToRemove.forEach(c => {
+                const grp = document.getElementById(c.id);
+                if(grp) grp.remove();
+            });
+            connections = connections.filter(c => !idsToDelete.has(c.sid) && !idsToDelete.has(c.tid));
+            
+            box.remove(); updateAllLines(true); 
+            if (parentArea && parentArea.classList.contains('children-area')) updateElasticParent(parentArea);
+            checkCascading(); showToast("Item excluído.", "Desfazer", restoreUndo);
+            markUnsaved();
+        });
+    }
+
+    function duplicateBox(id) {
+        if(!state.isEditMode) return;
+        const original = document.getElementById(id);
+        const originalParent = original.parentElement; 
+        
+        function recursiveClone(sourceEl, targetParent, isRoot = false) {
+            const title = sourceEl.querySelector('input.title').value;
+            const w = parseFloat(sourceEl.style.width);
+            const h = parseFloat(sourceEl.style.height);
+            const mw = sourceEl.dataset.mw;
+            const mh = sourceEl.dataset.mh;
+            const fScale = sourceEl.dataset.fontScale;
+            
+            let status = 'neutral';
+            if(sourceEl.classList.contains('red-state')) status = 'red';
+            else if(sourceEl.classList.contains('green-state')) status = 'green';
+
+            const collapsed = sourceEl.classList.contains('collapsed-mode');
+            const newId = 'box-' + Date.now() + Math.random().toString(36).substr(2, 4);
+            const newEl = createBoxElement(newId, title);
+            
+            if (isRoot) {
+                const oldLeft = parseFloat(sourceEl.style.left);
+                const oldTop = parseFloat(sourceEl.style.top);
+                let snapLeft = Math.round((oldLeft + 30) / SNAP_SIZE) * SNAP_SIZE;
+                let snapTop = Math.round((oldTop + 30) / SNAP_SIZE) * SNAP_SIZE;
+                newEl.style.left = snapLeft + 'px';
+                newEl.style.top = snapTop + 'px';
+            } else {
+                newEl.style.left = sourceEl.style.left;
+                newEl.style.top = sourceEl.style.top;
+            }
+            
+            newEl.style.width = w + 'px'; newEl.style.height = h + 'px';
+            if(mw) newEl.dataset.mw = mw; if(mh) newEl.dataset.mh = mh;
+            if(fScale) newEl.dataset.fontScale = fScale;
+            
+            if(status === 'red') newEl.classList.add('red-state');
+            else if(status === 'green') newEl.classList.add('green-state');
+
+            if(collapsed) {
+                newEl.classList.add('collapsed-mode');
+                newEl.querySelector('.actions-balloon .btn-toggle').innerText = '▶';
+            }
+            
+            targetParent.appendChild(newEl);
+            calcDynamicFont(newEl);
+            
+            // Clone tasks
+            const sourceTasks = sourceEl.querySelectorAll('.task-item');
+            if(sourceTasks.length > 0) {
+                 const tContainer = newEl.querySelector('.task-container');
+                 // Ensure visible on clone
+                 tContainer.style.display = 'block';
+                 sourceTasks.forEach(t => {
+                     // Check direct ownership
+                     if (t.closest('.box') === sourceEl) {
+                        renderTask(tContainer, t.querySelector('.task-input').value, t.dataset.status, t.querySelector('.task-owner').value, t.querySelector('.task-date').value);
+                     }
+                 });
+                 // No toggle needed
+                 updateBoxSummary(newEl);
+            }
+
+            const sourceArea = sourceEl.querySelector('.children-area');
+            Array.from(sourceArea.children).forEach(child => {
+                if(child.classList.contains('box')) {
+                    recursiveClone(child, newEl.querySelector('.children-area'), false);
+                }
+            });
+            if(targetParent.classList.contains('children-area')) updateElasticParent(targetParent);
+        }
+        recursiveClone(original, originalParent, true);
+        markUnsaved(); 
+        showToast("Caixa duplicada com sucesso!");
+    }
+
+    function exportReadOnlyHTML() {
+        showToast("Gerando visualizador...");
+    
+        // 1. CLONAR O MUNDO PARA PREPARAR
+        const worldNode = document.getElementById('world');
+        const worldClone = worldNode.cloneNode(true);
+    
+        // 2. CONGELAR VALORES (INPUTS E TEXTAREAS)
+        // O HTML puro não salva o que você digitou, a menos que esteja no atributo 'value'
+        const originalInputs = worldNode.querySelectorAll('input, textarea');
+        const clonedInputs = worldClone.querySelectorAll('input, textarea');
+        
+        originalInputs.forEach((el, i) => {
+            if (clonedInputs[i]) {
+                clonedInputs[i].setAttribute('readonly', 'true'); // Trava edição
+                clonedInputs[i].setAttribute('value', el.value);  // Salva valor
+                if (el.tagName === 'TEXTAREA') {
+                    clonedInputs[i].innerHTML = el.value;
+                }
+            }
+        });
+    
+        // 3. LIMPEZA VISUAL (REMOVE UI DE EDIÇÃO)
+        // Removemos tudo que é botão, conector, redimensionador...
+        const garbageSelectors = [
+            '.resizer', 
+            '.connector', 
+            '.actions-balloon', 
+            '.task-del-btn', 
+            '.add-task-btn', 
+            '.task-status-toggle', // Remove bolinha de status clicável
+            '#temp-line'
+        ];
+        garbageSelectors.forEach(sel => {
+            worldClone.querySelectorAll(sel).forEach(el => el.remove());
+        });
+    
+        // Remove classes de estado que podem confundir
+        worldClone.querySelectorAll('.box').forEach(b => {
+            b.classList.remove('selected', 'hover-focused');
+            // Garante que o input pareça texto normal
+            const title = b.querySelector('.title');
+            if(title) {
+                title.style.pointerEvents = "none";
+                title.style.border = "none";
+            }
+        });
+    
+        // 4. PEGAR O CSS ATUAL
+        let cssStyles = "";
+        document.querySelectorAll('style').forEach(s => cssStyles += s.innerHTML);
+    
+        // Adiciona CSS específico para o modo leitura
+        const viewerCSS = `
+            ${cssStyles}
+            /* Overrides para o Viewer */
+            body { overflow: hidden; background-color: #f0f2f5; }
+            .box { cursor: default !important; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: transform 0.3s; }
+            .box:hover { transform: scale(1.02); z-index: 100; box-shadow: 0 10px 20px rgba(0,0,0,0.15); }
+            .note { cursor: default !important; }
+            
+            /* Esconde elementos que sobraram */
+            .resizer, .connector, .actions-balloon { display: none !important; }
+            
+            /* Inputs parecem texto estático */
+            input, textarea { pointer-events: none !important; border: none !important; background: transparent !important; resize: none; }
+            
+            /* Estilo da barra de ferramentas do Viewer */
+            #viewer-toolbar {
+                position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+                background: rgba(30, 41, 59, 0.9); color: white;
+                padding: 10px 20px; border-radius: 50px;
+                display: flex; gap: 15px; align-items: center;
+                box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+                font-family: sans-serif; font-size: 14px;
+                z-index: 9999; backdrop-filter: blur(5px);
+            }
+            .v-btn { background: rgba(255,255,255,0.2); border: none; color: white; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-weight: bold; display: flex; align-items: center; justify-content: center;}
+            .v-btn:hover { background: rgba(255,255,255,0.4); }
+        `;
+    
+        // 5. O SCRIPT DO VIEWER (Navegação SVG)
+        // Esse script vai embutido no arquivo gerado
+        const viewerScript = `
+            const viewport = document.getElementById('viewport');
+            const world = document.getElementById('world');
+            const zoomInd = document.getElementById('v-zoom');
+            
+            let state = { scale: 1, offset: {x: 0, y: 0}, panning: false, panStart: {x:0, y:0} };
+    
+            function updateTransform() {
+                world.style.transform = \`translate(\${state.offset.x}px, \${state.offset.y}px) scale(\${state.scale})\`;
+                zoomInd.innerText = Math.round(state.scale * 100) + '%';
+            }
+    
+            // ZOOM (Roda do Mouse)
+            window.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const dir = e.deltaY > 0 ? -1 : 1;
+                let newScale = state.scale + (dir * 0.1 * state.scale);
+                newScale = Math.min(Math.max(0.1, newScale), 5);
+                
+                const rect = viewport.getBoundingClientRect();
+                const mx = e.clientX - rect.left;
+                const my = e.clientY - rect.top;
+                
+                const wx = (mx - state.offset.x) / state.scale;
+                const wy = (my - state.offset.y) / state.scale;
+                
+                state.scale = newScale;
+                state.offset.x = mx - (wx * state.scale);
+                state.offset.y = my - (wy * state.scale);
+                updateTransform();
+            }, { passive: false });
+    
+            // PAN (Arrastar Fundo)
+            window.addEventListener('mousedown', (e) => {
+                if(e.button !== 0) return;
+                state.panning = true;
+                state.panStart = { x: e.clientX - state.offset.x, y: e.clientY - state.offset.y };
+                document.body.style.cursor = 'grabbing';
+            });
+    
+            window.addEventListener('mousemove', (e) => {
+                if(!state.panning) return;
+                e.preventDefault();
+                state.offset.x = e.clientX - state.panStart.x;
+                state.offset.y = e.clientY - state.panStart.y;
+                updateTransform();
+            });
+    
+            window.addEventListener('mouseup', () => {
+                state.panning = false;
+                document.body.style.cursor = 'default';
+            });
+    
+            function resetView() {
+                state.scale = 1; state.offset = {x:0, y:0};
+                updateTransform();
+            }
+            
+            // Centralizar Inicialmente
+            resetView();
+        `;
+    
+        // 6. MONTAR O HTML FINAL
+        const htmlContent = `<!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${currentDrawingName || 'Visualizador'} - Read Only</title>
+        <style>${viewerCSS}</style>
+    </head>
+    <body>
+        <div id="viewport" style="width:100vw; height:100vh; overflow:hidden; position:relative;">
+            <div id="world" style="transform-origin: 0 0; position:absolute; top:0; left:0;">
+                ${worldClone.innerHTML}
+            </div>
+        </div>
+    
+        <div id="viewer-toolbar">
+            <span>${currentDrawingName || 'Projeto'}</span>
+            <div style="width:1px; height:15px; background:rgba(255,255,255,0.3);"></div>
+            <button class="v-btn" onclick="resetView()" title="Resetar">⟲</button>
+            <span id="v-zoom" style="min-width:40px; text-align:center;">100%</span>
+            <span style="font-size:10px; opacity:0.7;">(Use o scroll para Zoom, clique e arraste para Mover)</span>
+        </div>
+    
+        <script>${viewerScript}<\/script>
+    </body>
+    </html>`;
+    
+        // 7. DOWNLOAD
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${currentDrawingName || 'projeto'}_view.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        showToast("Página de leitura criada!");
+    }
+
+    function deleteConnection(connId) {
+        if(!state.isEditMode) return;
+        showConfirmToast("Remover conexão?", () => {
+            undoStack = serializeCanvas();
+            const idx = connections.findIndex(c => c.id === connId);
+            if (idx !== -1) { 
+                connections.splice(idx, 1); 
+                const path = document.getElementById(connId); 
+                if (path) path.remove(); 
+                checkCascading(); showToast("Conexão removida.", "Desfazer", restoreUndo); 
+                markUnsaved();
+            }
+        });
+    }
+
+    function performAutoSave() {
+        if (!currentDrawingName) return; 
+        const data = serializeCanvas();
+        const db = getDB();
+        const existingIdx = db.findIndex(p => p.name === currentDrawingName);
+        const proj = { 
+            id: existingIdx !== -1 ? db[existingIdx].id : 'proj_' + Date.now(), 
+            name: currentDrawingName, updatedAt: Date.now(), data: data 
+        };
+        if (existingIdx !== -1) db[existingIdx] = proj; else db.push(proj);
+        setDB(db);
+        
+        const now = new Date();
+        const el = document.getElementById('autosave-status');
+        if(el) el.innerText = `Salvo: ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+    }
+
+    function getDB() { return JSON.parse(localStorage.getItem('canvas_projects')) || []; }
+    function setDB(db) { localStorage.setItem('canvas_projects', JSON.stringify(db)); }
+    
+    function toggleEditMode() {
+        state.isEditMode = !state.isEditMode;
+        const btn = document.getElementById('btn-mode');
+        if (state.isEditMode) {
+            document.body.classList.remove('read-only'); btn.innerText = "🔓 Edição"; btn.classList.remove('locked'); showToast("Modo de Edição Ativado");
+        } else {
+            document.body.classList.add('read-only'); btn.innerText = "🔒 Leitura"; btn.classList.add('locked'); showToast("Modo de Leitura (Bloqueado)");
+            document.querySelectorAll('.hover-focused').forEach(el => el.classList.remove('hover-focused'));
+        }
+    }
+
+    function closeToast(toast) { toast.style.animation = 'fadeOut 0.2s forwards'; setTimeout(() => toast.remove(), 200); }
+    function showToast(message, actionLabel = null, actionCallback = null) {
+        const container = document.getElementById('toast-container');
+        while(container.children.length > 2) container.removeChild(container.firstChild);
+        const toast = document.createElement('div'); toast.className = 'toast';
+        let html = `<span>${message}</span>`;
+        if (actionLabel) { html += `<button class="toast-action-btn">${actionLabel}</button>`; }
+        toast.innerHTML = html;
+        if (actionLabel && actionCallback) { toast.querySelector('button').onclick = () => { actionCallback(); closeToast(toast); }; }
+        container.appendChild(toast); setTimeout(() => { if (toast.parentElement) closeToast(toast); }, 5000);
+    }
+    function showConfirmToast(message, onConfirm) {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div'); toast.className = 'toast';
+        toast.innerHTML = `<span>${message}</span><div style="display:flex; gap:8px;"><button class="toast-action-btn toast-btn-yes">SIM</button><button class="toast-action-btn toast-btn-no">NÃO</button></div>`;
+        container.appendChild(toast);
+        toast.querySelector('.toast-btn-yes').onclick = () => { closeToast(toast); onConfirm(); };
+        toast.querySelector('.toast-btn-no').onclick = () => { closeToast(toast); };
+    }
+    function restoreUndo() { if(undoStack) { deserializeCanvas(undoStack); undoStack = null; showToast("Ação desfeita."); } }
+
+    function exportJSON() {
+        const data = serializeCanvas(); data.name = currentDrawingName || "desenho";
+        const jsonStr = JSON.stringify(data, null, 2); const blob = new Blob([jsonStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `${data.name}.json`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); showToast("Exportado!");
+    }
+    function importJSON(input) {
+        const file = input.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try { const data = JSON.parse(e.target.result); if (data.boxes) { showConfirmToast("Substituir desenho?", () => { currentDrawingName = data.name || "Importado"; deserializeCanvas(data); showToast("Carregado."); }); } } catch (err) { showToast("Erro no arquivo."); }
+        }; reader.readAsText(file); input.value = '';
+    }
+    function downloadPNG() {
+        const boxes = document.querySelectorAll('.box'); if (boxes.length === 0) { showToast("Canvas vazio."); return; }
+        showToast("Gerando PNG...");
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        boxes.forEach(box => { /* bounds calc */ });
+        const prevScale = state.scale; const prevOffset = { ...state.offset };
+        state.scale = 1; state.offset = { x: 0, y: 0 }; updateTransform();
+        const worldRect = world.getBoundingClientRect();
+        boxes.forEach(box => {
+            const rect = box.getBoundingClientRect();
+            const relX = rect.left - worldRect.left; const relY = rect.top - worldRect.top;
+            if (relX < minX) minX = relX; if (relY < minY) minY = relY;
+            if (relX + rect.width > maxX) maxX = relX + rect.width;
+            if (relY + rect.height > maxY) maxY = relY + rect.height;
+        });
+        const padding = 60;
+        html2canvas(world, { backgroundColor: "#f0f2f5", x: minX - padding, y: minY - padding, width: (maxX - minX) + (padding * 2), height: (maxY - minY) + (padding * 2), logging: false, scale: 2 }).then(canvas => {
+            const link = document.createElement('a'); link.download = `${currentDrawingName || 'blueprint'}.png`; link.href = canvas.toDataURL(); link.click();
+            state.scale = prevScale; state.offset = prevOffset; updateTransform(); showToast("Download iniciado!");
+        });
+    }
+
+    function openDashboard() {
+        const list = document.getElementById('projects-list'); list.innerHTML = '';
+        const db = getDB();
+        if (db.length === 0) list.innerHTML = '<div style="text-align:center; color:#94a3b8; padding:20px;">Vazio</div>';
+        else {
+            db.sort((a, b) => b.updatedAt - a.updatedAt).forEach(proj => {
+                const dateStr = new Date(proj.updatedAt).toLocaleDateString();
+                const item = document.createElement('div'); item.className = 'project-card';
+                item.innerHTML = `<div class="p-info"><div class="p-name">${proj.name}</div><div class="p-date">${dateStr}</div></div><div class="p-actions"><button class="btn-load" onclick="loadProject('${proj.id}')">Abrir</button><button class="btn-trash" onclick="deleteProject('${proj.id}')">Excluir</button></div>`;
+                list.appendChild(item);
+            });
+        }
+        document.getElementById('dashboard-overlay').style.display = 'flex';
+    }
+    function closeDashboard() { document.getElementById('dashboard-overlay').style.display = 'none'; }
+    function newDrawing() { showConfirmToast("Criar novo desenho?", () => { document.querySelectorAll('.box').forEach(b => b.remove()); updateAllLines(true); connections = []; state = { ...state, scale: 1, panning: false, offset: {x:0, y:0} }; updateTransform(); currentDrawingName = null; addRootBox(); closeDashboard(); showToast("Novo desenho criado."); }); }
+    function deleteProject(id) { showConfirmToast("Excluir projeto?", () => { let db = getDB(); db = db.filter(p => p.id !== id); setDB(db); openDashboard(); showToast("Excluído."); }); }
+    function saveCurrentDrawing() {
+        let name = currentDrawingName; if (!name) { name = prompt("Nome do projeto:", "Projeto"); if (!name) return; currentDrawingName = name; }
+        
+        // [FEATURE] Expand All before Saving
+        expandAllBoxes();
+
+        // Small delay to allow expansion rendering (optional, but safer)
+        setTimeout(() => {
+            saveDataInternal();
+            markSaved();
+            showToast("Projeto salvo e expandido!");
+        }, 100);
+    }
+    
+    function expandAllBoxes() {
+        document.querySelectorAll('.box.collapsed-mode').forEach(box => {
+            const btn = box.querySelector('.actions-balloon .btn-toggle');
+            performToggle(box.id, btn); 
+        });
+    }
+    
+    function saveDataInternal() {
+        const data = serializeCanvas();
+        const db = getDB();
+        const existingIdx = db.findIndex(p => p.name === currentDrawingName);
+        const proj = { 
+            id: existingIdx !== -1 ? db[existingIdx].id : 'proj_' + Date.now(), 
+            name: currentDrawingName, updatedAt: Date.now(), data: data 
+        };
+        if (existingIdx !== -1) db[existingIdx] = proj; else db.push(proj);
+        setDB(db);
+        
+        const now = new Date();
+        const el = document.getElementById('last-saved-msg');
+        if(el) el.innerText = `Salvo: ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+    }
+    
+    function loadProject(id) { const proj = getDB().find(p => p.id === id); if (!proj) return; document.querySelectorAll('.box, .note').forEach(b => b.remove()); updateAllLines(true); connections = []; currentDrawingName = proj.name; deserializeCanvas(proj.data); closeDashboard(); showToast(`Carregado: ${proj.name}`); }
+
+    function serializeCanvas() {
+        const items = [];
+        
+        // Save Boxes
+        document.querySelectorAll('.box').forEach(box => {
+            const parent = box.parentElement.closest('.box');
+            // Extract Tasks
+            const tasks = [];
+            box.querySelectorAll('.task-item').forEach(tItem => {
+                // Strict check: only tasks belonging to this box
+                if (tItem.closest('.box') === box) {
+                    tasks.push({
+                        text: tItem.querySelector('.task-input').value,
+                        owner: tItem.querySelector('.task-owner').value,
+                        date: tItem.querySelector('.task-date').value,
+                        status: tItem.dataset.status || 'todo'
+                    });
+                }
+            });
+
+            // Get status safely
+            let status = 'neutral';
+            if(box.classList.contains('red-state')) status = 'red';
+            else if(box.classList.contains('green-state')) status = 'green';
+
+            items.push({
+                type: 'box',
+                id: box.id, x: box.style.left, y: box.style.top, w: box.style.width, h: box.style.height,
+                mw: box.dataset.mw, mh: box.dataset.mh, title: box.querySelector('input.title').value,
+                status: status,
+                collapsed: box.classList.contains('collapsed-mode'), 
+                showTasks: box.classList.contains('show-tasks'),
+                fontScale: box.dataset.fontScale || 1, 
+                parentId: parent ? parent.id : null,
+                tasks: tasks
+            });
+        });
+        
+        // Save Notes
+        document.querySelectorAll('.note').forEach(note => {
+            const parent = note.parentElement.closest('.box');
+            items.push({
+                type: 'note',
+                id: note.id,
+                x: note.style.left,
+                y: note.style.top,
+                w: note.style.width,
+                h: note.style.height,
+                text: note.querySelector('.note-textarea').value,
+                parentId: parent ? parent.id : null
+            });
+        });
+
+        return { boxes: items, connections, viewport: state };
+    }
+    
+    function deserializeCanvas(data) {
+        state = { ...data.viewport, isEditMode: true }; 
+        document.body.classList.remove('read-only'); document.getElementById('btn-mode').innerText = "🔓 Edição"; document.getElementById('btn-mode').classList.remove('locked');
+        updateTransform();
+        
+        const boxMap = {};
+        
+        // Data contains mixed types now in 'boxes' array or possibly 'items' if we renamed, 
+        // but 'boxes' is legacy name used in previous versions, so we reuse it for generic items.
+        // If 'boxes' is undefined, data structure might be old or empty.
+        const items = data.boxes || [];
+
+        items.forEach(d => {
+            if(d.type === 'note') {
+                const el = createNoteElement(d.id, d.text, parseFloat(d.x), parseFloat(d.y), parseFloat(d.w), parseFloat(d.h));
+                boxMap[d.id] = { el, parentId: d.parentId };
+            } else {
+                // It's a box (default)
+                const el = createBoxElement(d.id, d.title);
+                el.style.left = d.x; el.style.top = d.y; el.style.width = d.w; el.style.height = d.h;
+                if(d.mw) el.dataset.mw = d.mw; if(d.mh) el.dataset.mh = d.mh;
+                
+                if(d.status === 'red') el.classList.add('red-state');
+                else if(d.status === 'green') el.classList.add('green-state');
+                
+                if(d.fontScale) el.dataset.fontScale = d.fontScale; else el.dataset.fontScale = 1;
+                
+                if(d.collapsed) {
+                    el.classList.add('collapsed-mode');
+                    el.querySelector('.actions-balloon .btn-toggle').innerText = '▶';
+                }
+                
+                // Show tasks logic - default block now, but respect old toggle if needed
+                // Actually we just ensure container is block
+                const tContainer = el.querySelector('.task-container');
+                tContainer.style.display = 'block';
+
+                if(d.tasks && d.tasks.length > 0) {
+                    d.tasks.forEach(t => renderTask(tContainer, t.text, t.status, t.owner, t.date));
+                    updateBoxSummary(el);
+                }
+
+                boxMap[d.id] = { el, parentId: d.parentId }; 
+            }
+        });
+        
+        // Re-parent boxes
+        Object.values(boxMap).forEach(item => { 
+            if (item.parentId && boxMap[item.parentId]) boxMap[item.parentId].el.querySelector('.children-area').appendChild(item.el); 
+            else world.appendChild(item.el); 
+            if(item.el.classList.contains('box')) calcDynamicFont(item.el);
+        });
+        
+        data.connections.forEach(c => { 
+            if(document.getElementById(c.sid) && document.getElementById(c.tid)) addConnection(c.sid, c.spos, c.tid, c.tpos, c.id); 
+        });
+        
+        // FIX: Force recalculate font size and layout after load
+        setTimeout(() => { 
+            document.querySelectorAll('.children-area').forEach(area => updateElasticParent(area)); 
+            document.querySelectorAll('.box').forEach(box => calcDynamicFont(box));
+            updateAllLines(); 
+            markSaved(); // Start fresh
+        }, 50);
+    }
+    
+    function setStatus(id, s) {
+        if(!state.isEditMode) return;
+        const b = document.getElementById(id);
+        b.classList.remove('red-state', 'green-state');
+        if(s === 'red') b.classList.add('red-state');
+        if(s === 'green') b.classList.add('green-state');
+        checkCascading();
+        markUnsaved(); 
+    }
+    
+    function adjustFontSize(id, delta) {
+        if(!state.isEditMode) return;
+        const box = document.getElementById(id);
+        
+        // 1. Pega o valor atual
+        let currentScale = parseFloat(box.dataset.fontScale) || 1;
+        currentScale += delta;
+        
+        // 2. Limita (Clamp) entre 0.5 e 5.0
+        currentScale = Math.max(0.5, Math.min(5, currentScale)); 
+        
+        // 3. Aplica o novo valor visualmente
+        box.dataset.fontScale = currentScale;
+        
+        // 4. SALVA NO SLOT CORRETO (A Mágica acontece aqui)
+        if (box.classList.contains('collapsed-mode')) {
+            // Se estiver fechada, salva na memória de "fechado"
+            box.dataset.scaleCol = currentScale;
+        } else {
+            // Se estiver aberta, salva na memória de "expandido"
+            box.dataset.scaleExp = currentScale;
+        }
+    
+        calcDynamicFont(box);
+        markUnsaved(); 
+    }
+    
+    function addChild(id) {
+        if(!state.isEditMode) return;
+        const area = document.getElementById('area-' + id);
+        const parentBox = document.getElementById(id);
+        area.classList.remove('collapsed'); parentBox.classList.remove('collapsed-mode');
+        const btn = parentBox.querySelector('.actions-balloon .btn-toggle'); if(btn) btn.innerText = '▼';
+        createBox(area, 20, 20); 
+        markUnsaved(); 
+    }
+    
+    function handleSmartToggle(id, btn) {
+        const area = document.getElementById('area-' + id);
+        const isClosing = !area.classList.contains('collapsed');
+        if (isClosing) runCascadeClose(id, btn); else performToggle(id, btn);
+        markUnsaved(); 
+    }
+    
+    async function runCascadeClose(boxId) {
+        const box = document.getElementById(boxId);
+        const area = box.querySelector('.children-area');
+        const openChildren = Array.from(area.children).filter(child => child.classList.contains('box') && !child.classList.contains('collapsed-mode'));
+        if (openChildren.length > 0) { const promises = openChildren.map(child => runCascadeClose(child.id)); await Promise.all(promises); await new Promise(r => setTimeout(r, 800)); }
+        const myBtn = box.querySelector('.actions-balloon .btn-toggle');
+        if (!box.classList.contains('collapsed-mode')) { performToggle(boxId, myBtn); const parentArea = box.parentElement; if (parentArea && parentArea.classList.contains('children-area')) updateElasticParent(parentArea); }
+    }
+    
+    function performToggle(id, btn) {
+        const box = document.getElementById(id);
+        const area = document.getElementById('area-' + id);
+        
+        // Verifica se vamos FECHAR (se não tem a classe ainda, vai ganhar)
+        const isGoingToCollapse = !box.classList.contains('collapsed-mode');
+    
+        if (isGoingToCollapse) {
+            // --- INDO FECHAR ---
+            
+            // 1. Salva a escala atual (que é a de expandido) para usar depois
+            box.dataset.scaleExp = box.dataset.fontScale || 1;
+            
+            // 2. Carrega a escala de "fechado" (ou usa 1.0 se nunca foi ajustado)
+            // Dica: Se quiser que o fechado comece sempre maior, troque o '|| 1' por '|| 1.5'
+            box.dataset.fontScale = box.dataset.scaleCol || 1; 
+            
+        } else {
+            // --- INDO ABRIR ---
+            
+            // 1. Salva a escala atual (que é a de fechado)
+            box.dataset.scaleCol = box.dataset.fontScale || 1;
+            
+            // 2. Recupera a escala de "expandido" que estava salva antes
+            box.dataset.fontScale = box.dataset.scaleExp || 1;
+        }
+    
+        // --- Lógica Visual Padrão ---
+        area.classList.toggle('collapsed'); 
+        box.classList.toggle('collapsed-mode');
+        
+        if(btn) btn.innerText = area.classList.contains('collapsed') ? '▶' : '▼';
+        
+        calcDynamicFont(box); 
+        updateElasticParent(area); 
+        updateAllLines();
+    }
+    
+    function checkCascading() {
+        document.querySelectorAll('.box').forEach(b => b.classList.remove('alert-state'));
+        connections.forEach(c => {
+            const t = document.getElementById(c.tid), s = document.getElementById(c.sid);
+            if(s && t && (t.classList.contains('red-state')||t.classList.contains('alert-state'))) s.classList.add('alert-state');
+        });
+        document.querySelectorAll('.box').forEach(p => {
+            const children = Array.from(p.querySelectorAll('.box'));
+            if(children.some(c => c.classList.contains('red-state')) && !p.classList.contains('red-state')) p.classList.add('alert-state');
+        });
+    }
+
+    async function revealHierarchy(boxId) {
+        let el = document.getElementById(boxId);
+        let ancestors = [];
+        while (el) {
+            const parent = el.parentElement.closest('.box');
+            if (parent) { ancestors.push(parent); el = parent; } else break;
+        }
+        ancestors.reverse();
+        for (let box of ancestors) {
+            if (box.classList.contains('collapsed-mode')) {
+                const btn = box.querySelector('.actions-balloon .btn-toggle');
+                performToggle(box.id, btn);
+                await new Promise(r => setTimeout(r, 800));
+            }
+        }
+    }
+    function handleConnectionDblClick(connId, sid, tid) {
+        Promise.all([revealHierarchy(sid), revealHierarchy(tid)]);
+        if(state.isEditMode) deleteConnection(connId);
+    }
+    
+// --- CORREÇÃO DO ZOOM SEMÂNTICO ---
+
+function getDepth(box) {
+    let depth = 0;
+    // Sobe a árvore DOM contando quantas .box existem acima
+    let curr = box.parentElement;
+    while(curr && curr.id !== 'world') {
+        if(curr.classList.contains('box')) depth++;
+        curr = curr.parentElement;
+    }
+    return depth;
+}
+
+function applySemanticZoom() {
+    const z = state.scale;
+    const boxes = document.querySelectorAll('.box');
+    
+    // CONFIGURAÇÃO DE NÍVEIS
+    // < 40%: Mostra só a Raiz (Nível 0)
+    // < 70%: Mostra Raiz e Filhos (Nível 0 e 1)
+    // >= 70%: Mostra tudo (Nível 100)
+    
+    let maxVisibleDepth = 100; 
+    
+    if (z < 0.4) {
+        maxVisibleDepth = 0; // Modo Mapa: Só a Raiz
+    } else if (z < 0.7) {
+        maxVisibleDepth = 1; // Modo Visão Geral: Raiz e Filhos imediatos
+    }
+
+    boxes.forEach(box => {
+        const depth = getDepth(box);
+        const area = document.getElementById('area-' + box.id);
+        const btn = box.querySelector('.actions-balloon .btn-toggle');
+        
+        // Verifica se está fechado atualmente (tem a classe collapsed)
+        const isClosed = area.classList.contains('collapsed');
+
+        // LÓGICA DE FECHAR (Zoom Out)
+        // Se a profundidade da caixa é maior que o permitido E ela está ABERTA
+        if (depth > maxVisibleDepth && !isClosed) {
+            // Força o fechamento usando a função padrão
+            performToggle(box.id, btn);
+        }
+        
+        // LÓGICA DE ABRIR (Zoom In)
+        // Se a profundidade é permitida E ela está FECHADA
+        else if (depth <= maxVisibleDepth && isClosed) {
+            // Força a abertura
+            performToggle(box.id, btn);
+        }
+    });
+}
+
+
+    // --- INTERACTIONS ---
+    function initDrag(e, id) {
+        if(spacePressed) return; 
+        if(!state.isEditMode) return;
+        
+        // Don't drag if clicking in any "no-pan" element (buttons, inputs)
+        // Also note-delete, note-textarea
+        if (e.target.closest('.no-pan') || e.target.closest('.no-pan-strict') || e.target.closest('#toolbar') || e.target.closest('.modal-panel')) return;
+
+        e.stopPropagation(); 
+        dragItem = document.getElementById(id); dragItem.style.zIndex = 999; 
+        const wp = screenToWorld(e.clientX, e.clientY);
+        
+        state.dragThresholdMet = false;
+        state.dragStartScreen = { x: e.clientX, y: e.clientY };
+        
+        startInt = { mx: wp.x, my: wp.y, el: dragItem.offsetLeft, et: dragItem.offsetTop };
+    }
+    
+    // [FIX] Updated resize for TWO resizers
+    function initResize(e, id, dir) {
+        if(!state.isEditMode) return;
+        e.stopPropagation(); 
+        resizeItem = document.getElementById(id); 
+        resizeItem.classList.add('no-transition');
+        state.resizeDir = dir; // 'br' or 'bl'
+        
+        const wp = screenToWorld(e.clientX, e.clientY);
+        startInt = { mx: wp.x, my: wp.y, w: resizeItem.offsetWidth, h: resizeItem.offsetHeight, left: parseFloat(resizeItem.style.left) };
+    }
+
+    function initConn(e, id, pos) {
+        if(!state.isEditMode) return;
+        e.stopPropagation(); e.preventDefault(); isConnecting = true;
+        const rect = e.target.getBoundingClientRect();
+        const wp = screenToWorld(rect.left + rect.width/2, rect.top + rect.height/2);
+        startInt = { sid: id, spos: pos, sx: wp.x, sy: wp.y };
+        tempLine.style.display = 'block';
+    }
+    
+    window.addEventListener('mousemove', (e) => {
+        const wp = screenToWorld(e.clientX, e.clientY);
+        if (dragItem) {
+            e.preventDefault(); 
+            if (!state.dragThresholdMet) {
+                const dist = Math.hypot(e.clientX - state.dragStartScreen.x, e.clientY - state.dragStartScreen.y);
+                if (dist < 5) return; 
+                state.dragThresholdMet = true; 
+            }
+            let rawLeft = startInt.el + wp.x - startInt.mx;
+            let rawTop = startInt.et + wp.y - startInt.my;
+            let snapLeft = Math.round(rawLeft / SNAP_SIZE) * SNAP_SIZE;
+            let snapTop = Math.round(rawTop / SNAP_SIZE) * SNAP_SIZE;
+            dragItem.style.left = snapLeft + 'px';
+            dragItem.style.top = snapTop + 'px';
+            dragItem.style.pointerEvents = 'none'; 
+            const elementsBelow = document.elementsFromPoint(e.clientX, e.clientY);
+            dragItem.style.pointerEvents = 'auto';
+            if(currentDropTarget) { currentDropTarget.classList.remove('drop-active'); currentDropTarget = null; }
+            const target = elementsBelow.find(el => el.classList.contains('children-area'));
+            if (target && !dragItem.contains(target)) { currentDropTarget = target; currentDropTarget.classList.add('drop-active'); }
+            
+            // Only update elastic if dragging a box (notes don't have parents)
+            if(dragItem.classList.contains('box')) {
+                updateElasticParent(dragItem.parentElement); 
+                updateAllLines();
+            }
+        }
+        if (resizeItem) {
+            e.preventDefault();
+            
+            let dx = wp.x - startInt.mx;
+            let dy = wp.y - startInt.my;
+            
+            let newW, newH, newLeft;
+
+            if (state.resizeDir === 'br') {
+                newW = Math.max(150, startInt.w + dx); // min size
+                newH = Math.max(150, startInt.h + dy);
+                newLeft = startInt.left; // Left doesn't change
+            } else if (state.resizeDir === 'bl') {
+                newW = Math.max(150, startInt.w - dx);
+                newH = Math.max(150, startInt.h + dy);
+                newLeft = startInt.left + (startInt.w - newW); // Adjust left to compensate width change
+            }
+
+            // Snap
+            newW = Math.round(newW / SNAP_SIZE) * SNAP_SIZE;
+            newH = Math.round(newH / SNAP_SIZE) * SNAP_SIZE;
+            if (state.resizeDir === 'bl') newLeft = Math.round(newLeft / SNAP_SIZE) * SNAP_SIZE;
+
+            resizeItem.style.width = newW + 'px'; 
+            resizeItem.style.height = newH + 'px';
+            if (state.resizeDir === 'bl') resizeItem.style.left = newLeft + 'px';
+
+            if(resizeItem.classList.contains('box')) {
+                resizeItem.dataset.mw = newW; 
+                resizeItem.dataset.mh = newH;
+                calcDynamicFont(resizeItem); 
+                updateElasticParent(resizeItem.querySelector('.children-area')); 
+                updateElasticParent(resizeItem.parentElement); 
+                updateAllLines();
+            }
+        }
+        if (isConnecting) { const off = -50000; tempLine.setAttribute('d', `M ${startInt.sx-off} ${startInt.sy-off} L ${wp.x-off} ${wp.y-off}`); }
+    });
+    
+    window.addEventListener('mouseup', (e) => {
+        if (resizeItem) {
+            resizeItem.classList.remove('no-transition');
+            markUnsaved(); 
+        }
+        document.querySelectorAll('.drop-active').forEach(el => el.classList.remove('drop-active'));
+        if (dragItem) {
+            if (state.dragThresholdMet) {
+                // Re-parent logic for boxes AND NOTES
+                if(dragItem.classList.contains('box') || dragItem.classList.contains('note')) {
+                    if (currentDropTarget && currentDropTarget !== dragItem.parentElement) reparentBox(dragItem, currentDropTarget);
+                    else if (!currentDropTarget && dragItem.parentElement !== world) reparentBox(dragItem, world);
+                }
+                markUnsaved(); 
+            }
+            dragItem.style.zIndex = '';
+        }
+        dragItem = null; resizeItem = null; currentDropTarget = null;
+        if (isConnecting) {
+            isConnecting = false; tempLine.style.display = 'none';
+            const el = document.elementFromPoint(e.clientX, e.clientY);
+            if (el && el.classList.contains('connector')) {
+                const box = el.closest('.box'); const pos = el.className.match(/c-([a-z]+)/)[1];
+                if (box && box.id !== startInt.sid) addConnection(startInt.sid, startInt.spos, box.id, pos);
+            }
+        }
+    });
+    
+    viewport.addEventListener('click', (e) => {
+        if(e.target === viewport || e.target === world || e.target.classList.contains('grid-background')) {
+            document.querySelectorAll('.hover-focused').forEach(b => b.classList.remove('hover-focused'));
+        }
+    });
+    
+    // --- GRAPHICS & ZOOM ---
+    function updateTransform() { 
+        world.style.transform = `translate(${state.offset.x}px, ${state.offset.y}px) scale(${state.scale})`; 
+        zoomInd.innerText = Math.round(state.scale * 100) + '%'; 
+        let uiScale = 1; if (state.scale <= 0.7 && state.scale > 0.4) { uiScale = 1.5; } else if (state.scale <= 0.4) { uiScale = 2.0; }
+        document.documentElement.style.setProperty('--ui-scale', uiScale);
+    }
+    
+    viewport.addEventListener('wheel', (e) => { 
+        e.preventDefault(); 
+        
+        const dir = e.deltaY > 0 ? -1 : 1; 
+        let newScale = state.scale + (dir * 0.1 * state.scale); 
+        newScale = Math.min(Math.max(0.1, newScale), 5); 
+        
+        const rect = viewport.getBoundingClientRect(); 
+        const mx = e.clientX - rect.left; 
+        const my = e.clientY - rect.top; 
+        
+        const worldXBefore = (mx - state.offset.x) / state.scale; 
+        const worldYBefore = (my - state.offset.y) / state.scale; 
+        
+        state.scale = newScale; 
+        state.offset.x = mx - (worldXBefore * state.scale); 
+        state.offset.y = my - (worldYBefore * state.scale); 
+        
+        updateTransform(); 
+        
+        // CHAMA A FUNÇÃO CORRIGIDA
+        applySemanticZoom(); 
+    
+    }, { passive: false });
+
+    // DRAG LOGIC (UPDATED FOR NOTES AS CHILDREN)
+    viewport.addEventListener('mousedown', (e) => {
+        if (e.target.closest('.no-pan') || e.target.closest('.no-pan-strict') || e.target.closest('#toolbar') || e.target.closest('.modal-panel')) return;
+        const isControl = e.target.closest('button') || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
+        if (!isControl && (e.button === 0 || e.button === 1)) {
+            if (e.target.closest('.box-title-bar')) return; 
+            // Only block pan if note body (and allow drag)
+            if (e.target.closest('.note')) return; 
+            e.preventDefault(); state.panning = true; state.panStart = { x: e.clientX - state.offset.x, y: e.clientY - state.offset.y }; viewport.style.cursor = 'grabbing';
+        }
+    });
+    window.addEventListener('mousemove', (e) => { if (state.panning) { e.preventDefault(); state.offset.x = e.clientX - state.panStart.x; state.offset.y = e.clientY - state.panStart.y; updateTransform(); } });
+    window.addEventListener('mouseup', () => { state.panning = false; viewport.style.cursor = 'grab'; });
+    function resetView() { state.scale = 1; state.offset = { x: 0, y: 0 }; updateTransform(); }
+
+    // INIT
+    addRootBox();
+</script>
+</body>
+</html>
