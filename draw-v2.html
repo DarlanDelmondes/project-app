@@ -446,42 +446,50 @@ button.btn-pending:hover {
     will-change: transform;
     transition: background 0.2s;
 }
-/* Estado base: Totalmente escondido e sem ocupar espaço */
+/* --- BREADCRUMB VERTICAL LATERAL --- */
+
 .context-path {
+    position: absolute;
+    /* Posiciona do lado de fora da borda esquerda */
+    right: 100%; 
+    top: 0;
+    
+    /* Texto vertical de baixo para cima */
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    
+    /* Estilo do texto */
     font-size: calc(var(--bread-font-size, 10px) * var(--ui-scale));
-    line-height: 1.2;
     color: #64748b;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    width: 100%;
-    text-align: center;
+    letter-spacing: 1px;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    
+    /* Espaçamento e Alinhamento */
+    padding: 10px 4px;
     pointer-events: none;
     
+    /* Estado inicial: Escondido */
     opacity: 0;
-    max-height: 0;
-    margin-bottom: 0;
-    transform: translateY(-5px);
-    transition: opacity 0.2s ease, transform 0.2s ease, max-height 0.2s ease;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    
+    /* Garante que não quebre o layout da caixa */
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
 }
 
-/* HOVER ESTRITO: 
-   O seletar :hover direto na .box garante que ao passar o mouse 
-   apenas o caminho DAQUELA caixa apareça. 
-   O uso de 'max-height' em vez de 'height: auto' permite animação suave. */
+/* Exibe apenas quando o mouse está sobre a respectiva caixa */
 .box:hover > .box-title-bar > .context-path.visible {
     opacity: 1;
-    max-height: 40px; /* Valor alto o suficiente para caber o texto */
-    margin-bottom: calc(4px * var(--ui-scale));
-    transform: translateY(0);
 }
 
-/* Previne que o hover na filha ative o breadcrumb do pai ao mesmo tempo */
-.box:focus-within > .box-title-bar > .context-path.visible {
-    opacity: 1;
+/* Ajuste no título para não colidir com a lateral se necessário */
+.box-title-bar {
+    /* Mantém o resto, mas garante que o overflow não corte o breadcrumb lateral */
+    overflow: visible !important;
 }
         .box-title-bar:active { cursor: grabbing; }
         
@@ -1956,13 +1964,11 @@ button.btn-pending:hover {
     function updateBreadcrumbs() {
         const toolbarHeight = 70; 
         
-        // Pegamos todas as caixas
         document.querySelectorAll('.box').forEach(box => {
             const pathEl = box.querySelector('.context-path');
             if (!pathEl) return;
     
             let ancestors = [];
-            // Começa a busca a partir do pai da caixa atual
             let currentParent = box.parentElement.closest('.box');
     
             while (currentParent) {
@@ -1970,7 +1976,7 @@ button.btn-pending:hover {
                 const parentInput = currentParent.querySelector('.title');
                 const parentTitleVal = parentInput ? parentInput.value : '';
     
-                // Regra: se o título do pai sumiu no topo da tela, ele entra na trilha
+                // Se o pai sumiu no topo da tela, ele entra na lista lateral
                 if (parentRect.top < toolbarHeight && parentTitleVal.trim() !== "") {
                     ancestors.unshift(parentTitleVal); 
                 }
@@ -1978,15 +1984,10 @@ button.btn-pending:hover {
             }
     
             if (ancestors.length > 0) {
-                pathEl.innerText = ancestors.join(' > ');
+                // Unimos com um ponto ou barra para ficar elegante na vertical
+                pathEl.innerText = ancestors.join(' • ');
                 pathEl.classList.add('visible');
-                
-                // Redução inteligente para trilhas longas
-                if (ancestors.length > 2) {
-                     pathEl.innerText = '... > ' + ancestors.slice(-2).join(' > ');
-                }
             } else {
-                // Limpa o texto e remove a classe se não houver contexto
                 pathEl.innerText = '';
                 pathEl.classList.remove('visible');
             }
