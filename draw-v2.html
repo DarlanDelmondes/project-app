@@ -424,8 +424,6 @@ button.btn-pending:hover {
 .box-title-bar {
     min-height: var(--header-height);
     height: auto; 
-    
-    background: rgba(255, 255, 255, 0.95);
     border-bottom: 1px solid rgba(0,0,0,0.05);
     backdrop-filter: blur(4px);
     
@@ -648,7 +646,67 @@ button.btn-pending:hover {
         .task-input { flex-grow: 1; border: none; background: transparent; font-size: 13px; color: #334155; padding: 2px; border-bottom: 1px solid transparent; }
         .task-input:focus { border-bottom: 1px solid #3b82f6; outline: none; background: rgba(255,255,255,0.8); }
         
-        .task-owner { width: 60px; border: none; background: transparent; font-size: 11px; color: #64748b; border-bottom: 1px dotted #cbd5e1; margin-left: 2px; }
+/* ... outros estilos de task ... */
+
+.task-owner { 
+    width: 60px; 
+    border: none; background: transparent; font-size: 11px; color: #64748b; 
+    border-bottom: 1px dotted #cbd5e1; margin-left: 2px; 
+}
+
+/* NOVO CAMPO: LABEL */
+.task-label { 
+    width: 70px; /* Um pouco mais largo que o dono */
+    border: none; background: transparent; font-size: 11px; 
+    color: #059669; /* Verde escuro para diferenciar */
+    font-weight: 600;
+    border-bottom: 1px dotted #cbd5e1; margin-left: 2px; 
+}
+.task-label:focus { 
+    background: white; outline: none; border-bottom: 1px solid #059669; color: #064e3b; 
+}
+
+
+
+/* --- BARRA DE FILTROS --- */
+#filter-bar {
+    position: absolute; top: 80px; left: 20px; display: flex; gap: 8px; flex-wrap: wrap; max-width: 90vw; z-index: 9998; pointer-events: auto;
+}
+.filter-pill {
+    background: rgba(255, 255, 255, 0.95); border: 1px solid #cbd5e1; color: #64748b; padding: 5px 14px; border-radius: 20px;
+    font-size: 11px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.5px; user-select: none;
+}
+.filter-pill:hover { background: white; transform: translateY(-1px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); color: #334155; }
+.filter-pill.active {
+    background: #059669; color: white; border-color: #047857; box-shadow: 0 2px 8px rgba(5, 150, 105, 0.4); transform: scale(1.05);
+}
+
+/* --- EFEITOS VISUAIS DO FILTRO --- */
+
+/* 1. Item Desligado (Dimmed) */
+.dimmed {
+    opacity: 0.08 !important; /* Quase invisível */
+    filter: grayscale(100%);
+    pointer-events: none !important;
+    transition: opacity 0.4s ease, filter 0.4s ease;
+}
+
+/* 2. Item que deu Match (Destaque) */
+/* Isso diferencia a caixa alvo dos pais dela */
+.filter-match {
+    box-shadow: 0 0 0 6px rgba(5, 150, 105, 0.5) !important; /* Glow Verde */
+    border-color: #059669 !important;
+    z-index: 500 !important;
+    background-color: #fff !important; /* Garante fundo limpo */
+}
+
+/* Remove conflitos de animação durante o filtro */
+body.filtering .box.highlight-focus { animation: none !important; box-shadow: none !important; }
+
+
+
+/* ... mantenha o .task-date ... */
+
         .task-date { width: 90px; border: none; background: transparent; font-size: 11px; color: #64748b; }
         /* OVERDUE STYLE */
         .task-date.overdue { color: #ef4444; font-weight: bold; border-bottom: 1px solid #ef4444; }
@@ -825,7 +883,12 @@ button.btn-pending:hover {
         <button class="icon-btn" onclick="resetView()">⟲</button>
         <button class="icon-btn" onclick="fitToScreen()" title="Centralizar Tudo">🎯</button>
     </div>
+
+
+    <div id="filter-bar" class="no-pan"></div>
 </div>
+
+
 
 <div id="toast-container"></div>
 
@@ -1192,10 +1255,10 @@ button.btn-pending:hover {
     function addTask(boxId) {
         const box = document.getElementById(boxId);
         const container = box.querySelector('.task-container');
-        renderTask(container, "Nova tarefa", "todo", "", "");
-        // Garantir que está visível ao adicionar
-        container.style.display = 'block';
+        // Agora passamos label vazio no final: (container, texto, status, dono, data, LABEL)
+        renderTask(container, "Nova tarefa", "todo", "", "", ""); 
         
+        container.style.display = 'block';
         updateBoxSummary(box);
         updateElasticParent(box.parentElement.closest('.children-area'));
         updateAllLines();
@@ -1215,7 +1278,7 @@ button.btn-pending:hover {
         markUnsaved();
     }
 
-    function renderTask(container, text, status, owner = "", date = "") {
+    function renderTask(container, text, status, owner = "", date = "", label = "") {
         const div = document.createElement('div');
         div.className = `task-item ${status === 'done' ? 'done' : ''} no-pan`; 
         div.dataset.status = status;
@@ -1226,14 +1289,19 @@ button.btn-pending:hover {
         
         div.innerHTML = `
             <div class="task-status-toggle ${statusClass} no-pan" onclick="cycleTaskStatus(this)"></div>
+            
             <input class="task-input no-pan" value="${text}" placeholder="Tarefa..." oninput="markUnsaved()">
+            
+            <input class="task-label no-pan" value="${label}" placeholder="Label" title="Etiqueta/Categoria" oninput="markUnsaved()">
+            
             <input class="task-owner no-pan" value="${owner}" placeholder="Resp." title="Responsável" oninput="markUnsaved()">
+            
             <input class="task-date no-pan" type="date" value="${date}" title="Data Limite" onchange="checkTaskOverdue(this)">
+            
             <button class="task-del-btn no-pan" onclick="removeTask(this)">×</button>
         `;
         container.insertBefore(div, container.lastElementChild); 
         
-        // Initial check for loaded tasks
         const dateInput = div.querySelector('.task-date');
         checkTaskOverdue(dateInput);
     }
@@ -1267,6 +1335,10 @@ button.btn-pending:hover {
         updateAllLines();
         markUnsaved();
     }
+
+
+
+
     function updateStickyHeaders() {
         const toolbarOffset = 70; // Espaço do topo (toolbar)
         const screenW = window.innerWidth;
@@ -1345,7 +1417,6 @@ button.btn-pending:hover {
             titleInput.style.transform = `translateX(${shiftX / state.scale}px)`;
         });
     }
-    // --- JOURNAL LOGIC ---
     function openJournal() {
         const content = document.getElementById('journal-content');
         content.innerHTML = '';
@@ -1359,18 +1430,20 @@ button.btn-pending:hover {
             
             taskItems.forEach(item => {
                 if (item.closest('.box') !== box) return;
-
+    
                 const status = item.dataset.status;
                 if(status === 'done') return; 
                 
                 const dateVal = item.querySelector('.task-date').value;
                 const isOverdue = dateVal && dateVal < today;
-
+    
                 allTasks.push({
                     boxId: box.id, 
                     box: boxTitle,
                     text: item.querySelector('.task-input').value,
-                    owner: item.querySelector('.task-owner').value || "Sem Responsável",
+                    // Pega o label. Se vazio, usa "Geral"
+                    label: item.querySelector('.task-label').value || "Geral / Sem Etiqueta", 
+                    owner: item.querySelector('.task-owner').value,
                     date: dateVal,
                     status: status,
                     isOverdue: isOverdue
@@ -1383,27 +1456,34 @@ button.btn-pending:hover {
             document.getElementById('journal-overlay').style.display = 'flex';
             return;
         }
-
+    
+        // --- AGRUPAMENTO POR LABEL ---
         const grouped = allTasks.reduce((acc, t) => {
-            if(!acc[t.owner]) acc[t.owner] = [];
-            acc[t.owner].push(t);
+            if(!acc[t.label]) acc[t.label] = [];
+            acc[t.label].push(t);
             return acc;
         }, {});
         
-        for (const [owner, tasks] of Object.entries(grouped)) {
+        // Ordena as chaves (labels) alfabeticamente para ficar organizado
+        const sortedLabels = Object.keys(grouped).sort();
+    
+        sortedLabels.forEach(label => {
+            const tasks = grouped[label];
             const groupDiv = document.createElement('div');
             groupDiv.className = 'journal-group';
             
-            let html = `<div class="journal-header">${owner} <span style="font-weight:normal; font-size:12px; color:#64748b;">(${tasks.length})</span></div>`;
+            // Cabeçalho mostra o Label
+            let html = `<div class="journal-header" style="background:#f0fdf4; color:#166534;">🏷️ ${label} <span style="font-weight:normal; font-size:12px; color:#64748b;">(${tasks.length})</span></div>`;
             
             tasks.forEach(t => {
                 let tagClass = t.status === 'doing' ? 'tag-doing' : 'tag-todo';
                 let tagText = t.status === 'doing' ? 'Fazendo' : 'A Fazer';
-                
                 let overdueHtml = t.isOverdue ? '<span class="journal-tag tag-overdue">🔴 ATRASADO</span>' : '';
-                
                 let dateStr = t.date ? `<span style="color:${t.isOverdue ? '#ef4444' : '#d97706'};">📅 ${t.date}</span>` : '';
                 
+                // Adiciona info do Responsável dentro do item, já que não é mais o título do grupo
+                let ownerBadge = t.owner ? `<span style="font-size:10px; background:#e2e8f0; padding:2px 5px; border-radius:3px; color:#475569;">👤 ${t.owner}</span>` : '';
+    
                 html += `
                     <div class="journal-item">
                         <div style="display:flex; gap:5px; align-items:center;">
@@ -1412,6 +1492,7 @@ button.btn-pending:hover {
                         </div>
                         <span class="journal-text">${t.text}</span>
                         <div class="journal-meta">
+                            ${ownerBadge}
                             ${dateStr}
                             <span class="journal-context">em: ${t.box}</span>
                             <button class="journal-jump-btn" onclick="focusOnBox('${t.boxId}')">Ir ➔</button>
@@ -1422,7 +1503,7 @@ button.btn-pending:hover {
             
             groupDiv.innerHTML = html;
             content.appendChild(groupDiv);
-        }
+        });
         
         document.getElementById('journal-overlay').style.display = 'flex';
     }
@@ -1808,6 +1889,17 @@ setTimeout(repairBoxStructure, 500);
                 }
             });
             if(targetParent.classList.contains('children-area')) updateElasticParent(targetParent);
+
+
+            if (t.closest('.box') === sourceEl) {
+                renderTask(tContainer, 
+                    t.querySelector('.task-input').value, 
+                    t.dataset.status, 
+                    t.querySelector('.task-owner').value, 
+                    t.querySelector('.task-date').value,
+                    t.querySelector('.task-label').value // <--- COPIA O LABEL AO DUPLICAR
+                );
+             }
         }
         recursiveClone(original, originalParent, true);
         markUnsaved(); 
@@ -2207,12 +2299,14 @@ setTimeout(repairBoxStructure, 500);
             box.querySelectorAll('.task-item').forEach(tItem => {
                 // Strict check: only tasks belonging to this box
                 if (tItem.closest('.box') === box) {
-                    tasks.push({
-                        text: tItem.querySelector('.task-input').value,
-                        owner: tItem.querySelector('.task-owner').value,
-                        date: tItem.querySelector('.task-date').value,
-                        status: tItem.dataset.status || 'todo'
-                    });
+// ... dentro do loop taskItems.forEach ...
+tasks.push({
+    text: tItem.querySelector('.task-input').value,
+    label: tItem.querySelector('.task-label').value, // <--- SALVA O LABEL
+    owner: tItem.querySelector('.task-owner').value,
+    date: tItem.querySelector('.task-date').value,
+    status: tItem.dataset.status || 'todo'
+});
                 }
             });
 
@@ -2290,7 +2384,7 @@ setTimeout(repairBoxStructure, 500);
                 tContainer.style.display = 'block';
 
                 if(d.tasks && d.tasks.length > 0) {
-                    d.tasks.forEach(t => renderTask(tContainer, t.text, t.status, t.owner, t.date));
+                    d.tasks.forEach(t => renderTask(tContainer, t.text, t.status, t.owner, t.date, t.label)); // <--- CARREGA O LABEL
                     updateBoxSummary(el);
                 }
 
@@ -2506,7 +2600,118 @@ function applySemanticZoomToTarget(box, currentZoom) {
         performToggle(box.id, btn);
     }
 }
+// --- SISTEMA DE FILTROS (MÚLTIPLOS) ---
+// Agora usamos um Set para guardar vários labels ativos ao mesmo tempo
+let activeFilterLabels = new Set(); 
 
+function updateFilterBar() {
+    // 1. Coleta labels únicos presentes no canvas
+    const labels = new Set();
+    document.querySelectorAll('.task-label').forEach(input => {
+        const val = input.value.trim();
+        if (val) labels.add(val);
+    });
+
+    const container = document.getElementById('filter-bar');
+    if (!container) return;
+
+    // Se não tem labels e nenhum filtro ativo, esconde
+    if (labels.size === 0 && activeFilterLabels.size === 0) {
+        container.innerHTML = '';
+        return;
+    }
+
+    const sortedLabels = Array.from(labels).sort();
+    let html = '';
+    
+    // Botão Limpar (aparece se houver pelo menos 1 filtro ativo)
+    if (activeFilterLabels.size > 0) {
+        html += `<div class="filter-pill" style="background:#fee2e2; color:#ef4444; border-color:#fca5a5;" onclick="applyFilter(null)">✕ LIMPAR</div>`;
+    }
+
+    sortedLabels.forEach(label => {
+        // Verifica se este label está no Set de ativos
+        const isActive = activeFilterLabels.has(label) ? 'active' : '';
+        const safeLabel = label.replace(/"/g, '&quot;'); 
+        html += `<div class="filter-pill ${isActive}" onclick="applyFilter('${safeLabel}')">${label}</div>`;
+    });
+
+    if (container.innerHTML !== html) container.innerHTML = html;
+}
+
+function applyFilter(label) {
+    if (label === null) {
+        // Clicou em LIMPAR -> Reseta tudo
+        activeFilterLabels.clear();
+    } else {
+        // Lógica de Toggle (Ligar/Desligar)
+        if (activeFilterLabels.has(label)) {
+            activeFilterLabels.delete(label); // Se já tem, remove
+        } else {
+            activeFilterLabels.add(label); // Se não tem, adiciona
+        }
+    }
+    
+    updateFilterBar(); // Atualiza visual dos botões
+
+    // 1. Limpeza Inicial (Remove efeitos visuais)
+    document.querySelectorAll('.box, .conn-group, .note').forEach(el => {
+        el.classList.remove('dimmed', 'filter-match');
+    });
+
+    // Se o Set estiver vazio, remove o modo de filtro e sai
+    if (activeFilterLabels.size === 0) {
+        document.body.classList.remove('filtering');
+        return;
+    }
+
+    document.body.classList.add('filtering');
+
+    const matches = new Set();   // Caixas que têm ALGUM dos labels ativos
+    const ancestors = new Set(); // Pais dessas caixas
+
+    // 2. Identificar Matches e Ancestrais
+    document.querySelectorAll('.task-label').forEach(input => {
+        const val = input.value.trim();
+        
+        // Verifica se o valor deste input está na lista de ativos
+        if (activeFilterLabels.has(val)) {
+            const box = input.closest('.box');
+            if (box) {
+                matches.add(box.id);
+                box.classList.add('filter-match');
+
+                // Resgata ancestrais para manter o contexto visível
+                let parent = box.parentElement.closest('.box');
+                while(parent) {
+                    ancestors.add(parent.id);
+                    parent = parent.parentElement.closest('.box');
+                }
+            }
+        }
+    });
+
+    // 3. Aplicar "Dimmed" em quem sobrou
+    document.querySelectorAll('.box').forEach(box => {
+        // Se NÃO é match E NÃO é pai -> Desliga
+        if (!matches.has(box.id) && !ancestors.has(box.id)) {
+            box.classList.add('dimmed');
+        }
+    });
+
+    document.querySelectorAll('.note').forEach(n => n.classList.add('dimmed'));
+
+    // Conexões: Mostra se conecta dois elementos visíveis
+    connections.forEach(c => {
+        const group = document.getElementById(c.id);
+        if (!group) return;
+        const sVisible = matches.has(c.sid) || ancestors.has(c.sid);
+        const tVisible = matches.has(c.tid) || ancestors.has(c.tid);
+        
+        if (sVisible || tVisible) group.classList.remove('dimmed');
+        else group.classList.add('dimmed');
+    });
+}
 function initDrag(e, id) {
     if(spacePressed) return; 
     if(!state.isEditMode) return;
@@ -2782,6 +2987,15 @@ window.addEventListener('keyup', (e) => { if(!e.shiftKey) document.body.classLis
 
     // INIT
     addRootBox();
+
+
+// Atualiza breadcrumbs e barra de filtros a cada meio segundo
+setInterval(() => {
+    updateBreadcrumbs();
+    // Só atualiza a barra se NÃO estivermos filtrando no momento (para não re-renderizar botão enquanto clica)
+    // OU, melhor: atualiza sempre, mas a função updateFilterBar já tem checagem de HTML diff.
+    updateFilterBar(); 
+}, 500);
 </script>
 </body>
 </html>
