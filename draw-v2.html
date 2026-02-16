@@ -447,15 +447,14 @@ button.btn-pending:hover {
     transition: background 0.2s;
 }
 /* --- BREADCRUMB DINÂMICO --- */
-
 .context-path {
-    /* MÁGICA AQUI: Tamanho base (10px) multiplicado pela escala da interface.
-       Se você der zoom out, --ui-scale aumenta e o texto cresce. */
-    font-size: calc(10px * var(--ui-scale));
+    /* MUDANÇA: Usa a variável dinâmica calculada no JS */
+    /* Se a variável não existir, usa 10px como fallback */
+    font-size: calc(var(--bread-font-size, 10px) * var(--ui-scale));
     line-height: 1.2;
     
     color: #64748b;
-    font-weight: 700; /* Um pouco mais negrito para ler de longe */
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     
@@ -466,23 +465,22 @@ button.btn-pending:hover {
     text-overflow: ellipsis;
     pointer-events: none;
     
-    /* Estado inicial (escondido) */
     opacity: 0;
     height: 0;
     margin-bottom: 0;
     
-    /* Transição suave para não "pular" quando mudar o tamanho */
-    transition: opacity 0.3s, font-size 0.1s, margin-bottom 0.1s;
+    transition: opacity 0.3s, font-size 0.2s, margin-bottom 0.2s, height 0.2s;
 }
 
 .context-path.visible {
     opacity: 1;
     
-    /* Altura automática para acomodar o texto grande */
+    /* A altura se ajusta automaticamente ao tamanho da fonte */
     height: auto;
+    min-height: calc(var(--bread-font-size, 10px) * var(--ui-scale) * 1.2);
     
-    /* Margem dinâmica: empurra o título para baixo proporcionalmente ao tamanho */
-    margin-bottom: calc(5px * var(--ui-scale));
+    /* Margem proporcional */
+    margin-bottom: calc(4px * var(--ui-scale));
     padding-bottom: 2px;
 }
         .box-title-bar:active { cursor: grabbing; }
@@ -528,6 +526,20 @@ button.btn-pending:hover {
             /* SCALING LOGIC */
             transform-origin: bottom right; 
             transform: scale(var(--ui-scale));
+            
+            animation: popIn 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .actions-balloon {
+            position: absolute; 
+            top: -45px; /* Ajustei um pouco para cima pois ele vai crescer */
+            right: 10px; 
+            
+            /* ... mantenha as cores e bordas ... */
+            
+            /* MUDANÇA: Multiplica a escala do sistema por 1.25 */
+            transform-origin: bottom right; 
+            transform: scale(calc(var(--ui-scale) * 1.25));
             
             animation: popIn 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
@@ -579,6 +591,21 @@ button.btn-pending:hover {
         .box.collapsed-mode .box-title-bar { height: 100%; padding: 0; align-items: center; justify-content: center; }
         .box.collapsed-mode input.title { font-size: var(--dynamic-font-size); color: inherit; } 
         .box.collapsed-mode.red-state > .box-title-bar > input.title { color: white !important; }
+
+        .box.collapsed-mode .box-title-bar,
+        .box.collapsed-mode .title {
+            cursor: grab !important;
+        }
+
+        /* Quando estiver segurando SHIFT (lógica que vamos adicionar), volta a ser cursor de mover */
+        body.holding-shift .box.collapsed-mode .box-title-bar {
+            cursor: move !important;
+        }
+
+        /* Garante que o título receba cliques para podermos detectar onde clicou */
+        .box.collapsed-mode .title {
+            pointer-events: auto !important;
+        }
 
         /* TAREFAS */
         .task-container { 
@@ -908,8 +935,8 @@ button.btn-pending:hover {
     // --- 4. BOX LOGIC ---
     function calcDynamicFont(box) {
         if(box.classList.contains('note')) return; 
-
-        const input = box.querySelector('input.title');
+    
+        const input = box.querySelector('.title'); // Note: use .title, não input.title
         const textLen = Math.max(1, input.value.length); 
         
         const w = box.offsetWidth || parseFloat(box.style.width); 
@@ -917,15 +944,24 @@ button.btn-pending:hover {
         const area = w * h;
         
         const manualScale = parseFloat(box.dataset.fontScale) || 1;
-
+    
+        // 1. Cálculo do Título Principal
         let sizeBasedOnGeom = Math.sqrt(area) * 0.12;
         const maxSizeForWidth = (w * 0.9) / (textLen * 0.6);
         let finalSize = Math.min(sizeBasedOnGeom, maxSizeForWidth);
-        finalSize = Math.max(14, finalSize);
+        
+        finalSize = Math.max(14, finalSize); // Mínimo 14px
         finalSize = finalSize * manualScale;
         
+        // 2. Cálculo do Breadcrumb (NOVO)
+        // Define como 45% do tamanho do título, mas nunca menor que 10px
+        let breadSize = Math.max(10, finalSize * 0.45);
+    
+        // 3. Aplicação das Variáveis
         box.style.setProperty('--dynamic-font-size', finalSize + 'px');
+        box.style.setProperty('--bread-font-size', breadSize + 'px');
         
+        // Variável estática para base de cálculo (zoom)
         const staticBase = 16;
         box.style.setProperty('--static-font-size', (staticBase * manualScale) + 'px');
     }
@@ -2373,24 +2409,39 @@ function applySemanticZoomToTarget(box, currentZoom) {
     }
 }
 
-    // --- INTERACTIONS ---
-    function initDrag(e, id) {
-        if(spacePressed) return; 
-        if(!state.isEditMode) return;
-        
-        // Don't drag if clicking in any "no-pan" element (buttons, inputs)
-        // Also note-delete, note-textarea
-        if (e.target.closest('.no-pan') || e.target.closest('.no-pan-strict') || e.target.closest('#toolbar') || e.target.closest('.modal-panel')) return;
+function initDrag(e, id) {
+    if(spacePressed) return; 
+    if(!state.isEditMode) return;
+    
+    // Ignora controles de interface
+    if (e.target.closest('.no-pan') || e.target.closest('.no-pan-strict') || e.target.closest('.actions-balloon')) return;
 
-        e.stopPropagation(); 
-        dragItem = document.getElementById(id); dragItem.style.zIndex = 999; 
-        const wp = screenToWorld(e.clientX, e.clientY);
-        
-        state.dragThresholdMet = false;
-        state.dragStartScreen = { x: e.clientX, y: e.clientY };
-        
-        startInt = { mx: wp.x, my: wp.y, el: dragItem.offsetLeft, et: dragItem.offsetTop };
+    const box = document.getElementById(id);
+    const isCollapsed = box.classList.contains('collapsed-mode');
+    
+    // --- LÓGICA NOVA: NAVEGAÇÃO EM CAIXA FECHADA ---
+    if (isCollapsed) {
+        // Se NÃO estiver segurando Shift...
+        if (!e.shiftKey) {
+            // E clicou no TEXTO ou no MEIO da barra...
+            if (e.target.classList.contains('title') || e.target.classList.contains('box-title-bar')) {
+                // ...NÃO inicia o arrasto da caixa.
+                // Ao não chamar stopPropagation(), o evento sobe para o Viewport e vira PAN (Navegação).
+                return; 
+            }
+        }
     }
+    // -----------------------------------------------
+
+    e.stopPropagation(); 
+    dragItem = box; 
+    dragItem.style.zIndex = 999; 
+    
+    const wp = screenToWorld(e.clientX, e.clientY);
+    state.dragThresholdMet = false;
+    state.dragStartScreen = { x: e.clientX, y: e.clientY };
+    startInt = { mx: wp.x, my: wp.y, el: dragItem.offsetLeft, et: dragItem.offsetTop };
+}
     
     // [FIX] Updated resize for TWO resizers
     function initResize(e, id, dir) {
@@ -2544,12 +2595,17 @@ function applySemanticZoomToTarget(box, currentZoom) {
         
         updateBreadcrumbs(); 
     }
+
     viewport.addEventListener('wheel', (e) => { 
         e.preventDefault(); 
         
-        // 1. Calcula o novo Zoom
+        // Detecta direção: Zoom In (dir = -1) ou Zoom Out (dir = 1)
         const dir = e.deltaY > 0 ? -1 : 1; 
-        let newScale = state.scale + (dir * 0.1 * state.scale); 
+        // Correção: deltaY negativo geralmente é scroll para cima (Zoom In)
+        // Vamos garantir: se deltaY < 0 estamos aproximando
+        const isZoomingIn = e.deltaY < 0;
+    
+        let newScale = state.scale + (isZoomingIn ? 0.1 * state.scale : -0.1 * state.scale); 
         newScale = Math.min(Math.max(0.1, newScale), 5); 
         
         const rect = viewport.getBoundingClientRect(); 
@@ -2565,35 +2621,66 @@ function applySemanticZoomToTarget(box, currentZoom) {
         
         updateTransform(); 
         
-        // 2. DETECTA O ELEMENTO SOB O MOUSE
-        // Pega o elemento mais profundo na posição do cursor
-        const hoveredElement = document.elementFromPoint(e.clientX, e.clientY);
-        
-        // Verifica se é uma caixa ou está dentro de uma caixa
-        if (hoveredElement) {
-            const targetBox = hoveredElement.closest('.box');
+        // --- LÓGICA "BASTA APONTAR PARA ABRIR" ---
+        if (isZoomingIn) {
+            // Pega o elemento exato sob o mouse
+            const hoveredElement = document.elementFromPoint(e.clientX, e.clientY);
             
-            // Se encontrou uma caixa sob o mouse, aplica a mágica SÓ NELA
-            if (targetBox) {
-                applySemanticZoomToTarget(targetBox, state.scale);
+            if (hoveredElement) {
+                // Procura se é uma caixa (ou título/barra de uma caixa)
+                const targetBox = hoveredElement.closest('.box');
+                
+                if (targetBox) {
+                    // Se achou uma caixa E ela está fechada -> ABRE IMEDIATAMENTE
+                    if (targetBox.classList.contains('collapsed-mode')) {
+                        const btn = targetBox.querySelector('.actions-balloon .btn-toggle');
+                        performToggle(targetBox.id, btn);
+                    }
+                }
             }
         }
+        // ------------------------------------------
     
     }, { passive: false });
+
     // DRAG LOGIC (UPDATED FOR NOTES AS CHILDREN)
     viewport.addEventListener('mousedown', (e) => {
+        // Ignora botões e inputs
         if (e.target.closest('.no-pan') || e.target.closest('.no-pan-strict') || e.target.closest('#toolbar') || e.target.closest('.modal-panel')) return;
+        
         const isControl = e.target.closest('button') || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
+        
+        // Verifica se clicou num título
+        const titleBar = e.target.closest('.box-title-bar');
+        
+        // Se clicou num título, normalmente bloqueamos o Pan.
+        // MAS, se a caixa estiver FECHADA e sem Shift, permitimos o Pan.
+        if (titleBar) {
+            const box = titleBar.closest('.box');
+            // Se a caixa está aberta OU (está fechada mas segurando Shift), bloqueia o Pan (porque vai mover a caixa)
+            if (!box.classList.contains('collapsed-mode') || e.shiftKey) {
+                return;
+            }
+            // Se passou daqui, é caixa fechada sem shift -> PERMITE PAN
+        }
+    
         if (!isControl && (e.button === 0 || e.button === 1)) {
-            if (e.target.closest('.box-title-bar')) return; 
-            // Only block pan if note body (and allow drag)
+            // Se for nota, não navega (arrasta a nota)
             if (e.target.closest('.note')) return; 
-            e.preventDefault(); state.panning = true; state.panStart = { x: e.clientX - state.offset.x, y: e.clientY - state.offset.y }; viewport.style.cursor = 'grabbing';
+            
+            e.preventDefault(); 
+            state.panning = true; 
+            state.panStart = { x: e.clientX - state.offset.x, y: e.clientY - state.offset.y }; 
+            viewport.style.cursor = 'grabbing';
         }
     });
     window.addEventListener('mousemove', (e) => { if (state.panning) { e.preventDefault(); state.offset.x = e.clientX - state.panStart.x; state.offset.y = e.clientY - state.panStart.y; updateTransform(); } });
     window.addEventListener('mouseup', () => { state.panning = false; viewport.style.cursor = 'grab'; });
     function resetView() { state.scale = 1; state.offset = { x: 0, y: 0 }; updateTransform(); }
+
+// Detecta SHIFT para mudar o cursor
+window.addEventListener('keydown', (e) => { if(e.shiftKey) document.body.classList.add('holding-shift'); });
+window.addEventListener('keyup', (e) => { if(!e.shiftKey) document.body.classList.remove('holding-shift'); });
 
     // INIT
     addRootBox();
