@@ -1251,6 +1251,389 @@ body.filtering .box.highlight-focus { animation: none !important; box-shadow: no
     transition: transform 0.2s;
 }
 
+/* --- LAYOUT DO JORNAL (CORRIGIDO) --- */
+/* O container principal agora é Flex Column para empilhar Gantt em cima e o resto embaixo */
+#journal-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: #fff;
+}
+
+/* Área inferior dividida: Lista (Tree) à esquerda, Ranking à direita */
+.journal-split-view {
+    display: flex;
+    flex-grow: 1;
+    overflow: hidden; /* Importante para o scroll interno funcionar */
+    border-top: 1px solid #d0d7de;
+}
+
+.journal-tree-area {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 0; /* GitHub style não tem padding lateral solto */
+    background: #fff;
+}
+
+.journal-sidebar-area {
+    width: 300px;
+    min-width: 300px;
+    background: #f6f8fa; /* Fundo cinza claro estilo GitHub */
+    border-left: 1px solid #d0d7de;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+/* --- ESTILO GITHUB TREE --- */
+.git-tree-container {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    color: #24292f;
+}
+
+/* Cabeçalho da "Pasta" (Label ou Owner) */
+.git-row-header {
+    padding: 10px 16px;
+    background-color: #f6f8fa;
+    border-bottom: 1px solid #d0d7de;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+}
+.git-row-header:hover {
+    background-color: #eaeef2;
+}
+
+/* Item da Lista (Tarefa) */
+.git-row-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 16px;
+    border-bottom: 1px solid #d0d7de;
+    gap: 10px;
+    transition: background 0.1s;
+}
+.git-row-item:hover {
+    background-color: #f6f8fa;
+}
+.git-row-item:last-child {
+    border-bottom: none;
+}
+
+/* Ícones */
+.git-icon {
+    color: #57606a;
+    width: 16px;
+    text-align: center;
+}
+.folder-icon { color: #54aeff; } /* Azul pasta */
+.file-icon { color: #57606a; }   /* Cinza arquivo */
+
+/* Metadados alinhados à direita */
+.git-meta {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: #57606a;
+}
+
+/* Botão Retry Estilo Badge */
+.btn-retry-badge {
+    background: #f6f8fa;
+    border: 1px solid #d0d7de;
+    border-radius: 20px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #57606a;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.btn-retry-badge:hover {
+    background: #fff1f2; /* Vermelho claro */
+    color: #cf222e;
+    border-color: #fdaeb7;
+}
+.btn-retry-badge.active {
+    background: #cf222e;
+    color: white;
+    border-color: #cf222e;
+}
+
+/* Ranking na Lateral */
+.rank-card {
+    background: white;
+    border: 1px solid #d0d7de;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.rank-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #57606a;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #d0d7de;
+    padding-bottom: 5px;
+}
+.rank-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px dashed #eaeef2;
+    font-size: 13px;
+}
+
+
+
+/* --- ESTILO LINUX TREE (PONTILHADO) --- */
+.linux-tree-container {
+    font-family: "Consolas", "Monaco", "Courier New", monospace; /* Fonte de Terminal */
+    font-size: 13px;
+    color: #334155;
+    padding: 10px;
+    background: #fff;
+}
+
+/* Linha Vertical do Grupo (Pasta) */
+.tree-group-content {
+    margin-left: 7px; /* Alinhamento fino */
+    padding-left: 18px;
+    border-left: 1px dashed #94a3b8; /* A linha vertical pontilhada */
+}
+
+/* Cabeçalhos (Pastas) */
+.tree-summary {
+    cursor: pointer;
+    list-style: none; /* Remove triângulo padrão do browser */
+    padding: 4px 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    user-select: none;
+}
+.tree-summary:hover {
+    background-color: #f1f5f9;
+    color: #0f172a;
+}
+/* Custom marker para abrir/fechar */
+.tree-summary::before {
+    content: '[+]';
+    color: #64748b;
+    margin-right: 4px;
+    font-weight: bold;
+}
+details[open] > .tree-summary::before {
+    content: '[-]';
+}
+
+/* Itens Finais (Arquivos/Tarefas) */
+.tree-item {
+    position: relative;
+    padding: 6px 0 6px 25px; /* Espaço para a linha horizontal */
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px dotted #e2e8f0; /* Separador sutil entre linhas */
+}
+.tree-item:last-child {
+    border-bottom: none;
+}
+
+/* O Conector Horizontal (--) */
+.tree-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 20px;
+    border-top: 1px dashed #94a3b8; /* A linha horizontal pontilhada */
+}
+
+/* Visual do Botão Retry no modo Terminal */
+.btn-retry-terminal {
+    background: transparent;
+    border: 1px solid #cbd5e1;
+    color: #64748b;
+    font-size: 10px;
+    padding: 0 4px;
+    cursor: pointer;
+    font-family: monospace;
+}
+.btn-retry-terminal:hover {
+    background: #ef4444;
+    color: white;
+    border-color: #ef4444;
+}
+.btn-retry-terminal.active {
+    background: #ef4444;
+    color: white;
+    border-color: #ef4444;
+}
+
+/* --- EFEITO BLUR (PRIVACIDADE NO RANKING) --- */
+.secret-rank-wrapper {
+    position: relative;
+    cursor: pointer;
+    overflow: hidden;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    transition: all 0.3s;
+}
+
+/* Estado Borrado (Padrão) */
+.secret-rank-wrapper.blurred .rank-content {
+    filter: blur(8px);
+    opacity: 0.6;
+    pointer-events: none; /* Impede selecionar texto enquanto borrado */
+}
+
+/* Texto "Clique para revelar" */
+.secret-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    color: #475569;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 1px;
+    background: rgba(255,255,255,0.4);
+    z-index: 10;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.secret-rank-wrapper.blurred .secret-overlay {
+    opacity: 1; /* Só aparece quando está borrado */
+}
+
+/* Quando revelado (sem a classe blurred) */
+.secret-rank-wrapper:not(.blurred) {
+    background: #fff;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+}
+
+
+
+/* --- CORREÇÃO DE LAYOUT (SCROLL PERFEITO) --- */
+
+/* 1. O Container Principal ocupa 100% da altura disponível */
+#journal-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden; /* Impede que a janela inteira role */
+}
+
+/* 2. Área do Gantt (Topo) */
+.journal-top-section {
+    flex-shrink: 0; /* Não encolhe */
+    background: #fff;
+    border-bottom: 1px solid #e2e8f0;
+    transition: all 0.3s ease;
+}
+
+/* 3. Área Dividida (Tree + Ranking) preenche o RESTO do espaço */
+.journal-split-view {
+    display: flex;
+    flex-grow: 1; /* Ocupa todo o espaço que sobrar */
+    overflow: hidden; /* Trava o tamanho para forçar scroll interno */
+    min-height: 0; /* Truque do Flexbox para permitir scroll */
+}
+
+/* 4. As colunas internas rolam individualmente */
+.journal-tree-area, 
+.journal-sidebar-area {
+    overflow-y: auto; /* Scroll apenas aqui dentro */
+    height: 100%;     /* Respeita a altura do pai */
+}
+
+/* --- ESTILO DO GANTT COLAPSÁVEL --- */
+.gantt-wrapper {
+    margin: 0; /* Remove margens externas para colar nas bordas */
+    border: none;
+    border-bottom: 1px solid #cbd5e1;
+    border-radius: 0;
+    transition: height 0.3s ease;
+}
+
+.gantt-wrapper.collapsed .gantt-scroll-area {
+    display: none; /* Esconde o miolo quando fechado */
+}
+.gantt-wrapper.collapsed {
+    min-height: 0 !important;
+    height: auto !important;
+    resize: none; /* Remove alça de redimensionar quando fechado */
+}
+
+/* Botão de Toggle do Gantt */
+.btn-gantt-toggle {
+    background: transparent;
+    border: 1px solid #cbd5e1;
+    color: #64748b;
+    border-radius: 4px;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    transition: all 0.2s;
+}
+.btn-gantt-toggle:hover {
+    background: #f1f5f9;
+    color: #334155;
+}
+
+
+/* --- BOTÃO RETRY DENTRO DA CAIXA --- */
+.task-retry-btn {
+    width: 20px;
+    height: 18px;
+    background: transparent;
+    border: 1px solid #cbd5e1;
+    color: #94a3b8;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 10px;
+    margin-right: 4px; /* Espaço antes do input */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    font-family: monospace; /* Para alinhar com o estilo do jornal */
+}
+
+.task-retry-btn:hover {
+    background: #fff1f2;
+    border-color: #fca5a5;
+    color: #ef4444;
+}
+
+/* Quando tem retries > 0 */
+.task-retry-btn.active {
+    background: #fff1f2;
+    border-color: #fdaeb7;
+    color: #ef4444;
+    font-weight: bold;
+}
+
+
+
+
+
+
 
     </style>
 </head>
@@ -1756,33 +2139,155 @@ function addConnection(sid, spos, tid, tpos, existingId = null) {
         markUnsaved();
     }
 
-    function renderTask(container, text, status, owner = "", date = "", label = "") {
-        const div = document.createElement('div');
-        div.className = `task-item ${status === 'done' ? 'done' : ''} no-pan`; 
-        div.dataset.status = status;
+// --- LÓGICA DE RETRY E RANKING ---
+
+function incrementRetry(btn) {
+    // CENÁRIO 1: Clicou direto na CAIXA (Canvas)
+    // Verificamos se o botão está dentro de um .task-item normal
+    const boxItem = btn.closest('.task-item');
+    
+    // Se achou .task-item e NÃO estamos dentro da árvore do jornal (.linux-tree-container)
+    if (boxItem && !btn.closest('.linux-tree-container')) {
+        let current = parseInt(boxItem.dataset.retries || 0);
+        current++;
         
-        let statusClass = '';
-        if(status === 'doing') statusClass = 'doing';
-        if(status === 'done') statusClass = 'done';
+        // Atualiza dados e visual
+        boxItem.dataset.retries = current;
+        btn.innerText = `${current}`;
+        btn.classList.add('active');
         
-        div.innerHTML = `
-            <div class="task-status-toggle ${statusClass} no-pan" onclick="cycleTaskStatus(this)"></div>
-            
-            <input class="task-input no-pan" value="${text}" placeholder="Tarefa..." oninput="markUnsaved()">
-            
-            <input class="task-label no-pan" value="${label}" placeholder="Label" title="Etiqueta/Categoria" oninput="markUnsaved()">
-            
-            <input class="task-owner no-pan" value="${owner}" placeholder="Resp." title="Responsável" oninput="markUnsaved()">
-            
-            <input class="task-date no-pan" type="date" value="${date}" title="Data Limite" onchange="checkTaskOverdue(this)">
-            
-            <button class="task-del-btn no-pan" onclick="removeTask(this)">×</button>
-        `;
-        container.insertBefore(div, container.lastElementChild); 
-        
-        const dateInput = div.querySelector('.task-date');
-        checkTaskOverdue(dateInput);
+        markUnsaved();
+        return; // Sai da função, trabalho feito
     }
+
+    // CENÁRIO 2: Clicou no JORNAL (Tree View)
+    const row = btn.closest('.tree-item'); 
+    if (!row) return;
+
+    const boxId = row.dataset.boxId;
+    const taskIndex = parseInt(row.dataset.taskIndex); 
+    
+    const box = document.getElementById(boxId);
+    if(box) {
+        // Encontra a tarefa original pelo índice
+        const item = box.querySelectorAll('.task-item')[taskIndex];
+        
+        if(item) {
+            let current = parseInt(item.dataset.retries || 0);
+            current++;
+            item.dataset.retries = current;
+            
+            // Atualiza também o botãozinho lá na caixa (para ficar sincronizado se você olhar)
+            const boxBtn = item.querySelector('.task-retry-btn');
+            if(boxBtn) {
+                boxBtn.innerText = `${current}`;
+                boxBtn.classList.add('active');
+            }
+
+            // Atualiza o botão do Jornal onde você clicou
+            btn.innerText = `[x${current}]`;
+            btn.classList.add('active'); 
+            
+            markUnsaved();
+        }
+    }
+
+    // Atualiza o Ranking na lateral
+    const sidebar = document.querySelector('.journal-sidebar-area');
+    if(sidebar) {
+        const tasks = collectAllTasks();
+        sidebar.innerHTML = renderRetryRanking(tasks);
+    }
+}
+
+function renderRetryRanking(tasks) {
+    const stats = {};
+    let totalRetries = 0;
+    
+    tasks.forEach(t => {
+        if(t.retries > 0 && t.owner && t.owner !== "Sem Dono") {
+            if(!stats[t.owner]) stats[t.owner] = 0;
+            stats[t.owner] += t.retries;
+            totalRetries += t.retries;
+        }
+    });
+
+    const sorted = Object.entries(stats).sort((a,b) => b[1] - a[1]);
+
+    // Container externo com evento de clique para alternar o blur
+    let html = `
+    <div class="secret-rank-wrapper blurred" onclick="this.classList.remove('blurred')" title="Clique para revelar o ranking">
+        <div class="secret-overlay">🔒 Revelar Ranking</div>
+        <div class="rank-content" style="padding:15px; background:white;">
+            <div style="font-weight:bold; color:#be123c; margin-bottom:15px; text-transform:uppercase; font-size:12px; border-bottom:1px solid #fecaca; padding-bottom:5px;">
+                🏆 Top Cobranças
+            </div>
+    `;
+    
+    if (sorted.length === 0) {
+        html += `<div style="color:#94a3b8; font-size:12px; text-align:center;">Sem registros.</div>`;
+    } else {
+        sorted.forEach(([owner, count]) => {
+            const percent = Math.min(100, (count / totalRetries) * 100);
+            html += `
+                <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px; font-family:monospace;">
+                    <span>${owner}</span>
+                    <span style="font-weight:bold; color:#be123c;">${count}</span>
+                </div>
+                <div style="width:100%; height:6px; background:#f1f5f9; margin-bottom:12px; border-radius:3px; overflow:hidden;">
+                    <div style="width:${percent}%; height:100%; background:#ef4444;"></div>
+                </div>
+            `;
+        });
+    }
+
+    html += `
+        <div style="font-size:10px; color:#64748b; margin-top:10px; font-style:italic;">
+            * Dados baseados nos cliques de retry.
+        </div>
+        </div>
+    </div>`; // Fecha wrappers
+
+    return html;
+}
+
+
+
+
+
+function renderTask(container, text, status, owner = "", date = "", label = "", retries = 0) {
+    const div = document.createElement('div');
+    // Guardamos o valor no dataset para salvar depois
+    div.className = `task-item ${status === 'done' ? 'done' : ''} no-pan`; 
+    div.dataset.status = status;
+    div.dataset.retries = retries; 
+    
+    let statusClass = '';
+    if(status === 'doing') statusClass = 'doing';
+    if(status === 'done') statusClass = 'done';
+    
+    // Configuração visual do botão
+    const retryLabel = retries > 0 ? `${retries}` : `↻`;
+    const activeClass = retries > 0 ? 'active' : '';
+
+    div.innerHTML = `
+        <div class="task-status-toggle ${statusClass} no-pan" onclick="cycleTaskStatus(this)"></div>
+        
+        <button class="task-retry-btn ${activeClass} no-pan" onclick="incrementRetry(this)" title="Registrar Cobrança">
+            ${retryLabel}
+        </button>
+        
+        <input class="task-input no-pan" value="${text}" placeholder="Tarefa..." oninput="markUnsaved()">
+        <input class="task-label no-pan" value="${label}" placeholder="Label" title="Etiqueta" oninput="markUnsaved()">
+        <input class="task-owner no-pan" value="${owner}" placeholder="Resp." title="Responsável" oninput="markUnsaved()">
+        <input class="task-date no-pan" type="date" value="${date}" title="Data Limite" onchange="checkTaskOverdue(this)">
+        <button class="task-del-btn no-pan" onclick="removeTask(this)">×</button>
+    `;
+    container.insertBefore(div, container.lastElementChild); 
+    
+    const dateInput = div.querySelector('.task-date');
+    checkTaskOverdue(dateInput);
+}
     
     function cycleTaskStatus(btn) {
         const item = btn.parentElement;
@@ -1907,116 +2412,82 @@ function stringToColorGradient(str) {
     return `linear-gradient(135deg, hsl(${h}, 70%, 50%) 0%, hsl(${h}, 80%, 35%) 100%)`;
 }
 
+function updateGanttScale(val) {
+    state.ganttScale = parseInt(val);
+    openJournal(); // Re-renderiza o jornal inteiro com a nova escala
+}
+
 // 2. Renderiza o HTML do Gantt
 function renderGanttChart(tasks) {
     const validTasks = tasks.filter(t => t.date);
-    if (validTasks.length === 0) return '<div style="padding:20px; text-align:center; color:#94a3b8; font-size:12px;">Defina datas nas tarefas para ver o Cronograma Gantt.</div>';
+    if (validTasks.length === 0) return '';
 
-    // 1. Definição de Escala
-    const PX_PER_DAY = 20; // Largura fixa por dia (Controla o Scroll)
+    const PX_PER_DAY = state.ganttScale || 20; 
     
-    // 2. Determinar Limites (Começo do Mês Inicial -> Fim do Mês Final)
+    // ... (Cálculo de Datas - MANTENHA IGUAL) ...
     let minTime = Infinity;
     let maxTime = -Infinity;
-
-    // Processa tarefas (Data Início = Final - 5 dias)
     const processedTasks = validTasks.map(t => {
         const end = new Date(t.date);
         const start = new Date(end);
         start.setDate(end.getDate() - 5); 
-        
         if (start.getTime() < minTime) minTime = start.getTime();
         if (end.getTime() > maxTime) maxTime = end.getTime();
-        
         return { ...t, start, end };
     });
-
-    // Arredonda Data Mínima para o dia 1º do mês
-    const globalStart = new Date(minTime);
-    globalStart.setDate(1); 
-    globalStart.setHours(0,0,0,0);
-
-    // Arredonda Data Máxima para o último dia do mês
-    const globalEnd = new Date(maxTime);
-    globalEnd.setMonth(globalEnd.getMonth() + 1);
-    globalEnd.setDate(0); // Último dia do mês anterior ao setado (+1)
-    
+    const globalStart = new Date(minTime); globalStart.setDate(1); globalStart.setHours(0,0,0,0);
+    const globalEnd = new Date(maxTime); globalEnd.setMonth(globalEnd.getMonth() + 1); globalEnd.setDate(0); 
     const totalDays = (globalEnd - globalStart) / (1000 * 60 * 60 * 24);
     const totalWidth = totalDays * PX_PER_DAY;
 
-    // 3. Gerar Cabeçalho de Meses
-    let headerHtml = '';
-    let gridHtml = '';
-    let currentIter = new Date(globalStart);
-    let accumulatedLeft = 0;
-
+    // ... (Header e Grid - MANTENHA IGUAL) ...
+    let headerHtml = ''; let gridHtml = ''; let currentIter = new Date(globalStart); let accumulatedLeft = 0;
     const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-
     while (currentIter <= globalEnd) {
-        // Dias no mês atual
-        const year = currentIter.getFullYear();
-        const month = currentIter.getMonth();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-        
+        const year = currentIter.getFullYear(); const month = currentIter.getMonth(); const daysInMonth = new Date(year, month + 1, 0).getDate();
         const monthWidth = daysInMonth * PX_PER_DAY;
-        
-        headerHtml += `
-            <div class="gantt-month-block" style="width: ${monthWidth}px;">
-                ${monthNames[month]} ${year}
-            </div>
-        `;
-        
-        // Linha vertical de separação do mês no fundo
+        headerHtml += `<div class="gantt-month-block" style="width: ${monthWidth}px;">${monthNames[month]} ${year}</div>`;
         gridHtml += `<div class="gantt-month-bg" style="left: ${accumulatedLeft + monthWidth}px;"></div>`;
-
-        accumulatedLeft += monthWidth;
-        currentIter.setMonth(currentIter.getMonth() + 1);
+        accumulatedLeft += monthWidth; currentIter.setMonth(currentIter.getMonth() + 1);
     }
 
-    // 4. Gerar Barras
+    // ... (Barras - MANTENHA IGUAL) ...
     let barsHtml = '';
-    // Ordena por data de início
     processedTasks.sort((a,b) => a.start - b.start);
-
     processedTasks.forEach(t => {
-        // Calcula posição em PIXELS relativo ao GlobalStart
         const daysFromStart = (t.start - globalStart) / (1000 * 60 * 60 * 24);
         const durationDays = (t.end - t.start) / (1000 * 60 * 60 * 24);
-        
         const leftPx = daysFromStart * PX_PER_DAY;
-        const widthPx = Math.max(durationDays * PX_PER_DAY, 10); // Mínimo visível
-        
+        const widthPx = Math.max(durationDays * PX_PER_DAY, 5);
         const bgGradient = stringToColorGradient(t.label);
-
-        barsHtml += `
-            <div class="gantt-body-row">
-                <div class="gantt-bar" 
-                     style="left: ${leftPx}px; width: ${widthPx}px; background: ${bgGradient};"
-                     title="${t.label}: ${t.start.toLocaleDateString()} - ${t.end.toLocaleDateString()}"
-                     onclick="focusOnBox('${t.boxId}')">
-                    <span style="font-size:9px; background:rgba(0,0,0,0.2); padding:0 4px; border-radius:3px; margin-right:5px;">${t.label}</span>
-                    ${t.text}
-                </div>
-            </div>
-        `;
+        barsHtml += `<div class="gantt-body-row"><div class="gantt-bar" style="left: ${leftPx}px; width: ${widthPx}px; background: ${bgGradient};" title="${t.label}: ${t.start.toLocaleDateString()} - ${t.end.toLocaleDateString()}" onclick="focusOnBox('${t.boxId}')"><span style="font-size:9px; background:rgba(0,0,0,0.2); padding:0 4px; border-radius:3px; margin-right:5px; white-space:nowrap;">${t.label}</span><span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.text}</span></div></div>`;
     });
 
-    // 5. Montagem Final
+    // --- MUDANÇA VISUAL AQUI ---
+    // Removida a classe 'collapsed' do wrapper
+    // Ícone alterado para '▲' (já que começa aberto)
     return `
-        <div class="gantt-wrapper">
-            <div class="gantt-title-bar">
-                <span>📅 Cronograma de Entregas</span>
-                <span style="font-size:10px; font-weight:normal; color:#64748b;">(Prazos - 5 dias)</span>
+        <div class="gantt-wrapper"> 
+            <div class="gantt-title-bar" style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <button class="btn-gantt-toggle" onclick="toggleGantt(this)" title="Recolher Cronograma">▲</button>
+                    <span>📅 Cronograma</span>
+                    <span style="font-size:10px; font-weight:normal; color:#64748b;">(${processedTasks.length} prazos)</span>
+                </div>
+                
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="font-size:10px; color:#64748b;">Zoom:</span>
+                    <input type="range" min="2" max="100" value="${PX_PER_DAY}" 
+                       oninput="updateGanttScale(this.value)" 
+                       style="width:80px;" title="Zoom">
+                </div>
             </div>
+            
             <div class="gantt-scroll-area">
                 <div class="gantt-inner" style="width: ${totalWidth}px;">
-                    <div class="gantt-header-row">
-                        ${headerHtml}
-                    </div>
+                    <div class="gantt-header-row">${headerHtml}</div>
                     ${gridHtml}
-                    <div style="padding-top: 10px;">
-                        ${barsHtml}
-                    </div>
+                    <div style="padding-top: 10px;">${barsHtml}</div>
                 </div>
             </div>
         </div>
@@ -2051,6 +2522,17 @@ function toggleJournalGroup(groupId, btn) {
     }
 }
 
+
+function toggleGantt(btn) {
+    const wrapper = btn.closest('.gantt-wrapper');
+    const isCollapsed = wrapper.classList.toggle('collapsed');
+    
+    // Muda o ícone
+    btn.innerText = isCollapsed ? '▼' : '▲';
+    btn.title = isCollapsed ? "Expandir Cronograma" : "Recolher Cronograma";
+}
+
+
 function openJournal() {
     const content = document.getElementById('journal-content');
     content.innerHTML = '';
@@ -2058,17 +2540,19 @@ function openJournal() {
     const today = new Date().toISOString().split('T')[0];
     let allTasks = [];
     
-    // 1. Coleta e Filtra tarefas (Respeitando labels ativos)
+    // 1. Coleta de Dados (COM ÍNDICES)
     document.querySelectorAll('.box').forEach(box => {
         const boxTitle = box.querySelector('input.title').value;
         const taskItems = box.querySelectorAll('.task-item');
         
-        taskItems.forEach(item => {
+        // --- MUDANÇA: Adicionamos 'index' no forEach ---
+        taskItems.forEach((item, index) => {
             if (item.closest('.box') !== box) return;
+
             const status = item.dataset.status;
             if(status === 'done') return; 
             
-            const taskLabel = item.querySelector('.task-label').value.trim() || "Geral";
+            const taskLabel = item.querySelector('.task-label').value.trim() || "Raiz";
             if (activeFilterLabels.size > 0 && !activeFilterLabels.has(taskLabel)) return;
 
             allTasks.push({
@@ -2079,92 +2563,91 @@ function openJournal() {
                 owner: item.querySelector('.task-owner').value.trim() || "Sem Dono",
                 date: item.querySelector('.task-date').value,
                 status: status,
-                isOverdue: (item.querySelector('.task-date').value && item.querySelector('.task-date').value < today)
+                isOverdue: (item.querySelector('.task-date').value && item.querySelector('.task-date').value < today),
+                retries: parseInt(item.dataset.retries || 0),
+                originalIndex: index // <--- SALVAMOS A POSIÇÃO EXATA AQUI
             });
         });
     });
-    
-    if(allTasks.length === 0) {
-        content.innerHTML = '<div style="text-align:center; padding:20px; color:#64748b;">Nenhuma pendência encontrada.</div>';
-        document.getElementById('journal-overlay').style.display = 'flex';
-        return;
+
+    // 2. Topo (Gantt)
+    const topContainer = document.createElement('div');
+    topContainer.className = 'journal-top-section';
+    if(allTasks.length > 0) {
+        topContainer.innerHTML += renderGanttChart(allTasks);
+        topContainer.innerHTML += renderInsightCards(allTasks);
+    } else {
+        topContainer.innerHTML = '<div style="padding:20px; text-align:center; font-family:monospace;">> System check: 0 pending tasks.</div>';
     }
+    content.appendChild(topContainer);
 
-    // --- RENDERIZA GANTT E INSIGHTS ---
-    content.innerHTML += renderGanttChart(allTasks);
-    content.innerHTML += renderInsightCards(allTasks);
+    // 3. Área Inferior
+    const splitView = document.createElement('div');
+    splitView.className = 'journal-split-view';
+    
+    // --- Tree Area ---
+    const treeArea = document.createElement('div');
+    treeArea.className = 'journal-tree-area';
+    let treeHtml = `<div class="linux-tree-container"><div style="padding-bottom:10px; color:#64748b;">./journal_tasks/</div>`;
 
-    // 2. Agrupamento Nível 1: LABEL
-    const groupedByLabel = allTasks.reduce((acc, t) => {
-        if(!acc[t.label]) acc[t.label] = [];
-        acc[t.label].push(t);
+    const grouped = allTasks.reduce((acc, t) => {
+        if(!acc[t.label]) acc[t.label] = {};
+        if(!acc[t.label][t.owner]) acc[t.label][t.owner] = [];
+        acc[t.label][t.owner].push(t);
         return acc;
     }, {});
-    
-    Object.keys(groupedByLabel).sort().forEach((label, lIdx) => {
-        const tasksInLabel = groupedByLabel[label];
-        const labelGroupId = `journal-label-${lIdx}`;
-        
-        const groupDiv = document.createElement('div');
-        groupDiv.className = 'journal-group';
-        
-        // CABEÇALHO DA LABEL (Clicável)
-        let html = `
-            <div class="journal-header" style="background:#f0fdf4; color:#166534;" onclick="toggleJournalGroup('${labelGroupId}', this)">
-                <span><span class="toggle-icon">▼</span> 🏷️ ${label}</span>
-                <span style="font-weight:normal; font-size:12px; color:#64748b;">(${tasksInLabel.length} tarefas)</span>
-            </div>
-            <div id="${labelGroupId}" class="journal-group-content">`; // Início do conteúdo da label
 
-        // 3. Agrupamento Nível 2: RESPONSÁVEL
-        const groupedByOwner = tasksInLabel.reduce((acc, t) => {
-            if(!acc[t.owner]) acc[t.owner] = [];
-            acc[t.owner].push(t);
-            return acc;
-        }, {});
+    Object.keys(grouped).sort().forEach(label => {
+        treeHtml += `<details open><summary class="tree-summary"><span style="color:#0ea5e9; font-weight:bold;">${label}</span></summary><div class="tree-group-content">`;
 
-        Object.keys(groupedByOwner).sort().forEach((owner, oIdx) => {
-            const ownerTasks = groupedByOwner[owner];
-            const ownerGroupId = `journal-owner-${lIdx}-${oIdx}`;
-            
-            // CABEÇALHO DO RESPONSÁVEL (Clicável)
-            html += `
-                <div class="journal-subheader" onclick="toggleJournalGroup('${ownerGroupId}', this)">
-                    <span><span class="toggle-icon">▼</span> 👤 ${owner}</span>
-                </div>
-                <div id="${ownerGroupId}" class="journal-group-content">`; // Início do conteúdo do responsável
+        Object.keys(grouped[label]).sort().forEach(owner => {
+            const tasks = grouped[label][owner];
+            treeHtml += `<details open><summary class="tree-summary"><span style="color:#eab308;">${owner}</span></summary><div class="tree-group-content">`;
 
-            // LISTA DE TAREFAS
-            ownerTasks.forEach(t => {
-                let tagClass = t.status === 'doing' ? 'tag-doing' : 'tag-todo';
-                let tagText = t.status === 'doing' ? 'Fazendo' : 'A Fazer';
-                let overdueHtml = t.isOverdue ? '<span class="journal-tag tag-overdue">🔴 ATRASADO</span>' : '';
-                
-                html += `
-                    <div class="journal-item">
-                        <div style="display:flex; gap:5px; align-items:center;">
-                            <span class="journal-tag ${tagClass}">${tagText}</span>
-                            ${overdueHtml}
-                        </div>
-                        <span class="journal-text">${t.text}</span>
-                        <div class="journal-meta">
-                            <span class="journal-context">em: ${t.box}</span>
-                            <button class="journal-jump-btn" onclick="focusOnBox('${t.boxId}')">Ir ➔</button>
+            tasks.forEach(t => {
+                const retryLabel = t.retries > 0 ? `[x${t.retries}]` : `[R]`;
+                const activeClass = t.retries > 0 ? 'active' : '';
+                const dateStr = t.date ? `<span style="font-size:10px; color:#94a3b8; margin-right:5px;">(${t.date})</span>` : '';
+                const alertStyle = t.isOverdue ? 'color:#ef4444; font-weight:bold;' : '';
+
+                // --- MUDANÇA: Inserimos data-task-index no HTML ---
+                treeHtml += `
+                    <div class="tree-item" data-box-id="${t.boxId}" data-task-index="${t.originalIndex}">
+                        <button class="btn-retry-terminal ${activeClass}" onclick="incrementRetry(this)" title="Registrar Cobrança">${retryLabel}</button>
+                        <span class="git-task-text" style="${alertStyle}">${t.text}</span>
+                        <div style="margin-left:auto; display:flex; align-items:center; gap:5px;">
+                            ${dateStr}
+                            <button class="journal-jump-btn" onclick="focusOnBox('${t.boxId}')">GoTo</button>
                         </div>
                     </div>
                 `;
             });
-
-            html += `</div>`; // Fecha conteúdo do responsável
+            treeHtml += `</div></details>`; 
         });
-
-        html += `</div>`; // Fecha conteúdo da label
-        groupDiv.innerHTML = html;
-        content.appendChild(groupDiv);
+        treeHtml += `</div></details>`; 
     });
+
+    treeHtml += `</div>`; 
+    treeArea.innerHTML = treeHtml;
+
+    // --- Sidebar ---
+    const sidebarArea = document.createElement('div');
+    sidebarArea.className = 'journal-sidebar-area';
+    sidebarArea.innerHTML = renderRetryRanking(allTasks);
+
+    splitView.appendChild(treeArea);
+    splitView.appendChild(sidebarArea);
+    content.appendChild(splitView);
     
     document.getElementById('journal-overlay').style.display = 'flex';
 }
+
+
+
+
+
+
+
 
     function downloadJournalCSV() {
         const headers = ["Status", "Atrasado?", "Tarefa", "Responsável", "Data Limite", "Caixa de Origem"];
@@ -2733,8 +3216,9 @@ setTimeout(repairBoxStructure, 500);
             `;
         });
     
+        // --- MUDANÇA AQUI: Adicionado margin-top: 30px ---
         return `
-            <div style="margin-bottom: 12px; font-size: 10px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 2px;">
+            <div style="margin-top: 30px; margin-bottom: 12px; padding-left: 5px; font-size: 10px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 2px;">
                 💎 Business Intelligence / Insights Ativos
             </div>
             <div class="insights-container">${html}</div>
@@ -3066,6 +3550,28 @@ setTimeout(repairBoxStructure, 500);
             state.scale = prevScale; state.offset = prevOffset; updateTransform(); showToast("Download iniciado!");
         });
     }
+
+// Função auxiliar para ler todas as tarefas (respeitando filtros)
+// Helper para ler todas as tarefas do canvas e gerar estatísticas
+function collectAllTasks() {
+    let allTasks = [];
+    document.querySelectorAll('.box').forEach(box => {
+        const taskItems = box.querySelectorAll('.task-item');
+        taskItems.forEach(item => {
+            // Ignora tarefas de caixas filhas (aninhamento)
+            if (item.closest('.box') !== box) return;
+
+            const ownerVal = item.querySelector('.task-owner').value.trim();
+            
+            allTasks.push({
+                owner: ownerVal || "Sem Dono",
+                retries: parseInt(item.dataset.retries || 0)
+            });
+        });
+    });
+    return allTasks;
+}
+
 
     function openDashboard() {
         const list = document.getElementById('projects-list'); list.innerHTML = '';
