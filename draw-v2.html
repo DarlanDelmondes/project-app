@@ -448,50 +448,63 @@ button.btn-pending:hover {
 }
 /* --- BREADCRUMB VERTICAL LATERAL --- */
 /* --- BREADCRUMB LATERAL EMPILHADO --- */
-
+/* --- BREADCRUMB LATERAL (FIXO E EXCLUSIVO) --- */
+/* --- BREADCRUMB EM PILARES (Colunas Verticais) --- */
 .context-path {
     position: absolute;
-    /* Posiciona colado à esquerda, do lado de fora */
+    /* Cola na esquerda da caixa */
     right: 100%; 
     top: 0;
-    margin-right: 12px; /* Espaço entre a barra e a caixa */
+    /* Ocupa toda a altura da caixa para permitir colunas */
+    height: 100%; 
+    margin-right: 12px;
     
-    /* Configuração de empilhamento vertical */
+    /* CONFIGURAÇÃO DOS PILARES */
     display: flex;
-    flex-direction: column; 
-    align-items: flex-end; /* Alinha os textos à direita, encostando na caixa */
-    gap: 8px; /* Espaço entre cada nome de pai */
+    flex-direction: column; /* Itens um abaixo do outro */
+    /* wrap-reverse: se encher a altura, cria nova coluna para a ESQUERDA */
+    flex-wrap: wrap-reverse; 
+    align-content: flex-end; /* Mantém as colunas grudadas na caixa */
+    justify-content: flex-start; /* Começa do topo */
+    gap: 4px; /* Espaço entre itens */
     
     pointer-events: none;
     opacity: 0;
-    transition: opacity 0.3s ease;
-    z-index: 100;
+    z-index: 10001;
+    transition: opacity 0.2s ease;
 }
 
-/* Item individual da trilha (cada nome de pai) */
 .context-item {
-    /* Texto vertical */
+    /* Texto na Vertical */
     writing-mode: vertical-rl;
     transform: rotate(180deg);
     white-space: nowrap;
     
-    font-size: calc(var(--bread-font-size, 10px) * var(--ui-scale));
-    color: #64748b;
-    font-weight: 800;
+    /* Tamanho Fixo (mantendo o que você gostou) */
+    font-size: calc(14px * var(--ui-scale));
+    color: #94a3b8;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
     
-    /* Efeito de etiqueta */
-    background: rgba(226, 232, 240, 0.6);
-    padding: 8px 4px;
+    /* Visual de Etiqueta */
+    background: rgba(248, 250, 252, 0.9);
+    padding: 8px 3px;
     border-radius: 4px;
+    border-right: 3px solid #cbd5e1; /* Borda mais grossa para destacar o pilar */
+    box-shadow: -2px 2px 6px rgba(0,0,0,0.05);
 }
 
-/* REGRA DE OURO: Só aparece na caixa que está com o mouse EXATAMENTE em cima */
-/* O seletor > garante que não apareça nos pais quando você está na filha */
-.box:hover > .box-title-bar > .context-path.visible {
-    opacity: 1;
+/* VISIBILIDADE: Apenas na caixa focada */
+/* O seletor '>' é crucial aqui porque mudamos a div de lugar no HTML */
+.box.hover-focused > .context-path.visible {
+    opacity: 1 !important;
 }
+
+
+
+
+
 
 .box-title-bar {
     overflow: visible !important;
@@ -991,7 +1004,7 @@ button.btn-pending:hover {
         
         const manualScale = parseFloat(box.dataset.fontScale) || 1;
     
-        // 1. Cálculo do Título Principal
+        // Cálculo APENAS do Título Principal
         let sizeBasedOnGeom = Math.sqrt(area) * 0.12;
         const maxSizeForWidth = (w * 0.9) / (textLen * 0.6);
         let finalSize = Math.min(sizeBasedOnGeom, maxSizeForWidth);
@@ -999,16 +1012,11 @@ button.btn-pending:hover {
         finalSize = Math.max(14, finalSize); 
         finalSize = finalSize * manualScale;
         
-        // 2. Cálculo do Breadcrumb: 
-        // Reduzimos para 35% do título (antes era 45%) para garantir que seja "sempre menor"
-        // E limitamos para que não ultrapasse um teto proporcional
-        let breadSize = finalSize * 0.35;
-        
-        // Trava de segurança: se o título for muito pequeno, o breadcrumb não vira poeira
-        breadSize = Math.max(9, breadSize); 
-    
+        // Aplica variáveis
         box.style.setProperty('--dynamic-font-size', finalSize + 'px');
-        box.style.setProperty('--bread-font-size', breadSize + 'px');
+        
+        // O Breadcrumb agora é controlado puramente pelo CSS (14px * ui-scale)
+        // Então não precisamos mais calcular --bread-font-size aqui
         
         const staticBase = 16;
         box.style.setProperty('--static-font-size', (staticBase * manualScale) + 'px');
@@ -1494,8 +1502,11 @@ button.btn-pending:hover {
         const el = document.createElement('div'); el.className = 'box'; el.id = id;
         el.dataset.fontScale = "1"; 
         el.innerHTML = `
+
+
+            <div class="context-path"></div> 
             <div class="box-title-bar" onmousedown="initDrag(event, '${id}')" ondblclick="enableTitleEdit('${id}')">
-                <div class="context-path"></div> 
+                
                 <div class="child-indicator" title="Contém itens"></div>
                 <input class="title" value="${titleVal}" placeholder="Nome..." onblur="disableTitleEdit('${id}')" oninput="calcDynamicFont(this.closest('.box')); markUnsaved();" readonly>
                 <div class="task-summary-badge"></div>
@@ -1703,6 +1714,28 @@ button.btn-pending:hover {
             markUnsaved();
         });
     }
+
+    // --- AUTO-REPARO DE ESTRUTURA ---
+function repairBoxStructure() {
+    document.querySelectorAll('.box').forEach(box => {
+        // 1. Procura o breadcrumb atual
+        let cp = box.querySelector('.context-path');
+        
+        // 2. Se não existir, cria
+        if (!cp) {
+            cp = document.createElement('div');
+            cp.className = 'context-path';
+            box.prepend(cp); // Adiciona como primeiro filho (correto)
+        } 
+        // 3. Se existir mas estiver no lugar errado (dentro do título), move para fora
+        else if (cp.parentElement.classList.contains('box-title-bar')) {
+            box.prepend(cp); // Move para a raiz da caixa
+        }
+    });
+}
+
+// Chame isso logo após carregar o canvas ou no final do script
+setTimeout(repairBoxStructure, 500);
 
     function duplicateBox(id) {
         if(!state.isEditMode) return;
