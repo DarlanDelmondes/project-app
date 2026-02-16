@@ -363,39 +363,71 @@ button.btn-pending:hover {
             z-index: -1; 
             pointer-events: none; 
         }
-        
-        #connections-layer { 
-            position: absolute; 
-            top: -50000px; 
-            left: -50000px; 
-            width: 100000px; 
-            height: 100000px; 
-            z-index: 500; 
-            pointer-events: none; 
-            overflow: visible; 
-        }
-        .conn-visual { fill: none; stroke: #64748b; stroke-width: 2px; pointer-events: none; transition: stroke 0.2s, stroke-width 0.2s; }
-        .conn-hitbox { fill: none; stroke: transparent; stroke-width: 25px; cursor: pointer; pointer-events: stroke; }
-        .conn-group:hover .conn-visual { stroke: #3b82f6; }
-        .drag-line { stroke: #3b82f6; stroke-width: 4; stroke-dasharray: 5,5; opacity: 0.8; }
-        .proxy-line { stroke-dasharray: 4,4; } 
-        .no-pan { pointer-events: auto !important; }
-        /* Strict class for elements that MUST capture click (like inputs) */
-        .no-pan-strict { pointer-events: auto !important; }
 
 
-/* --- HIERARQUIA DE CAMADAS (Z-INDEX FIX) --- */
 
-/* 1. Camada de Conexões (Setas) */
-/* Colocamos um valor muito alto (90.000) para garantir que fique acima de qualquer caixa */
+
+
+
+
+
+
+/* CAMADA DE CONEXÕES - FIXA E GIGANTE */
+/* CORREÇÃO CRÍTICA: O SVG PRECISA COBRIR O MUNDO INTEIRO */
+/* --- CORREÇÃO OBRIGATÓRIA PARA AS SETAS APARECEREM --- */
+/* CAMADA DE CONEXÕES - NÍVEL MESTRE */
 #connections-layer {
     position: absolute;
-    top: -50000px; left: -50000px; width: 100000px; height: 100000px;
+    top: -50000px;
+    left: -50000px;
+    width: 100000px;
+    height: 100000px;
     
-    z-index: 90000 !important; /* <--- O TRUQUE ESTÁ AQUI */
+    /* MUDANÇA CRÍTICA: De 9000 para 99999 */
+    /* Isso garante que a seta vença qualquer caixa, mesmo que você clique na caixa mil vezes */
+    z-index: 99999; 
     
-    pointer-events: none; /* Permite clicar nas caixas que estão por baixo do espaço vazio */
+    pointer-events: none;
     overflow: visible;
+}
+
+/* Garante que a linha tenha espessura e cor visíveis */
+.conn-visual {
+    fill: none;
+    stroke: #64748b;
+    stroke-width: 2px;
+    transition: stroke 0.3s;
+}
+
+/* Garante que a linha temporária (arrasto) apareça */
+/* ... seu #connections-layer atual ... */
+
+/* ADICIONE ISTO PARA VER A LINHA AZUL ENQUANTO ARRASTA */
+#temp-line {
+    stroke: #3b82f6;       /* Azul brilhante */
+    stroke-width: 2px;
+    stroke-dasharray: 5, 5; /* Pontilhado */
+    fill: none;
+    pointer-events: none;
+}
+/* ESTILO "PROXY" (QUANDO ESTÁ CONECTADA AO PAI PORQUE O FILHO SUMIU) */
+.conn-visual.proxy-line {
+    stroke-dasharray: 6, 4; /* Tracejado elegante */
+    stroke: #94a3b8; /* Cor mais suave */
+    animation: flowLine 1s linear infinite; /* Animação de fluxo */
+}
+
+@keyframes flowLine {
+    to { stroke-dashoffset: -10; }
+}
+
+/* ÁREA DE HITBOX (PARA CLICAR NA LINHA MAIS FÁCIL) */
+.conn-hitbox {
+    fill: none;
+    stroke: transparent;
+    stroke-width: 20px;
+    cursor: pointer;
+    pointer-events: stroke; /* Permite clicar na linha invisível */
 }
 
 
@@ -473,7 +505,12 @@ button.btn-pending:hover {
             
             --header-height: 36px;
             cursor: grab; 
-            transition: box-shadow 0.2s, border-color 0.2s, background-color 0.2s, width 0.8s cubic-bezier(0.25, 0.8, 0.25, 1), height 0.8s cubic-bezier(0.25, 0.8, 0.25, 1);
+            transition: width 0.8s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                height 0.8s cubic-bezier(0.25, 0.8, 0.25, 1),
+                left 0.8s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                top 0.8s cubic-bezier(0.25, 0.8, 0.25, 1),
+                box-shadow 0.2s, background-color 0.2s; /* Adicione left/top para garantir */
+
         }
         
         /* Focus Animation when jumping from Journal */
@@ -1297,6 +1334,12 @@ body.filtering .box.highlight-focus { animation: none !important; box-shadow: no
     const ns = "http://www.w3.org/2000/svg";
     const SNAP_SIZE = 20;
     
+// --- SONS DO SISTEMA ---
+const openSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
+const closeSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3');
+openSound.volume = 0.3;
+closeSound.volume = 0.2;
+
     let state = { scale: 1, panning: false, panStart: { x: 0, y: 0 }, offset: { x: 0, y: 0 }, isEditMode: true, dragThresholdMet: false, dragStartScreen: {x:0, y:0}, resizeDir: null };
     
     let globalZ = 1000; // Começa alto para garantir que fique acima do básico
@@ -1327,79 +1370,136 @@ body.filtering .box.highlight-focus { animation: none !important; box-shadow: no
         return screenToWorld(x,y);
     }
     
-    function findVisibleNode(id) {
-        let currentEl = document.getElementById(id); if (!currentEl) return null;
-        while (currentEl) {
-            const parentArea = currentEl.parentElement;
-            if (parentArea && parentArea.classList.contains('children-area')) { if (parentArea.classList.contains('collapsed')) { currentEl = parentArea.closest('.box'); continue; } }
-            return currentEl;
-        }
-        return null;
-    }
-
-    function updateLine(c) {
-        const vSource = findVisibleNode(c.sid); const vTarget = findVisibleNode(c.tid);
-        const group = document.getElementById(c.id); if (!group) return;
-        
-        if (!vSource || !vTarget || vSource === vTarget) { group.style.display = 'none'; return; }
-        group.style.display = 'block';
-        
-        const visualLine = group.querySelector('.conn-visual');
-        if (vSource.id !== c.sid || vTarget.id !== c.tid) visualLine.classList.add('proxy-line'); else visualLine.classList.remove('proxy-line');
-        
-        const ps = getConnPos(vSource, c.spos); const pt = getConnPos(vTarget, c.tpos);
-        const off = -50000;
-        const x1=ps.x-off, y1=ps.y-off, x2=pt.x-off, y2=pt.y-off;
-        
-        if (vTarget) {
-            const tAvg = (vTarget.offsetWidth + vTarget.offsetHeight) / 2;
-            const thickness = Math.max(3, Math.min(30, tAvg / 15)); 
-            visualLine.setAttribute("stroke-width", thickness);
-        }
-
-        const dVal = Math.sqrt(Math.pow(x2-x1,2)+Math.pow(y2-y1,2)); const cp = Math.max(dVal*0.5, 80);
-        let cx1=x1, cy1=y1, cx2=x2, cy2=y2;
-        if(c.spos==='top') cy1-=cp; if(c.spos==='bottom') cy1+=cp; if(c.spos==='left') cx1-=cp; if(c.spos==='right') cx1+=cp;
-        if(c.tpos==='top') cy2-=cp; if(c.tpos==='bottom') cy2+=cp; if(c.tpos==='left') cx2-=cp; if(c.tpos==='right') cx2+=cp;
-        
-        const pathD = `M ${x1} ${y1} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${x2} ${y2}`;
-        group.querySelector('.conn-hitbox').setAttribute("d", pathD);
-        visualLine.setAttribute("d", pathD);
-    }
     
-    function updateAllLines() {
-        connections.forEach(c => {
-            const source = document.getElementById(c.sid);
-            const target = document.getElementById(c.tid);
-            
-            // Se ambos os pais estão visíveis, desenha. 
-            // Se um deles está dentro de algo colapsado, podemos simplificar ou pular.
-            if (source && target && source.offsetParent !== null && target.offsetParent !== null) {
-                updateLine(c);
+
+    /* =================================================================
+   ENGINE DE CONEXÕES V2 - CORREÇÃO DEFINITIVA
+   ================================================================= */
+
+// 1. RASTREADOR DE VISIBILIDADE (Ancestralidade)
+// Descobre quem é o "pai visível" se o filho estiver escondido
+function getEffectiveNode(id) {
+    let el = document.getElementById(id);
+    if (!el) return null;
+
+    let walker = el;
+    while (walker && walker.id !== 'world') {
+        const parentArea = walker.parentElement; 
+        
+        // Se estivermos dentro de uma área de filhos
+        if (parentArea && parentArea.classList.contains('children-area')) {
+            // Se essa área está colapsada, o pai assume IMEDIATAMENTE
+            if (parentArea.classList.contains('collapsed')) {
+                const parentBox = parentArea.closest('.box');
+                // Chamada recursiva: verifica se o pai deste pai também não está fechado
+                return getEffectiveNode(parentBox.id); 
             }
-        });
+        }
+        walker = walker.parentElement ? walker.parentElement.closest('.box') : null;
     }
+    return el;
+}
 
-    function addConnection(sid, spos, tid, tpos, existingId = null) {
-        const id = existingId || 'c-' + Date.now();
-        const g = document.createElementNS(ns, "g");
-        g.id = id; g.classList.add('conn-group');
-        
-        const hit = document.createElementNS(ns, "path");
-        hit.setAttribute("class", "conn-hitbox");
-        hit.addEventListener('dblclick', function() { handleConnectionDblClick(id, sid, tid); });
-        
-        const vis = document.createElementNS(ns, "path");
-        vis.setAttribute("class", "conn-visual");
-        vis.setAttribute("marker-end", "url(#arrowhead)");
 
-        g.appendChild(hit); g.appendChild(vis); svgLayer.appendChild(g);
+
+// 3. DESENHISTA PRINCIPAL (Render Graph)
+// 3. DESENHISTA PRINCIPAL (Render Graph) - VERSÃO CORRIGIDA
+function renderGraph() {
+    const off = -50000; // <--- O SEGREDO ESTÁ AQUI (Compensa o CSS top: -50000px)
+
+    connections.forEach(conn => {
+        const group = document.getElementById(conn.id);
+        if (!group) return;
+
+        // A) Descobre os nós reais visíveis
+        const realSource = getEffectiveNode(conn.sid);
+        const realTarget = getEffectiveNode(conn.tid);
+
+        // B) Se origem e destino são o mesmo, esconde
+        if (!realSource || !realTarget || realSource === realTarget) {
+            group.style.display = 'none';
+            return;
+        }
+        group.style.display = 'block';
+
+        // C) Detecta Proxy
+        const visualLine = group.querySelector('.conn-visual');
+        if (realSource.id !== conn.sid || realTarget.id !== conn.tid) {
+            visualLine.classList.add('proxy-line');
+        } else {
+            visualLine.classList.remove('proxy-line');
+        }
+
+        // D) Calcula Posições do Mundo
+        const start = getAnchorPoint(realSource, conn.spos);
+        const end = getAnchorPoint(realTarget, conn.tpos);
+
+        // E) Calcula Posições do SVG (Aplicando o Offset)
+        const x1 = start.x - off;
+        const y1 = start.y - off;
+        const x2 = end.x - off;
+        const y2 = end.y - off;
+
+        // F) Calcula Curva Bézier
+        const dist = Math.hypot(x2 - x1, y2 - y1);
+        const controlDist = Math.max(dist * 0.5, 60);
+
+        let cpx1 = x1, cpy1 = y1;
+        let cpx2 = x2, cpy2 = y2;
+
+        if (conn.spos === 'top')    cpy1 -= controlDist;
+        if (conn.spos === 'bottom') cpy1 += controlDist;
+        if (conn.spos === 'left')   cpx1 -= controlDist;
+        if (conn.spos === 'right')  cpx1 += controlDist;
+
+        if (conn.tpos === 'top')    cpy2 -= controlDist;
+        if (conn.tpos === 'bottom') cpy2 += controlDist;
+        if (conn.tpos === 'left')   cpx2 -= controlDist;
+        if (conn.tpos === 'right')  cpx2 += controlDist;
+
+        // G) Monta o Path com as coordenadas corrigidas
+        const pathData = `M ${x1} ${y1} C ${cpx1} ${cpy1}, ${cpx2} ${cpy2}, ${x2} ${y2}`;
         
-        if (!connections.find(c => c.id === id)) connections.push({ id, sid, spos, tid, tpos });
-        updateLine(connections[connections.length-1]); 
-        checkCascading();
-        markUnsaved();
+        group.querySelector('.conn-hitbox').setAttribute("d", pathData);
+        visualLine.setAttribute("d", pathData);
+    });
+}
+
+// 4. CRIADOR DE CONEXÕES (Compatível com V2)
+function addConnection(sid, spos, tid, tpos, existingId = null) {
+    const id = existingId || 'c-' + Date.now();
+    
+    // Cria os elementos DOM apenas uma vez
+    const g = document.createElementNS(ns, "g");
+    g.id = id; 
+    g.classList.add('conn-group');
+    
+    const hit = document.createElementNS(ns, "path");
+    hit.setAttribute("class", "conn-hitbox");
+    // Adiciona evento de duplo clique para deletar
+    hit.addEventListener('dblclick', function() { handleConnectionDblClick(id, sid, tid); });
+    
+    const vis = document.createElementNS(ns, "path");
+    vis.setAttribute("class", "conn-visual");
+    vis.setAttribute("marker-end", "url(#arrowhead)");
+
+    g.appendChild(hit); 
+    g.appendChild(vis); 
+    svgLayer.appendChild(g);
+    
+    // Adiciona aos dados e desenha imediatamente
+    if (!connections.find(c => c.id === id)) {
+        connections.push({ id, sid, spos, tid, tpos });
     }
+    renderGraph(); 
+    checkCascading();
+    markUnsaved();
+}
+
+
+
+
+    
     
     // --- 3. PROJECT MGMT ---
     function markUnsaved() {
@@ -2136,6 +2236,87 @@ function openJournal() {
         box.classList.add('highlight-focus');
         setTimeout(() => box.classList.remove('highlight-focus'), 3000);
     }
+
+
+
+
+
+/* =================================================================
+   ENGINE DE CONEXÕES V2 (REESCRITA TOTAL)
+   ================================================================= */
+
+// 1. O RASTREADOR DE ANCESTRALIDADE
+// Objetivo: Descobrir qual é a caixa REALMENTE visível que representa o ID alvo.
+// Se a caixa "Task A" está dentro de "Projeto X" e "Projeto X" está fechado,
+// esta função retorna o elemento do "Projeto X".
+
+
+// 2. A MATEMÁTICA DE POSIÇÃO
+// Calcula o ponto exato (x, y) de conexão na borda da caixa, compensando o Zoom/Pan
+function getAnchorPoint(el, side) {
+    if (!el) return { x: 0, y: 0 };
+    
+    const rect = el.getBoundingClientRect();
+    const worldRect = document.getElementById('world').getBoundingClientRect();
+    
+    // Coordenadas relativas ao mundo (0,0 do SVG)
+    // Importante: Dividimos pelo scale para normalizar a posição dentro do SVG
+    const relLeft = (rect.left - worldRect.left) / state.scale;
+    const relTop = (rect.top - worldRect.top) / state.scale;
+    const relW = rect.width / state.scale;
+    const relH = rect.height / state.scale;
+    
+    let x = relLeft + relW / 2;
+    let y = relTop + relH / 2;
+
+    // Ajuste fino para colar na borda
+    if (side === 'top')    y = relTop;
+    if (side === 'bottom') y = relTop + relH;
+    if (side === 'left')   x = relLeft;
+    if (side === 'right')  x = relLeft + relW;
+
+    return { x, y };
+}
+
+// 3. O DESENHISTA (RENDERER)
+// Esta função é chamada 60x por segundo durante animações
+
+
+// 4. O LOOP DE ANIMAÇÃO (O SEGREDO DA FLUIDEZ)
+// Em vez de tentar adivinhar quando desenhar, criamos um loop inteligente
+// que roda intensamente apenas quando necessário.
+// 4. O LOOP DE ANIMAÇÃO (O SEGREDO DA FLUIDEZ)
+// Em vez de tentar adivinhar quando desenhar, criamos um loop inteligente
+// que roda intensamente apenas quando necessário.
+let animationFrameId;
+
+function startRenderLoop() {
+    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+    
+    // Roda por 1 segundo (tempo suficiente para qualquer transição CSS terminar)
+    let start = Date.now();
+    
+    function loop() {
+        renderGraph(); // Redesenha tudo
+        if (Date.now() - start < 1000) {
+            animationFrameId = requestAnimationFrame(loop);
+        } else {
+            // Garante um último frame perfeito
+            renderGraph();
+            animationFrameId = null;
+        }
+    }
+    loop();
+}
+
+// Atalho para compatibilidade com seu código antigo
+function updateAllLines() {
+    // Se não estivermos animados, um render único basta
+    if (!animationFrameId) renderGraph();
+}
+
+
+
 
     function createBoxElement(id, titleVal = "Novo Item") {
         const el = document.createElement('div'); 
@@ -3146,9 +3327,14 @@ tasks.push({
         const box = document.getElementById(id);
         const area = document.getElementById('area-' + id);
         
-        const isGoingToCollapse = !box.classList.contains('collapsed-mode');
+        // 1. Efeitos Sonoros (Mantenha se quiser)
+        const isClosing = !box.classList.contains('collapsed-mode');
+        if (typeof closeSound !== 'undefined' && typeof openSound !== 'undefined') {
+            isClosing ? closeSound.play().catch(()=>{}) : openSound.play().catch(()=>{});
+        }
     
-        if (isGoingToCollapse) {
+        // 2. Lógica de Memória de Fonte (Mantenha sua lógica)
+        if (isClosing) {
             box.dataset.scaleExp = box.dataset.fontScale || 1;
             box.dataset.fontScale = box.dataset.scaleCol || 1; 
         } else {
@@ -3156,25 +3342,26 @@ tasks.push({
             box.dataset.fontScale = box.dataset.scaleExp || 1;
         }
     
+        // 3. A MUDANÇA DE ESTADO
+        // Aqui está a mágica: Nós mudamos a classe PRIMEIRO.
+        // O getEffectiveNode vai perceber imediatamente que a área está 'collapsed'.
+        // Portanto, no próximo frame, a seta já vai pular para o pai.
         area.classList.toggle('collapsed'); 
         box.classList.toggle('collapsed-mode');
         
+        // Atualiza botão e fonte
         if(btn) btn.innerText = area.classList.contains('collapsed') ? '▶' : '▼';
+        calcDynamicFont(box);
         
-        calcDynamicFont(box); 
-        updateElasticParent(area); 
-        updateAllLines();
+        // Força atualização do layout elástico
+        updateElasticParent(area);
+        if(box.parentElement && box.parentElement.classList.contains('children-area')) {
+            updateElasticParent(box.parentElement);
+        }
     
-        // --- NOVA LÓGICA: Sincronização com o fim da animação ---
-        // Como a transição CSS no seu arquivo é de 0.8s (800ms), 
-        // chamamos a atualização novamente após esse tempo.
-        setTimeout(() => {
-            updateAllLines();
-            // Chamada extra para garantir que os pais elásticos também se ajustaram
-            if (box.parentElement && box.parentElement.classList.contains('children-area')) {
-                updateElasticParent(box.parentElement);
-            }
-        }, 850); // 850ms para garantir que a animação de 0.8s terminou
+        // 4. INICIA O MOTOR GRÁFICO
+        // Dispara o loop de 60fps que vai acompanhar a animação CSS da caixa diminuindo
+        startRenderLoop();
     }
     
     function updateChildIndicators() {
@@ -3441,28 +3628,36 @@ function initDrag(e, id) {
         const wp = screenToWorld(e.clientX, e.clientY);
         if (dragItem) {
             e.preventDefault(); 
+            
+            // --- CHAMA O NOVO RENDERIZADOR ---
+            renderGraph(); 
+            // ---------------------------------
+    
             if (!state.dragThresholdMet) {
                 const dist = Math.hypot(e.clientX - state.dragStartScreen.x, e.clientY - state.dragStartScreen.y);
                 if (dist < 5) return; 
                 state.dragThresholdMet = true; 
             }
+    
             let rawLeft = startInt.el + wp.x - startInt.mx;
             let rawTop = startInt.et + wp.y - startInt.my;
             let snapLeft = Math.round(rawLeft / SNAP_SIZE) * SNAP_SIZE;
             let snapTop = Math.round(rawTop / SNAP_SIZE) * SNAP_SIZE;
+            
             dragItem.style.left = snapLeft + 'px';
             dragItem.style.top = snapTop + 'px';
+    
             dragItem.style.pointerEvents = 'none'; 
             const elementsBelow = document.elementsFromPoint(e.clientX, e.clientY);
             dragItem.style.pointerEvents = 'auto';
+            
             if(currentDropTarget) { currentDropTarget.classList.remove('drop-active'); currentDropTarget = null; }
             const target = elementsBelow.find(el => el.classList.contains('children-area'));
             if (target && !dragItem.contains(target)) { currentDropTarget = target; currentDropTarget.classList.add('drop-active'); }
             
-            // Only update elastic if dragging a box (notes don't have parents)
+            // Atualiza elástico se for caixa
             if(dragItem.classList.contains('box')) {
                 updateElasticParent(dragItem.parentElement); 
-                updateAllLines();
             }
         }
         if (resizeItem) {
