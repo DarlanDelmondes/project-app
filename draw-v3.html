@@ -2508,24 +2508,34 @@ function renderGanttChart(tasks) {
 
     const PX_PER_DAY = state.ganttScale || 20; 
     
-    // ... (Cálculo de Datas - MANTENHA IGUAL) ...
     let minTime = Infinity;
     let maxTime = -Infinity;
+    
     const processedTasks = validTasks.map(t => {
-        const end = new Date(t.date);
+        // Truque de 'T12:00:00' para evitar que o fuso horário empurre a data 1 dia para trás
+        const end = new Date(t.date + 'T12:00:00'); 
         const start = new Date(end);
         start.setDate(end.getDate() - 5); 
+        
         if (start.getTime() < minTime) minTime = start.getTime();
         if (end.getTime() > maxTime) maxTime = end.getTime();
         return { ...t, start, end };
     });
+
     const globalStart = new Date(minTime); globalStart.setDate(1); globalStart.setHours(0,0,0,0);
     const globalEnd = new Date(maxTime); globalEnd.setMonth(globalEnd.getMonth() + 1); globalEnd.setDate(0); 
     const totalDays = (globalEnd - globalStart) / (1000 * 60 * 60 * 24);
-    const totalWidth = totalDays * PX_PER_DAY;
+    
+    // --- MUDANÇA: ADICIONANDO OFFSET PARA O TEXTO ---
+    const OFFSET = 45; // 45px de folga na esquerda para a data inicial
+    const totalWidth = (totalDays * PX_PER_DAY) + OFFSET + 45; // Mais 45px na direita para a data final
 
-    // ... (Header e Grid - MANTENHA IGUAL) ...
-    let headerHtml = ''; let gridHtml = ''; let currentIter = new Date(globalStart); let accumulatedLeft = 0;
+    // Injetamos um "bloco vazio" de 45px no começo do header para alinhar o fundo corretamente
+    let headerHtml = `<div style="width: ${OFFSET}px; flex-shrink: 0;"></div>`; 
+    let gridHtml = ''; 
+    let currentIter = new Date(globalStart); 
+    let accumulatedLeft = OFFSET; 
+    
     const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
     while (currentIter <= globalEnd) {
         const year = currentIter.getFullYear(); const month = currentIter.getMonth(); const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -2535,21 +2545,34 @@ function renderGanttChart(tasks) {
         accumulatedLeft += monthWidth; currentIter.setMonth(currentIter.getMonth() + 1);
     }
 
-    // ... (Barras - MANTENHA IGUAL) ...
     let barsHtml = '';
     processedTasks.sort((a,b) => a.start - b.start);
     processedTasks.forEach(t => {
         const daysFromStart = (t.start - globalStart) / (1000 * 60 * 60 * 24);
         const durationDays = (t.end - t.start) / (1000 * 60 * 60 * 24);
-        const leftPx = daysFromStart * PX_PER_DAY;
+        
+        // Empurramos o leftPx da barra somando o OFFSET
+        const leftPx = (daysFromStart * PX_PER_DAY) + OFFSET;
         const widthPx = Math.max(durationDays * PX_PER_DAY, 5);
         const bgGradient = stringToColorGradient(t.label);
-        barsHtml += `<div class="gantt-body-row"><div class="gantt-bar" style="left: ${leftPx}px; width: ${widthPx}px; background: ${bgGradient};" title="${t.label}: ${t.start.toLocaleDateString()} - ${t.end.toLocaleDateString()}" onclick="focusOnBox('${t.boxId}')"><span style="font-size:9px; background:rgba(0,0,0,0.2); padding:0 4px; border-radius:3px; margin-right:5px; white-space:nowrap;">${t.label}</span><span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.text}</span></div></div>`;
+
+        // --- MUDANÇA: Formatação das datas no estilo DD/MM ---
+        const sDate = t.start.getDate().toString().padStart(2, '0') + '/' + (t.start.getMonth() + 1).toString().padStart(2, '0');
+        const eDate = t.end.getDate().toString().padStart(2, '0') + '/' + (t.end.getMonth() + 1).toString().padStart(2, '0');
+
+        barsHtml += `
+        <div class="gantt-body-row">
+            <span style="position:absolute; left: ${leftPx - 42}px; width: 38px; text-align:right; top: 8px; font-size: 10px; color: #64748b; font-family: monospace; font-weight:bold; pointer-events:none;">${sDate}</span>
+            
+            <div class="gantt-bar" style="left: ${leftPx}px; width: ${widthPx}px; background: ${bgGradient};" title="${t.label}: ${sDate} - ${eDate}" onclick="focusOnBox('${t.boxId}')">
+                <span style="font-size:9px; background:rgba(0,0,0,0.2); padding:0 4px; border-radius:3px; margin-right:5px; white-space:nowrap;">${t.label}</span>
+                <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.text}</span>
+            </div>
+            
+            <span style="position:absolute; left: ${leftPx + widthPx + 5}px; top: 8px; font-size: 10px; color: #be123c; font-family: monospace; font-weight:bold; pointer-events:none;">${eDate}</span>
+        </div>`;
     });
 
-    // --- MUDANÇA VISUAL AQUI ---
-    // Removida a classe 'collapsed' do wrapper
-    // Ícone alterado para '▲' (já que começa aberto)
     return `
         <div class="gantt-wrapper"> 
             <div class="gantt-title-bar" style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc;">
