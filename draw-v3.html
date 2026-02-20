@@ -2512,7 +2512,6 @@ function renderGanttChart(tasks) {
     let maxTime = -Infinity;
     
     const processedTasks = validTasks.map(t => {
-        // Truque de 'T12:00:00' para evitar que o fuso horário empurre a data 1 dia para trás
         const end = new Date(t.date + 'T12:00:00'); 
         const start = new Date(end);
         start.setDate(end.getDate() - 5); 
@@ -2526,11 +2525,9 @@ function renderGanttChart(tasks) {
     const globalEnd = new Date(maxTime); globalEnd.setMonth(globalEnd.getMonth() + 1); globalEnd.setDate(0); 
     const totalDays = (globalEnd - globalStart) / (1000 * 60 * 60 * 24);
     
-    // --- MUDANÇA: ADICIONANDO OFFSET PARA O TEXTO ---
-    const OFFSET = 45; // 45px de folga na esquerda para a data inicial
-    const totalWidth = (totalDays * PX_PER_DAY) + OFFSET + 45; // Mais 45px na direita para a data final
+    const OFFSET = 45; 
+    const totalWidth = (totalDays * PX_PER_DAY) + OFFSET + 45; 
 
-    // Injetamos um "bloco vazio" de 45px no começo do header para alinhar o fundo corretamente
     let headerHtml = `<div style="width: ${OFFSET}px; flex-shrink: 0;"></div>`; 
     let gridHtml = ''; 
     let currentIter = new Date(globalStart); 
@@ -2551,12 +2548,10 @@ function renderGanttChart(tasks) {
         const daysFromStart = (t.start - globalStart) / (1000 * 60 * 60 * 24);
         const durationDays = (t.end - t.start) / (1000 * 60 * 60 * 24);
         
-        // Empurramos o leftPx da barra somando o OFFSET
         const leftPx = (daysFromStart * PX_PER_DAY) + OFFSET;
         const widthPx = Math.max(durationDays * PX_PER_DAY, 5);
         const bgGradient = stringToColorGradient(t.label);
 
-        // --- MUDANÇA: Formatação das datas no estilo DD/MM ---
         const sDate = t.start.getDate().toString().padStart(2, '0') + '/' + (t.start.getMonth() + 1).toString().padStart(2, '0');
         const eDate = t.end.getDate().toString().padStart(2, '0') + '/' + (t.end.getMonth() + 1).toString().padStart(2, '0');
 
@@ -2569,7 +2564,7 @@ function renderGanttChart(tasks) {
                 <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.text}</span>
             </div>
             
-            <span style="position:absolute; left: ${leftPx + widthPx + 5}px; top: 8px; font-size: 10px; color: #be123c; font-family: monospace; font-weight:bold; pointer-events:none;">${eDate}</span>
+            <span style="position:absolute; left: ${leftPx + widthPx + 20}px; top: 8px; font-size: 10px; color: #be123c; font-family: monospace; font-weight:bold; pointer-events:none;">${eDate}</span>
         </div>`;
     });
 
@@ -2600,7 +2595,6 @@ function renderGanttChart(tasks) {
         </div>
     `;
 }
-
 
 
 function toggleJournalFullscreen() {
