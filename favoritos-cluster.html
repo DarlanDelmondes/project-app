@@ -54,10 +54,20 @@
         .cluster-boundary:hover { border-color: #444c5e; }
         
         .cluster-boundary-title {
-            color: var(--primary); font-size: 1.1rem; font-weight: 600; 
-            margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;
+            display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;
         }
-        .cluster-meta { font-size: 0.8rem; color: var(--text-muted); font-weight: 400; }
+        
+        .editable-cluster-title {
+            background: transparent; border: 1px solid transparent;
+            color: var(--primary); font-size: 1.1rem; font-weight: 600;
+            outline: none; padding: 0.2rem 0.5rem; border-radius: 4px;
+            transition: var(--transition); width: 100%; max-width: 350px;
+        }
+        .editable-cluster-title:hover, .editable-cluster-title:focus {
+            border-color: var(--primary); background: rgba(0,0,0,0.2);
+        }
+
+        .cluster-meta { font-size: 0.8rem; color: var(--text-muted); font-weight: 400; white-space: nowrap; }
 
         .isolated-section-title {
             margin: 2rem 0 1rem; color: var(--text-muted); font-weight: 500; font-size: 1rem;
@@ -125,7 +135,7 @@
 <body>
 
     <header>
-        <h1>Painel de Entidades</h1>
+        <h1>Painel Sistêmico de Correlações</h1>
         <div class="sys-actions">
             <button class="btn-sys" onclick="exportSystem()">↓ Exportar JSON</button>
             <button class="btn-sys" onclick="document.getElementById('file-upload').click()">↑ Importar JSON</button>
@@ -168,9 +178,12 @@
         // === Core System Config ===
         const TIME_WINDOW_MS = 2 * 60 * 1000; 
         
+        // Estado
         let entities = JSON.parse(localStorage.getItem('sys_entities')) || [];
         let historyLog = JSON.parse(localStorage.getItem('sys_history')) || [];
+        let customClusterNames = JSON.parse(localStorage.getItem('sys_cluster_names')) || {};
 
+        // DOM Elements
         const formContainer = document.getElementById('form-container');
         const fab = document.getElementById('fab');
         const addForm = document.getElementById('add-form');
@@ -182,7 +195,7 @@
 
         // === I/O Backup System ===
         function exportSystem() {
-            const state = { entities, history: historyLog };
+            const state = { entities, history: historyLog, customNames: customClusterNames };
             const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -207,6 +220,10 @@
                     if (importedState.history) {
                         historyLog = importedState.history;
                         localStorage.setItem('sys_history', JSON.stringify(historyLog));
+                    }
+                    if (importedState.customNames) {
+                        customClusterNames = importedState.customNames;
+                        localStorage.setItem('sys_cluster_names', JSON.stringify(customClusterNames));
                     }
                     renderSystem();
                     showToast('Estado do sistema restaurado.');
@@ -239,6 +256,12 @@
             toastEl.textContent = message;
             toastEl.classList.add('show');
             setTimeout(() => toastEl.classList.remove('show'), 3000);
+        }
+
+        function saveClusterName(signature, newName) {
+            customClusterNames[signature] = newName;
+            localStorage.setItem('sys_cluster_names', JSON.stringify(customClusterNames));
+            showToast('Nomenclatura do arranjo redefinida.');
         }
 
         // === Lógica de Domínio ===
@@ -279,7 +302,6 @@
                 window.open(entity.content, '_blank');
             }
             
-            // Reorganiza o ambiente visual imediatamente após a ação
             renderSystem();
         }
 
@@ -316,7 +338,7 @@
             return "Correlação de Fluxo";
         }
 
-        // === Processamento Sistêmico de Organização (Nova Lógica) ===
+        // === Processamento Sistêmico de Organização ===
         function renderSystem() {
             mainContainer.innerHTML = '';
             if (entities.length === 0) return;
@@ -371,7 +393,6 @@
                 const best = entityToBestCluster[ent.id];
                 if (best) {
                     const signature = best.signature;
-                    // Verifica se o cluster ainda possui pelo menos 2 itens válidos no sistema
                     const activeIds = signature.split('|').filter(id => entities.some(e => e.id === id));
                     if (activeIds.length > 1) {
                         if (!groupedEntities[signature]) groupedEntities[signature] = [];
@@ -388,20 +409,24 @@
             Object.entries(groupedEntities)
                 .sort((a, b) => clusterCounts[b[0]] - clusterCounts[a[0]])
                 .forEach(([signature, group]) => {
-                    // Prevenção: Se sobrou só 1 item no grupo, joga para isolados
                     if (group.length <= 1) {
                         isolatedEntities.push(...group);
                         return;
                     }
 
-                    const title = generateClusterTitle(group.map(e => e.title));
+                    const autoTitle = generateClusterTitle(group.map(e => e.title));
+                    const finalTitle = customClusterNames[signature] || autoTitle;
+                    
                     const boundary = document.createElement('div');
                     boundary.className = 'cluster-boundary';
                     
                     boundary.innerHTML = `
                         <div class="cluster-boundary-title">
-                            ${title} 
-                            <span class="cluster-meta">[ ${clusterCounts[signature]} iterações em conjunto ]</span>
+                            <input type="text" class="editable-cluster-title" 
+                                   value="${finalTitle}" 
+                                   onchange="saveClusterName('${signature}', this.value)"
+                                   title="Clique para renomear a fronteira deste sistema" />
+                            <span class="cluster-meta">[ ${clusterCounts[signature]} iterações ]</span>
                         </div>
                     `;
                     
