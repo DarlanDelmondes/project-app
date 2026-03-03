@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Sistêmico de Correlações</title>
+    <style>
+        :root {
+            --bg-color: #0f1115;
+            --surface: #1e2128;
+            --primary: #4a90e2;
+            --text-main: #e4e6eb;
+            --text-muted: #a0a4ae;
+            --accent: #50fa7b;
+            --danger: #ff5555;
+            --boundary-color: #2c313c;
+            --radius: 8px;
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+
+        body {
+            background-color: var(--bg-color); color: var(--text-main);
+            padding: 2rem; min-height: 100vh; overflow-x: hidden;
+        }
+
+        header {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;
+            flex-wrap: wrap; gap: 1rem;
+        }
+
+        h1 { font-weight: 500; letter-spacing: -0.5px; }
+        
+        .sys-actions { display: flex; gap: 0.5rem; }
+        .btn-sys {
+            background: var(--surface); color: var(--text-muted); border: 1px solid #333;
+            padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.85rem;
+            transition: var(--transition);
+        }
+        .btn-sys:hover { background: #333; color: var(--text-main); border-color: var(--primary); }
+
+        /* Estruturas Sistêmicas (Grid e Fronteiras) */
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+        
+        .cluster-boundary {
+            border: 2px dashed var(--boundary-color);
+            background: rgba(30, 33, 40, 0.2);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            transition: var(--transition);
+        }
+        .cluster-boundary:hover { border-color: #444c5e; }
+        
+        .cluster-boundary-title {
+            color: var(--primary); font-size: 1.1rem; font-weight: 600; 
+            margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;
+        }
+        .cluster-meta { font-size: 0.8rem; color: var(--text-muted); font-weight: 400; }
+
+        .isolated-section-title {
+            margin: 2rem 0 1rem; color: var(--text-muted); font-weight: 500; font-size: 1rem;
+        }
+
+        /* Entidades (Cards) */
+        .card {
+            background: var(--surface); padding: 1.5rem; border-radius: var(--radius);
+            cursor: pointer; transition: var(--transition); border-left: 4px solid transparent;
+            display: flex; flex-direction: column; gap: 0.5rem; position: relative;
+        }
+        
+        .card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .card.type-link { border-left-color: var(--primary); }
+        .card.type-text { border-left-color: var(--accent); }
+        
+        .card-type-badge { font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 1px; }
+        .card-title { font-size: 1.1rem; font-weight: 600; }
+        .card-meta { font-size: 0.85rem; color: var(--text-muted); word-break: break-all; }
+        
+        /* Toast de Notificação */
+        #toast {
+            position: fixed; bottom: 20px; right: 20px; background: var(--surface);
+            padding: 1rem 1.5rem; border-radius: var(--radius); border-left: 4px solid var(--accent);
+            transform: translateX(150%); transition: transform 0.4s ease-out; z-index: 1000;
+        }
+        #toast.show { transform: translateX(0); }
+
+        /* Botão Flutuante */
+        #fab {
+            position: fixed; bottom: 30px; left: 30px; width: 60px; height: 60px;
+            border-radius: 50%; background: var(--primary); color: white;
+            border: none; font-size: 2rem; cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: var(--transition); z-index: 100;
+            display: flex; align-items: center; justify-content: center;
+        }
+        #fab:hover { transform: scale(1.1); background: #357abd; }
+        #fab.active { transform: rotate(45deg); background: var(--danger); }
+
+        /* Formulário */
+        #form-container {
+            position: fixed; bottom: 100px; left: 30px; width: 320px;
+            background: var(--surface); padding: 1.5rem; border-radius: var(--radius);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            opacity: 0; visibility: hidden; transform: translateY(20px); transition: var(--transition); z-index: 99;
+        }
+        #form-container.show { opacity: 1; visibility: visible; transform: translateY(0); }
+
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; font-size: 0.85rem; margin-bottom: 0.4rem; color: var(--text-muted); }
+        .form-group input, .form-group select {
+            width: 100%; padding: 0.8rem; background: var(--bg-color); border: 1px solid #333;
+            color: var(--text-main); border-radius: 4px; outline: none; transition: var(--transition);
+        }
+        .form-group input:focus, .form-group select:focus { border-color: var(--primary); }
+        
+        button[type="submit"] {
+            width: 100%; padding: 0.8rem; background: var(--primary); color: white;
+            border: none; border-radius: 4px; font-weight: 600; cursor: pointer; transition: var(--transition);
+        }
+        button[type="submit"]:hover { background: #357abd; }
+        #auto-copy-group { display: none; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Painel de Entidades</h1>
+        <div class="sys-actions">
+            <button class="btn-sys" onclick="exportSystem()">↓ Exportar JSON</button>
+            <button class="btn-sys" onclick="document.getElementById('file-upload').click()">↑ Importar JSON</button>
+            <input type="file" id="file-upload" style="display: none;" accept=".json" onchange="importSystem(event)">
+        </div>
+    </header>
+
+    <main id="main-container">
+        </main>
+
+    <div id="form-container">
+        <form id="add-form">
+            <div class="form-group">
+                <label>Tipo de Entidade</label>
+                <select id="item-type">
+                    <option value="link">Link Interativo</option>
+                    <option value="text">Texto Copiável</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Título de Identificação</label>
+                <input type="text" id="item-title" required placeholder="Ex: AWS Console">
+            </div>
+            <div class="form-group">
+                <label id="content-label">URL do Link</label>
+                <input type="text" id="item-content" required placeholder="https://...">
+            </div>
+            <div class="form-group" id="auto-copy-group" style="display: block;">
+                <label>Texto de Cópia Automática (Opcional)</label>
+                <input type="text" id="item-autocopy" placeholder="Ex: admin_user">
+            </div>
+            <button type="submit">Gravar Entidade</button>
+        </form>
+    </div>
+
+    <button id="fab">+</button>
+    <div id="toast">Ação realizada.</div>
+
+    <script>
+        // === Core System Config ===
+        const TIME_WINDOW_MS = 2 * 60 * 1000; 
+        
+        let entities = JSON.parse(localStorage.getItem('sys_entities')) || [];
+        let historyLog = JSON.parse(localStorage.getItem('sys_history')) || [];
+
+        const formContainer = document.getElementById('form-container');
+        const fab = document.getElementById('fab');
+        const addForm = document.getElementById('add-form');
+        const typeSelect = document.getElementById('item-type');
+        const contentLabel = document.getElementById('content-label');
+        const autoCopyGroup = document.getElementById('auto-copy-group');
+        const mainContainer = document.getElementById('main-container');
+        const toastEl = document.getElementById('toast');
+
+        // === I/O Backup System ===
+        function exportSystem() {
+            const state = { entities, history: historyLog };
+            const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `sys_estado_correlacoes_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Dados exportados com precisão.');
+        }
+
+        function importSystem(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedState = JSON.parse(e.target.result);
+                    if (importedState.entities) {
+                        entities = importedState.entities;
+                        localStorage.setItem('sys_entities', JSON.stringify(entities));
+                    }
+                    if (importedState.history) {
+                        historyLog = importedState.history;
+                        localStorage.setItem('sys_history', JSON.stringify(historyLog));
+                    }
+                    renderSystem();
+                    showToast('Estado do sistema restaurado.');
+                } catch (err) {
+                    showToast('Falha crítica na importação do JSON.');
+                }
+                event.target.value = '';
+            };
+            reader.readAsText(file);
+        }
+
+        // === UI Interações ===
+        fab.addEventListener('click', () => {
+            formContainer.classList.toggle('show');
+            fab.classList.toggle('active');
+            fab.textContent = fab.classList.contains('active') ? '×' : '+';
+        });
+
+        typeSelect.addEventListener('change', (e) => {
+            if(e.target.value === 'link') {
+                contentLabel.textContent = 'URL do Link';
+                autoCopyGroup.style.display = 'block';
+            } else {
+                contentLabel.textContent = 'Conteúdo do Texto';
+                autoCopyGroup.style.display = 'none';
+            }
+        });
+
+        function showToast(message) {
+            toastEl.textContent = message;
+            toastEl.classList.add('show');
+            setTimeout(() => toastEl.classList.remove('show'), 3000);
+        }
+
+        // === Lógica de Domínio ===
+        addForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const type = document.getElementById('item-type').value;
+            const newEntity = {
+                id: crypto.randomUUID(),
+                type: type,
+                title: document.getElementById('item-title').value,
+                content: document.getElementById('item-content').value,
+                autoCopy: type === 'link' ? document.getElementById('item-autocopy').value : null
+            };
+            
+            entities.push(newEntity);
+            localStorage.setItem('sys_entities', JSON.stringify(entities));
+            
+            addForm.reset();
+            formContainer.classList.remove('show');
+            fab.classList.remove('active');
+            fab.textContent = '+';
+            
+            renderSystem();
+        });
+
+        async function handleEntityClick(entity) {
+            historyLog.push({ id: entity.id, timestamp: Date.now() });
+            localStorage.setItem('sys_history', JSON.stringify(historyLog));
+
+            if (entity.type === 'text') {
+                await navigator.clipboard.writeText(entity.content);
+                showToast(`Texto cirúrgico copiado: ${entity.title}`);
+            } else if (entity.type === 'link') {
+                if (entity.autoCopy && entity.autoCopy.trim() !== "") {
+                    await navigator.clipboard.writeText(entity.autoCopy);
+                    showToast(`Contexto copiado. Inicializando link...`);
+                }
+                window.open(entity.content, '_blank');
+            }
+            
+            // Reorganiza o ambiente visual imediatamente após a ação
+            renderSystem();
+        }
+
+        function createCardDOM(ent) {
+            const card = document.createElement('div');
+            card.className = `card type-${ent.type}`;
+            card.onclick = () => handleEntityClick(ent);
+            
+            card.innerHTML = `
+                <div class="card-type-badge">${ent.type === 'link' ? '🔗 Link' : '📝 Texto'}</div>
+                <div class="card-title">${ent.title}</div>
+                <div class="card-meta">${ent.content.substring(0, 40)}${ent.content.length > 40 ? '...' : ''}</div>
+                ${ent.autoCopy ? `<div class="card-meta" style="color: var(--accent); font-size: 0.75rem;">+ Auto-cópia ativada</div>` : ''}
+            `;
+            return card;
+        }
+
+        // === Algoritmo Lexical ===
+        function generateClusterTitle(titles) {
+            if (!titles || titles.length <= 1) return "Agrupamento Lógico";
+            const stopWords = ['de', 'a', 'o', 'e', 'do', 'da', 'para', 'em', 'com'];
+            const tokenizedTitles = titles.map(t => 
+                t.toLowerCase().split(/[\s\W]+/).filter(w => w.length > 2 && !stopWords.includes(w))
+            );
+            
+            let commonTokens = tokenizedTitles[0];
+            for (let i = 1; i < tokenizedTitles.length; i++) {
+                commonTokens = commonTokens.filter(token => tokenizedTitles[i].includes(token));
+            }
+
+            if (commonTokens.length > 0) {
+                return commonTokens.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+            }
+            return "Correlação de Fluxo";
+        }
+
+        // === Processamento Sistêmico de Organização (Nova Lógica) ===
+        function renderSystem() {
+            mainContainer.innerHTML = '';
+            if (entities.length === 0) return;
+
+            // 1. Limpeza de log antigo
+            const seteDias = 7 * 24 * 60 * 60 * 1000;
+            const now = Date.now();
+            historyLog = historyLog.filter(h => (now - h.timestamp) < seteDias);
+            localStorage.setItem('sys_history', JSON.stringify(historyLog));
+
+            // 2. Mapeia sessões
+            let sessions = [];
+            if (historyLog.length > 0) {
+                let currentSession = [historyLog[0]];
+                for (let i = 1; i < historyLog.length; i++) {
+                    if (historyLog[i].timestamp - historyLog[i-1].timestamp <= TIME_WINDOW_MS) {
+                        currentSession.push(historyLog[i]);
+                    } else {
+                        sessions.push(currentSession);
+                        currentSession = [historyLog[i]];
+                    }
+                }
+                sessions.push(currentSession);
+            }
+
+            // 3. Conta frequência dos clusters
+            const clusterCounts = {};
+            sessions.forEach(session => {
+                const uniqueIds = [...new Set(session.map(s => s.id))].sort();
+                if (uniqueIds.length > 1) {
+                    const signature = uniqueIds.join('|');
+                    clusterCounts[signature] = (clusterCounts[signature] || 0) + 1;
+                }
+            });
+
+            // 4. Elege o cluster mais forte para cada entidade
+            const entityToBestCluster = {};
+            for (const [signature, count] of Object.entries(clusterCounts)) {
+                const ids = signature.split('|');
+                ids.forEach(id => {
+                    if (!entityToBestCluster[id] || entityToBestCluster[id].count < count) {
+                        entityToBestCluster[id] = { signature, count };
+                    }
+                });
+            }
+
+            // 5. Distribui as entidades
+            const groupedEntities = {};
+            const isolatedEntities = [];
+
+            entities.forEach(ent => {
+                const best = entityToBestCluster[ent.id];
+                if (best) {
+                    const signature = best.signature;
+                    // Verifica se o cluster ainda possui pelo menos 2 itens válidos no sistema
+                    const activeIds = signature.split('|').filter(id => entities.some(e => e.id === id));
+                    if (activeIds.length > 1) {
+                        if (!groupedEntities[signature]) groupedEntities[signature] = [];
+                        groupedEntities[signature].push(ent);
+                    } else {
+                        isolatedEntities.push(ent);
+                    }
+                } else {
+                    isolatedEntities.push(ent);
+                }
+            });
+
+            // 6. Renderiza os Clusters (Arranjos com Fronteiras)
+            Object.entries(groupedEntities)
+                .sort((a, b) => clusterCounts[b[0]] - clusterCounts[a[0]])
+                .forEach(([signature, group]) => {
+                    // Prevenção: Se sobrou só 1 item no grupo, joga para isolados
+                    if (group.length <= 1) {
+                        isolatedEntities.push(...group);
+                        return;
+                    }
+
+                    const title = generateClusterTitle(group.map(e => e.title));
+                    const boundary = document.createElement('div');
+                    boundary.className = 'cluster-boundary';
+                    
+                    boundary.innerHTML = `
+                        <div class="cluster-boundary-title">
+                            ${title} 
+                            <span class="cluster-meta">[ ${clusterCounts[signature]} iterações em conjunto ]</span>
+                        </div>
+                    `;
+                    
+                    const grid = document.createElement('div');
+                    grid.className = 'grid';
+                    group.forEach(ent => grid.appendChild(createCardDOM(ent)));
+                    
+                    boundary.appendChild(grid);
+                    mainContainer.appendChild(boundary);
+                });
+
+            // 7. Renderiza as Entidades Isoladas
+            if (isolatedEntities.length > 0) {
+                const isolatedSection = document.createElement('div');
+                if (Object.keys(groupedEntities).length > 0) {
+                    isolatedSection.innerHTML = `<div class="isolated-section-title">Elementos Isolados</div>`;
+                }
+                
+                const grid = document.createElement('div');
+                grid.className = 'grid';
+                isolatedEntities.forEach(ent => grid.appendChild(createCardDOM(ent)));
+                
+                isolatedSection.appendChild(grid);
+                mainContainer.appendChild(isolatedSection);
+            }
+        }
+
+        // Inicialização
+        renderSystem();
+    </script>
+</body>
+</html>
