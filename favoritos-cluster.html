@@ -3,140 +3,173 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel Sistêmico de Correlações</title>
+    <title>Painel de Correlações</title>
     <style>
+        /* Modo Dia (Padrão) */
         :root {
+            --bg-color: #f4f5f7;
+            --surface: #ffffff;
+            --primary: #2563eb;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --accent: #10b981;
+            --danger: #ef4444;
+            --boundary-color: #d1d5db;
+            --radius: 6px;
+            --transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        /* Modo Noite */
+        body.dark-theme {
             --bg-color: #0f1115;
             --surface: #1e2128;
             --primary: #4a90e2;
             --text-main: #e4e6eb;
             --text-muted: #a0a4ae;
             --accent: #50fa7b;
-            --danger: #ff5555;
             --boundary-color: #2c313c;
-            --radius: 8px;
-            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
 
         body {
             background-color: var(--bg-color); color: var(--text-main);
-            padding: 2rem; min-height: 100vh; overflow-x: hidden;
+            padding: 1.5rem 2rem; min-height: 100vh; overflow-x: hidden;
+            transition: background-color 0.3s, color 0.3s;
         }
 
         header {
-            display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;
+            display: flex; justify-content: flex-end; align-items: center; margin-bottom: 1.5rem;
             flex-wrap: wrap; gap: 1rem;
         }
-
-        h1 { font-weight: 500; letter-spacing: -0.5px; }
         
-        .sys-actions { display: flex; gap: 0.5rem; }
+        .sys-actions { display: flex; gap: 0.5rem; align-items: center; }
         .btn-sys {
-            background: var(--surface); color: var(--text-muted); border: 1px solid #333;
-            padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.85rem;
+            background: var(--surface); color: var(--text-muted); border: 1px solid var(--boundary-color);
+            padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;
             transition: var(--transition);
         }
-        .btn-sys:hover { background: #333; color: var(--text-main); border-color: var(--primary); }
+        .btn-sys:hover { border-color: var(--primary); color: var(--text-main); }
+        
+        #theme-toggle { font-size: 1rem; padding: 0.3rem 0.6rem; }
 
-        /* Estruturas Sistêmicas (Grid e Fronteiras) */
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+        /* Estruturas Sistêmicas (Grid Compacto) */
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); /* Redução drástica da área */
+            gap: 0.6rem; 
+        }
         
         .cluster-boundary {
-            border: 2px dashed var(--boundary-color);
-            background: rgba(30, 33, 40, 0.2);
+            border: 1px dashed var(--boundary-color);
+            background: rgba(128, 128, 128, 0.05);
             border-radius: var(--radius);
-            padding: 1.5rem;
-            margin-bottom: 2rem;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
             transition: var(--transition);
         }
-        .cluster-boundary:hover { border-color: #444c5e; }
+        .cluster-boundary:hover { border-color: var(--text-muted); }
         
         .cluster-boundary-title {
-            display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;
+            display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.8rem;
         }
         
         .editable-cluster-title {
             background: transparent; border: 1px solid transparent;
-            color: var(--primary); font-size: 1.1rem; font-weight: 600;
-            outline: none; padding: 0.2rem 0.5rem; border-radius: 4px;
-            transition: var(--transition); width: 100%; max-width: 350px;
+            color: var(--primary); font-size: 0.95rem; font-weight: 600;
+            outline: none; padding: 0.1rem 0.3rem; border-radius: 3px;
+            transition: var(--transition); width: 100%; max-width: 250px;
         }
         .editable-cluster-title:hover, .editable-cluster-title:focus {
-            border-color: var(--primary); background: rgba(0,0,0,0.2);
+            border-color: var(--primary); background: var(--surface);
         }
 
-        .cluster-meta { font-size: 0.8rem; color: var(--text-muted); font-weight: 400; white-space: nowrap; }
+        .cluster-meta { font-size: 0.7rem; color: var(--text-muted); font-weight: 400; white-space: nowrap; }
 
         .isolated-section-title {
-            margin: 2rem 0 1rem; color: var(--text-muted); font-weight: 500; font-size: 1rem;
+            margin: 1.5rem 0 0.8rem; color: var(--text-muted); font-weight: 500; font-size: 0.85rem;
         }
 
-        /* Entidades (Cards) */
+        /* Entidades (Cards Ultra Compactos) */
         .card {
-            background: var(--surface); padding: 1.5rem; border-radius: var(--radius);
-            cursor: pointer; transition: var(--transition); border-left: 4px solid transparent;
-            display: flex; flex-direction: column; gap: 0.5rem; position: relative;
+            background: var(--surface); padding: 0.6rem; border-radius: var(--radius);
+            cursor: pointer; transition: var(--transition); border-left: 3px solid transparent;
+            display: flex; flex-direction: column; gap: 0.2rem; position: relative;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            overflow: hidden;
         }
         
-        .card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .card:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
         .card.type-link { border-left-color: var(--primary); }
         .card.type-text { border-left-color: var(--accent); }
         
-        .card-type-badge { font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 1px; }
-        .card-title { font-size: 1.1rem; font-weight: 600; }
-        .card-meta { font-size: 0.85rem; color: var(--text-muted); word-break: break-all; }
+        /* Botão Cirúrgico de Exclusão */
+        .btn-delete {
+            position: absolute; top: 0.2rem; right: 0.2rem;
+            width: 18px; height: 18px; border-radius: 50%;
+            background: transparent; color: var(--text-muted);
+            border: none; cursor: pointer; display: none;
+            align-items: center; justify-content: center;
+            font-size: 0.7rem; font-weight: bold; transition: var(--transition);
+        }
+        .card:hover .btn-delete { display: flex; }
+        .btn-delete:hover { background: var(--danger); color: white; }
+        
+        .card-type-badge { font-size: 0.6rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; }
+        .card-title { font-size: 0.85rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .card-meta { font-size: 0.7rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         
         /* Toast de Notificação */
         #toast {
-            position: fixed; bottom: 20px; right: 20px; background: var(--surface);
-            padding: 1rem 1.5rem; border-radius: var(--radius); border-left: 4px solid var(--accent);
-            transform: translateX(150%); transition: transform 0.4s ease-out; z-index: 1000;
+            position: fixed; bottom: 20px; right: 20px; background: var(--surface); color: var(--text-main);
+            padding: 0.8rem 1.2rem; border-radius: var(--radius); border-left: 3px solid var(--accent);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); font-size: 0.85rem;
+            transform: translateX(150%); transition: transform 0.3s ease-out; z-index: 1000;
         }
         #toast.show { transform: translateX(0); }
 
         /* Botão Flutuante */
         #fab {
-            position: fixed; bottom: 30px; left: 30px; width: 60px; height: 60px;
+            position: fixed; bottom: 30px; left: 30px; width: 50px; height: 50px;
             border-radius: 50%; background: var(--primary); color: white;
-            border: none; font-size: 2rem; cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: var(--transition); z-index: 100;
+            border: none; font-size: 1.5rem; cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: var(--transition); z-index: 100;
             display: flex; align-items: center; justify-content: center;
         }
-        #fab:hover { transform: scale(1.1); background: #357abd; }
+        #fab:hover { transform: scale(1.05); background: #1d4ed8; }
         #fab.active { transform: rotate(45deg); background: var(--danger); }
 
         /* Formulário */
         #form-container {
-            position: fixed; bottom: 100px; left: 30px; width: 320px;
-            background: var(--surface); padding: 1.5rem; border-radius: var(--radius);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            opacity: 0; visibility: hidden; transform: translateY(20px); transition: var(--transition); z-index: 99;
+            position: fixed; bottom: 90px; left: 30px; width: 300px;
+            background: var(--surface); padding: 1.2rem; border-radius: var(--radius);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15); border: 1px solid var(--boundary-color);
+            opacity: 0; visibility: hidden; transform: translateY(15px); transition: var(--transition); z-index: 99;
         }
         #form-container.show { opacity: 1; visibility: visible; transform: translateY(0); }
 
-        .form-group { margin-bottom: 1rem; }
-        .form-group label { display: block; font-size: 0.85rem; margin-bottom: 0.4rem; color: var(--text-muted); }
+        .form-group { margin-bottom: 0.8rem; }
+        .form-group label { display: block; font-size: 0.75rem; margin-bottom: 0.3rem; color: var(--text-muted); font-weight: 500;}
         .form-group input, .form-group select {
-            width: 100%; padding: 0.8rem; background: var(--bg-color); border: 1px solid #333;
-            color: var(--text-main); border-radius: 4px; outline: none; transition: var(--transition);
+            width: 100%; padding: 0.6rem; background: var(--bg-color); border: 1px solid var(--boundary-color);
+            color: var(--text-main); border-radius: 4px; outline: none; transition: var(--transition); font-size: 0.85rem;
         }
         .form-group input:focus, .form-group select:focus { border-color: var(--primary); }
         
         button[type="submit"] {
-            width: 100%; padding: 0.8rem; background: var(--primary); color: white;
-            border: none; border-radius: 4px; font-weight: 600; cursor: pointer; transition: var(--transition);
+            width: 100%; padding: 0.7rem; background: var(--primary); color: white;
+            border: none; border-radius: 4px; font-weight: 600; cursor: pointer; transition: var(--transition); font-size: 0.85rem;
+            margin-top: 0.5rem;
         }
-        button[type="submit"]:hover { background: #357abd; }
+        button[type="submit"]:hover { background: #1d4ed8; }
         #auto-copy-group { display: none; }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>Painel Sistêmico de Correlações</h1>
         <div class="sys-actions">
+            <button class="btn-sys" id="theme-toggle" onclick="toggleTheme()" title="Alternar Modo Dia/Noite">🌙</button>
             <button class="btn-sys" onclick="exportSystem()">↓ Exportar JSON</button>
             <button class="btn-sys" onclick="document.getElementById('file-upload').click()">↑ Importar JSON</button>
             <input type="file" id="file-upload" style="display: none;" accept=".json" onchange="importSystem(event)">
@@ -164,7 +197,7 @@
                 <input type="text" id="item-content" required placeholder="https://...">
             </div>
             <div class="form-group" id="auto-copy-group" style="display: block;">
-                <label>Texto de Cópia Automática (Opcional)</label>
+                <label>Texto de Cópia Automática</label>
                 <input type="text" id="item-autocopy" placeholder="Ex: admin_user">
             </div>
             <button type="submit">Gravar Entidade</button>
@@ -183,6 +216,14 @@
         let historyLog = JSON.parse(localStorage.getItem('sys_history')) || [];
         let customClusterNames = JSON.parse(localStorage.getItem('sys_cluster_names')) || {};
 
+        // Inicialização de Tema
+        const savedTheme = localStorage.getItem('sys_theme') || 'light';
+        const themeBtn = document.getElementById('theme-toggle');
+        if (savedTheme === 'dark') {
+            document.body.classList.add('dark-theme');
+            themeBtn.innerText = '☀️';
+        }
+
         // DOM Elements
         const formContainer = document.getElementById('form-container');
         const fab = document.getElementById('fab');
@@ -192,6 +233,14 @@
         const autoCopyGroup = document.getElementById('auto-copy-group');
         const mainContainer = document.getElementById('main-container');
         const toastEl = document.getElementById('toast');
+
+        // === Theme System ===
+        function toggleTheme() {
+            document.body.classList.toggle('dark-theme');
+            const isDark = document.body.classList.contains('dark-theme');
+            localStorage.setItem('sys_theme', isDark ? 'dark' : 'light');
+            themeBtn.innerText = isDark ? '☀️' : '🌙';
+        }
 
         // === I/O Backup System ===
         function exportSystem() {
@@ -255,13 +304,21 @@
         function showToast(message) {
             toastEl.textContent = message;
             toastEl.classList.add('show');
-            setTimeout(() => toastEl.classList.remove('show'), 3000);
+            setTimeout(() => toastEl.classList.remove('show'), 2500);
         }
 
         function saveClusterName(signature, newName) {
             customClusterNames[signature] = newName;
             localStorage.setItem('sys_cluster_names', JSON.stringify(customClusterNames));
             showToast('Nomenclatura do arranjo redefinida.');
+        }
+
+        function deleteEntity(id, event) {
+            event.stopPropagation();
+            entities = entities.filter(e => e.id !== id);
+            localStorage.setItem('sys_entities', JSON.stringify(entities));
+            renderSystem();
+            showToast('Elemento removido do sistema.');
         }
 
         // === Lógica de Domínio ===
@@ -293,7 +350,7 @@
 
             if (entity.type === 'text') {
                 await navigator.clipboard.writeText(entity.content);
-                showToast(`Texto cirúrgico copiado: ${entity.title}`);
+                showToast(`Texto copiado: ${entity.title}`);
             } else if (entity.type === 'link') {
                 if (entity.autoCopy && entity.autoCopy.trim() !== "") {
                     await navigator.clipboard.writeText(entity.autoCopy);
@@ -311,10 +368,11 @@
             card.onclick = () => handleEntityClick(ent);
             
             card.innerHTML = `
+                <button class="btn-delete" title="Excluir Elemento" onclick="deleteEntity('${ent.id}', event)">✕</button>
                 <div class="card-type-badge">${ent.type === 'link' ? '🔗 Link' : '📝 Texto'}</div>
-                <div class="card-title">${ent.title}</div>
-                <div class="card-meta">${ent.content.substring(0, 40)}${ent.content.length > 40 ? '...' : ''}</div>
-                ${ent.autoCopy ? `<div class="card-meta" style="color: var(--accent); font-size: 0.75rem;">+ Auto-cópia ativada</div>` : ''}
+                <div class="card-title" title="${ent.title}">${ent.title}</div>
+                <div class="card-meta" title="${ent.content}">${ent.content}</div>
+                ${ent.autoCopy ? `<div class="card-meta" style="color: var(--accent);">+ Auto-cópia ativada</div>` : ''}
             `;
             return card;
         }
@@ -343,13 +401,11 @@
             mainContainer.innerHTML = '';
             if (entities.length === 0) return;
 
-            // 1. Limpeza de log antigo
             const seteDias = 7 * 24 * 60 * 60 * 1000;
             const now = Date.now();
             historyLog = historyLog.filter(h => (now - h.timestamp) < seteDias);
             localStorage.setItem('sys_history', JSON.stringify(historyLog));
 
-            // 2. Mapeia sessões
             let sessions = [];
             if (historyLog.length > 0) {
                 let currentSession = [historyLog[0]];
@@ -364,7 +420,6 @@
                 sessions.push(currentSession);
             }
 
-            // 3. Conta frequência dos clusters
             const clusterCounts = {};
             sessions.forEach(session => {
                 const uniqueIds = [...new Set(session.map(s => s.id))].sort();
@@ -374,7 +429,6 @@
                 }
             });
 
-            // 4. Elege o cluster mais forte para cada entidade
             const entityToBestCluster = {};
             for (const [signature, count] of Object.entries(clusterCounts)) {
                 const ids = signature.split('|');
@@ -385,7 +439,6 @@
                 });
             }
 
-            // 5. Distribui as entidades
             const groupedEntities = {};
             const isolatedEntities = [];
 
@@ -405,7 +458,6 @@
                 }
             });
 
-            // 6. Renderiza os Clusters (Arranjos com Fronteiras)
             Object.entries(groupedEntities)
                 .sort((a, b) => clusterCounts[b[0]] - clusterCounts[a[0]])
                 .forEach(([signature, group]) => {
@@ -438,7 +490,6 @@
                     mainContainer.appendChild(boundary);
                 });
 
-            // 7. Renderiza as Entidades Isoladas
             if (isolatedEntities.length > 0) {
                 const isolatedSection = document.createElement('div');
                 if (Object.keys(groupedEntities).length > 0) {
@@ -454,7 +505,6 @@
             }
         }
 
-        // Inicialização
         renderSystem();
     </script>
 </body>
