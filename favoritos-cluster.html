@@ -56,7 +56,7 @@
         /* Estruturas Sistêmicas (Grid Compacto) */
         .grid { 
             display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); /* Redução drástica da área */
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); 
             gap: 0.6rem; 
         }
         
@@ -139,7 +139,7 @@
         #fab:hover { transform: scale(1.05); background: #1d4ed8; }
         #fab.active { transform: rotate(45deg); background: var(--danger); }
 
-        /* Formulário */
+        /* Formulário & Toggle */
         #form-container {
             position: fixed; bottom: 90px; left: 30px; width: 300px;
             background: var(--surface); padding: 1.2rem; border-radius: var(--radius);
@@ -150,12 +150,28 @@
 
         .form-group { margin-bottom: 0.8rem; }
         .form-group label { display: block; font-size: 0.75rem; margin-bottom: 0.3rem; color: var(--text-muted); font-weight: 500;}
-        .form-group input, .form-group select {
+        .form-group input {
             width: 100%; padding: 0.6rem; background: var(--bg-color); border: 1px solid var(--boundary-color);
             color: var(--text-main); border-radius: 4px; outline: none; transition: var(--transition); font-size: 0.85rem;
         }
-        .form-group input:focus, .form-group select:focus { border-color: var(--primary); }
+        .form-group input:focus { border-color: var(--primary); }
         
+        /* Toggle Switch Customizado */
+        .toggle-switch {
+            display: flex; background: var(--bg-color); border-radius: 4px; 
+            border: 1px solid var(--boundary-color); padding: 2px;
+        }
+        .toggle-switch input[type="radio"] { display: none; }
+        .toggle-switch label.toggle-btn {
+            flex: 1; text-align: center; padding: 0.4rem; cursor: pointer;
+            font-size: 0.75rem; font-weight: 600; color: var(--text-muted);
+            border-radius: 3px; transition: var(--transition); display: block; margin-bottom: 0;
+        }
+        .toggle-switch input[type="radio"]:checked + label.toggle-btn {
+            background: var(--surface); color: var(--text-main);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
         button[type="submit"] {
             width: 100%; padding: 0.7rem; background: var(--primary); color: white;
             border: none; border-radius: 4px; font-weight: 600; cursor: pointer; transition: var(--transition); font-size: 0.85rem;
@@ -176,21 +192,22 @@
         </div>
     </header>
 
-    <main id="main-container">
-        </main>
+    <main id="main-container"></main>
 
     <div id="form-container">
         <form id="add-form">
             <div class="form-group">
                 <label>Tipo de Entidade</label>
-                <select id="item-type">
-                    <option value="link">Link Interativo</option>
-                    <option value="text">Texto Copiável</option>
-                </select>
+                <div class="toggle-switch">
+                    <input type="radio" id="type-link" name="item-type" value="link" checked>
+                    <label for="type-link" class="toggle-btn">🔗 Link</label>
+                    <input type="radio" id="type-text" name="item-type" value="text">
+                    <label for="type-text" class="toggle-btn">📝 Texto</label>
+                </div>
             </div>
             <div class="form-group">
                 <label>Título de Identificação</label>
-                <input type="text" id="item-title" required placeholder="Ex: AWS Console">
+                <input type="text" id="item-title" required placeholder="Ex: Painel AWS">
             </div>
             <div class="form-group">
                 <label id="content-label">URL do Link</label>
@@ -198,7 +215,7 @@
             </div>
             <div class="form-group" id="auto-copy-group" style="display: block;">
                 <label>Texto de Cópia Automática</label>
-                <input type="text" id="item-autocopy" placeholder="Ex: admin_user">
+                <input type="text" id="item-autocopy" placeholder="Ex: user_admin">
             </div>
             <button type="submit">Gravar Entidade</button>
         </form>
@@ -211,12 +228,10 @@
         // === Core System Config ===
         const TIME_WINDOW_MS = 2 * 60 * 1000; 
         
-        // Estado
         let entities = JSON.parse(localStorage.getItem('sys_entities')) || [];
         let historyLog = JSON.parse(localStorage.getItem('sys_history')) || [];
         let customClusterNames = JSON.parse(localStorage.getItem('sys_cluster_names')) || {};
 
-        // Inicialização de Tema
         const savedTheme = localStorage.getItem('sys_theme') || 'light';
         const themeBtn = document.getElementById('theme-toggle');
         if (savedTheme === 'dark') {
@@ -224,15 +239,14 @@
             themeBtn.innerText = '☀️';
         }
 
-        // DOM Elements
         const formContainer = document.getElementById('form-container');
         const fab = document.getElementById('fab');
         const addForm = document.getElementById('add-form');
-        const typeSelect = document.getElementById('item-type');
         const contentLabel = document.getElementById('content-label');
         const autoCopyGroup = document.getElementById('auto-copy-group');
         const mainContainer = document.getElementById('main-container');
         const toastEl = document.getElementById('toast');
+        const typeRadios = document.querySelectorAll('input[name="item-type"]');
 
         // === Theme System ===
         function toggleTheme() {
@@ -291,14 +305,17 @@
             fab.textContent = fab.classList.contains('active') ? '×' : '+';
         });
 
-        typeSelect.addEventListener('change', (e) => {
-            if(e.target.value === 'link') {
-                contentLabel.textContent = 'URL do Link';
-                autoCopyGroup.style.display = 'block';
-            } else {
-                contentLabel.textContent = 'Conteúdo do Texto';
-                autoCopyGroup.style.display = 'none';
-            }
+        // Toggle Switch Lógica
+        typeRadios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                if(e.target.value === 'link') {
+                    contentLabel.textContent = 'URL do Link';
+                    autoCopyGroup.style.display = 'block';
+                } else {
+                    contentLabel.textContent = 'Conteúdo do Texto';
+                    autoCopyGroup.style.display = 'none';
+                }
+            });
         });
 
         function showToast(message) {
@@ -313,18 +330,21 @@
             showToast('Nomenclatura do arranjo redefinida.');
         }
 
+        // Função de Deleção com Barreira de Confirmação
         function deleteEntity(id, event) {
-            event.stopPropagation();
-            entities = entities.filter(e => e.id !== id);
-            localStorage.setItem('sys_entities', JSON.stringify(entities));
-            renderSystem();
-            showToast('Elemento removido do sistema.');
+            event.stopPropagation(); // Impede que o clique dispare a cópia/abertura do link
+            if (window.confirm("Atenção: Você tem certeza que deseja remover esta entidade do sistema?")) {
+                entities = entities.filter(e => e.id !== id);
+                localStorage.setItem('sys_entities', JSON.stringify(entities));
+                renderSystem();
+                showToast('Elemento cirurgicamente removido.');
+            }
         }
 
         // === Lógica de Domínio ===
         addForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            const type = document.getElementById('item-type').value;
+            const type = document.querySelector('input[name="item-type"]:checked').value;
             const newEntity = {
                 id: crypto.randomUUID(),
                 type: type,
@@ -337,6 +357,11 @@
             localStorage.setItem('sys_entities', JSON.stringify(entities));
             
             addForm.reset();
+            // Reseta o visual do toggle para o padrão (Link)
+            document.getElementById('type-link').checked = true;
+            contentLabel.textContent = 'URL do Link';
+            autoCopyGroup.style.display = 'block';
+
             formContainer.classList.remove('show');
             fab.classList.remove('active');
             fab.textContent = '+';
