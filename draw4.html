@@ -1932,6 +1932,8 @@ body.playing-anim .conn-group:not(.anim-participant) {
 }
 
 
+.task-viewer.collapsed, .add-task-btn.collapsed { display: none !important; }
+
     </style>
 </head>
 <body>
@@ -2047,6 +2049,34 @@ body.playing-anim .conn-group:not(.anim-participant) {
         
         <div style="padding: 15px; border-top: 1px solid #e2e8f0; text-align: right; color: #64748b; font-size: 12px;">
             Exibindo apenas tarefas não concluídas.
+        </div>
+    </div>
+</div>
+
+<div id="task-modal-overlay" class="modal-overlay">
+    <div class="modal-panel no-pan" style="width: 750px; max-height: 85vh;">
+        <div class="dash-header">
+            <div>
+                <span class="dash-title">📋 Gerenciador de Entregas</span>
+                <div style="font-size: 12px; color: #64748b; margin-top: 4px;" id="task-modal-subtitle">Caixa: Nome da Caixa</div>
+            </div>
+            <span class="dash-close" onclick="closeTaskModal()">×</span>
+        </div>
+        <div class="dash-content" style="background: #f8fafc; flex-grow: 1; overflow-y: auto; padding: 20px;">
+            <div style="display:flex; gap:6px; font-size:11px; font-weight:bold; color:#64748b; padding-bottom:8px; margin-bottom:10px; border-bottom:1px solid #e2e8f0; margin-left: 42px;">
+                <div style="flex-grow:1;">NOME DA TAREFA</div>
+                <div style="width:70px;">LABEL</div>
+                <div style="width:60px;">RESP.</div>
+                <div style="width:90px;">PRAZO</div>
+                <div style="width:24px;"></div>
+            </div>
+
+            <div id="task-modal-body" style="display:flex; flex-direction:column; gap:8px;"></div>
+            
+            <button class="add-task-btn no-pan" style="margin-top:15px; background:white; padding:10px; font-size: 13px; font-weight: bold; border: 1px dashed #cbd5e1; border-radius: 8px; cursor:pointer; width:100%; color:#64748b; transition:background 0.2s;" onclick="addTaskToModal()" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='white'">+ Adicionar Nova Linha</button>
+        </div>
+        <div style="padding: 15px; border-top: 1px solid #e2e8f0; text-align: right; background: white;">
+            <button class="btn-primary" onclick="closeTaskModal()">Concluído / Salvar</button>
         </div>
     </div>
 </div>
@@ -2604,9 +2634,9 @@ function renderRetryRanking(tasks) {
 
 
 
+// Renderiza o input (agora sempre vai direto pro final com appendChild)
 function renderTask(container, text, status, owner = "", date = "", label = "", retries = 0) {
     const div = document.createElement('div');
-    // Guardamos o valor no dataset para salvar depois
     div.className = `task-item ${status === 'done' ? 'done' : ''} no-pan`; 
     div.dataset.status = status;
     div.dataset.retries = retries; 
@@ -2615,27 +2645,80 @@ function renderTask(container, text, status, owner = "", date = "", label = "", 
     if(status === 'doing') statusClass = 'doing';
     if(status === 'done') statusClass = 'done';
     
-    // Configuração visual do botão
     const retryLabel = retries > 0 ? `${retries}` : `↻`;
     const activeClass = retries > 0 ? 'active' : '';
 
     div.innerHTML = `
         <div class="task-status-toggle ${statusClass} no-pan" onclick="cycleTaskStatus(this)"></div>
-        
-        <button class="task-retry-btn ${activeClass} no-pan" onclick="incrementRetry(this)" title="Registrar Cobrança">
-            ${retryLabel}
-        </button>
-        
-        <input class="task-input no-pan" value="${text}" placeholder="Tarefa..." oninput="markUnsaved()">
+        <button class="task-retry-btn ${activeClass} no-pan" onclick="incrementRetry(this)" title="Registrar Cobrança">${retryLabel}</button>
+        <input class="task-input no-pan" value="${text}" placeholder="Descrição da Tarefa..." oninput="markUnsaved()">
         <input class="task-label no-pan" value="${label}" placeholder="Label" title="Etiqueta" oninput="markUnsaved()">
         <input class="task-owner no-pan" value="${owner}" placeholder="Resp." title="Responsável" oninput="markUnsaved()">
         <input class="task-date no-pan" type="date" value="${date}" title="Data Limite" onchange="checkTaskOverdue(this)">
         <button class="task-del-btn no-pan" onclick="removeTask(this)">×</button>
     `;
-    container.insertBefore(div, container.lastElementChild); 
+    container.appendChild(div); // <-- MUDANÇA CRUCIAL PARA O MODAL
     
     const dateInput = div.querySelector('.task-date');
     checkTaskOverdue(dateInput);
+}
+
+// Muda o status (Suporta dentro e fora do modal)
+function cycleTaskStatus(btn) {
+    const item = btn.parentElement;
+    const boxNode = item.closest('.box'); // Se for null, estamos editando no modal
+    const boxId = boxNode ? boxNode.id : currentTaskBoxId;
+    
+    const current = item.dataset.status;
+    let next = 'todo';
+    if(current === 'todo') next = 'doing';
+    else if(current === 'doing') next = 'done';
+    else if(current === 'done') next = 'todo';
+    
+    item.dataset.status = next;
+    btn.className = `task-status-toggle ${next === 'done' ? 'done' : (next === 'doing' ? 'doing' : '')} no-pan`;
+    if(next === 'done') item.classList.add('done'); else item.classList.remove('done');
+    
+    const dateInput = item.querySelector('.task-date');
+    checkTaskOverdue(dateInput);
+    
+    if (boxNode) updateBoxSummary(boxId);
+    markUnsaved();
+}
+
+// Remove tarefa (Suporta dentro e fora do modal)
+function removeTask(btn) {
+    const item = btn.parentElement;
+    const boxNode = item.closest('.box');
+    const boxId = boxNode ? boxNode.id : currentTaskBoxId;
+    item.remove();
+    
+    if (boxNode) { // Se apagou via hack pelo mapa, atualiza na hora
+        updateBoxSummary(boxId);
+        updateMinimalTaskView(boxId);
+        updateAllLines();
+    }
+    markUnsaved();
+}
+
+// Ocultar/Mostrar tarefas no mapa (Aquele botão 📋)
+function toggleTaskView(boxId) {
+    const box = document.getElementById(boxId);
+    const viewer = box.querySelector('.task-viewer');
+    const addBtn = box.querySelector('.add-task-btn');
+    
+    viewer.classList.toggle('collapsed');
+    addBtn.classList.toggle('collapsed');
+    
+    const btn = box.querySelector('.btn-font[onclick*="toggleTaskView"]');
+    if (btn) {
+        btn.style.opacity = viewer.classList.contains('collapsed') ? '0.5' : '1';
+        btn.title = viewer.classList.contains('collapsed') ? 'Mostrar Tarefas' : 'Esconder Tarefas';
+    }
+
+    updateElasticParent(box.querySelector('.children-area')); 
+    updateAllLines();
+    markUnsaved();
 }
     
     function cycleTaskStatus(btn) {
@@ -3206,9 +3289,11 @@ function createBoxElement(id, titleVal = "Novo Item") {
             </div>
         </div>
         <div class="box-body">
-            <div class="task-container no-pan">
-                <button class="add-task-btn no-pan" onclick="addTask('${id}')">+ Nova Tarefa</button>
-            </div>
+            <div class="task-viewer no-pan"></div>
+            <button class="add-task-btn no-pan" onclick="openTaskModal('${id}', true)">+ Nova Tarefa</button>
+            
+            <div class="task-data-store" style="display:none;"></div>
+            
             <div class="children-area" id="area-${id}"></div>
         </div>
         
@@ -3468,19 +3553,24 @@ setTimeout(repairBoxStructure, 500);
             calcDynamicFont(newEl);
             
             // Clone tasks
+            // ... Clone tasks
             const sourceTasks = sourceEl.querySelectorAll('.task-item');
             if(sourceTasks.length > 0) {
-                 const tContainer = newEl.querySelector('.task-container');
-                 // Ensure visible on clone
-                 tContainer.style.display = 'block';
+                 const tStore = newEl.querySelector('.task-data-store');
                  sourceTasks.forEach(t => {
-                     // Check direct ownership
                      if (t.closest('.box') === sourceEl) {
-                        renderTask(tContainer, t.querySelector('.task-input').value, t.dataset.status, t.querySelector('.task-owner').value, t.querySelector('.task-date').value);
+                        renderTask(tStore, 
+                            t.querySelector('.task-input').value, 
+                            t.dataset.status, 
+                            t.querySelector('.task-owner').value, 
+                            t.querySelector('.task-date').value,
+                            t.querySelector('.task-label').value,
+                            parseInt(t.dataset.retries || 0)
+                        );
                      }
                  });
-                 // No toggle needed
-                 updateBoxSummary(newEl);
+                 // Renderiza a listinha sutil na caixa clonada
+                 updateMinimalTaskView(newEl.id);
             }
 
             const sourceArea = sourceEl.querySelector('.children-area');
@@ -4014,13 +4104,15 @@ function collectAllTasks() {
                 // Strict check: only tasks belonging to this box
                 if (tItem.closest('.box') === box) {
                 // ... dentro do loop taskItems.forEach ...
-                tasks.push({
-                    text: tItem.querySelector('.task-input').value,
-                    label: tItem.querySelector('.task-label').value, // <--- SALVA O LABEL
-                    owner: tItem.querySelector('.task-owner').value,
-                    date: tItem.querySelector('.task-date').value,
-                    status: tItem.dataset.status || 'todo'
-                });
+                    // ... no loop: box.querySelectorAll('.task-item').forEach(tItem => { ...
+                    tasks.push({
+                        text: tItem.querySelector('.task-input').value,
+                        label: tItem.querySelector('.task-label').value, 
+                        owner: tItem.querySelector('.task-owner').value,
+                        date: tItem.querySelector('.task-date').value,
+                        status: tItem.dataset.status || 'todo',
+                        retries: parseInt(tItem.dataset.retries || 0) // <--- ADICIONAR ESTA LINHA
+                    });
                 }
             });
 
@@ -4120,21 +4212,22 @@ function collectAllTasks() {
                 
                 // Importante: Também esconde a área de filhos para o CSS funcionar
                 const tContainer = el.querySelector('.task-container');
+                // --- APAGUE O TRECHO ANTIGO SOBRE tContainer E COLE ESTE: ---
+                const tStore = el.querySelector('.task-data-store');
                 const childArea = el.querySelector('.children-area');
-                
+
                 childArea.classList.add('collapsed'); 
-                
-                // Opcional: Se quiser esconder as tarefas também ao abrir, descomente abaixo:
-                // tContainer.style.display = 'none'; 
-                // Caso contrário, mantemos tarefas visíveis se a caixa tiver:
-                tContainer.style.display = 'block';
-    
+                tStore.innerHTML = ''; // Limpa prevencionamente
+
                 if(d.tasks && d.tasks.length > 0) {
-                    d.tasks.forEach(t => renderTask(tContainer, t.text, t.status, t.owner, t.date, t.label));
-                    updateBoxSummary(el);
+                    d.tasks.forEach(t => renderTask(tStore, t.text, t.status, t.owner, t.date, t.label, t.retries));
                 }
+
+                // Transforma os dados em interface minimalista
+                updateMinimalTaskView(el.id);
+                // -------------------------------------------------------------
     
-                boxMap[d.id] = { el, parentId: d.parentId }; 
+                boxMap[d.id] = { el, parentId: d.parentId }; //atencao
             }
         });
         
@@ -5525,6 +5618,172 @@ function cancelReadyAnimation() {
     document.getElementById('anim-ready-toast').style.display = 'none'; // <--- CORREÇÃO AQUI
     pendingAnimIdForReady = null;
     showToast("Apresentação cancelada.");
+}
+
+
+// =========================================================================
+// --- GERENCIADOR DE TAREFAS MINIMALISTA (MODAL & VIEWER) ---
+// =========================================================================
+
+let currentTaskBoxId = null;
+
+// 1. Abre o Modal e puxa os dados do armazém da caixa
+function openTaskModal(boxId, addNew = false) {
+    if (!state.isEditMode) return;
+    currentTaskBoxId = boxId;
+    const box = document.getElementById(boxId);
+    const store = box.querySelector('.task-data-store');
+    const modalBody = document.getElementById('task-modal-body');
+    
+    document.getElementById('task-modal-subtitle').innerText = `Caixa: ${box.querySelector('.title').value || 'Sem título'}`;
+
+    // Move fisicamente os inputs da caixa para o modal
+    while (store.firstChild) {
+        modalBody.appendChild(store.firstChild);
+    }
+
+    document.getElementById('task-modal-overlay').style.display = 'flex';
+
+    if (addNew) addTaskToModal();
+}
+
+// 2. Adiciona uma tarefa diretamente no modal
+function addTaskToModal() {
+    const modalBody = document.getElementById('task-modal-body');
+    renderTask(modalBody, "", "todo", "", "", "", 0);
+    markUnsaved();
+    // Scroll automático para a nova linha
+    const content = document.querySelector('#task-modal-overlay .dash-content');
+    setTimeout(() => content.scrollTop = content.scrollHeight, 50);
+}
+
+// 3. Fecha o Modal, devolve os dados e renderiza a visão bonita
+function closeTaskModal() {
+    if (!currentTaskBoxId) return;
+    const box = document.getElementById(currentTaskBoxId);
+    const store = box.querySelector('.task-data-store');
+    const modalBody = document.getElementById('task-modal-body');
+
+    // Devolve os inputs valiosos de volta para a caixa invisível
+    while (modalBody.firstChild) {
+        store.appendChild(modalBody.firstChild);
+    }
+
+    document.getElementById('task-modal-overlay').style.display = 'none';
+
+    // Gera a visão sutil na frente da caixa
+    updateMinimalTaskView(currentTaskBoxId);
+    
+    // Recalcula o tamanho da caixa se necessário
+    updateElasticParent(box.querySelector('.children-area'));
+    currentTaskBoxId = null;
+}
+
+// 4. Cria o visual da listinha na tela
+// 4. Cria o visual da listinha na tela (Agora Compacta, Fixa e Centralizada)
+// 4. Cria o visual da listinha na tela (Proporcional, Centralizada e com Limite Máximo)
+function updateMinimalTaskView(boxId) {
+    const box = document.getElementById(boxId);
+    if (!box) return;
+    const store = box.querySelector('.task-data-store');
+    const viewer = box.querySelector('.task-viewer');
+    if (!viewer || !store) return;
+
+    viewer.innerHTML = '';
+    const tasks = store.querySelectorAll('.task-item');
+    
+    // --- LÓGICA DE TAMANHO PROPORCIONAL COM LIMITE ---
+    const DYNAMIC_WIDTH = '100%'; 
+    const MAX_WIDTH = '400px';
+
+    // Mostra/Esconde a caixa decorativa
+    if (tasks.length > 0) {
+        viewer.style.display = 'flex'; 
+        viewer.style.flexDirection = 'column';
+        viewer.style.gap = '4px';
+        viewer.style.background = 'rgba(241, 245, 249, 0.5)';
+        viewer.style.padding = '6px';
+        viewer.style.borderRadius = '8px';
+        viewer.style.border = '1px dashed #cbd5e1';
+        
+        // Centralização e Tamanho Dinâmico
+        viewer.style.width = DYNAMIC_WIDTH;
+        viewer.style.maxWidth = MAX_WIDTH;
+        viewer.style.boxSizing = 'border-box';
+        viewer.style.margin = '0 auto 6px auto'; // Mantém centralizado caso a caixa passe de 400px
+    } else {
+        viewer.style.display = 'none';
+    }
+
+    tasks.forEach((t, index) => {
+        const status = t.dataset.status;
+        const text = t.querySelector('.task-input').value;
+        const owner = t.querySelector('.task-owner').value;
+
+        let statusColor = '#cbd5e1'; // Cinza (todo)
+        if (status === 'doing') statusColor = '#fbbf24'; // Amarelo
+        if (status === 'done') statusColor = '#4ade80'; // Verde
+
+        const div = document.createElement('div');
+        div.style.cssText = 'display:flex; align-items:center; gap:6px; padding:4px; border-radius:4px; cursor:pointer; transition:background 0.2s;';
+        div.onmouseover = () => div.style.background = 'white';
+        div.onmouseout = () => div.style.background = 'transparent';
+        
+        // Clicar no texto abre o modal
+        div.onclick = (e) => { e.stopPropagation(); openTaskModal(boxId); };
+
+        div.innerHTML = `
+            <div onclick="toggleMinimalStatus(event, '${boxId}', ${index})" style="width:10px; height:10px; border-radius:50%; background:${statusColor}; flex-shrink:0; border:1px solid rgba(0,0,0,0.1); cursor:pointer;" title="Clique para mudar status"></div>
+            
+            <div style="flex-grow:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:11px; color:#334155; text-decoration:${status === 'done' ? 'line-through' : 'none'}; font-weight: 500;">${text || '<i style="color:#94a3b8">Sem título</i>'}</div>
+            
+            ${owner ? `<div style="font-size:8px; background:#e2e8f0; color:#475569; padding:2px 4px; border-radius:8px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; border:1px solid #cbd5e1; flex-shrink:0;">${owner}</div>` : ''}
+        `;
+        viewer.appendChild(div);
+    });
+
+    // Atualiza o visual do botão base para acompanhar as novas proporções
+    const addBtn = box.querySelector('.add-task-btn');
+    if (addBtn) {
+        addBtn.innerText = tasks.length > 0 ? "⚙️ Gerenciar Entregas" : "+ Nova Tarefa";
+        
+        if (tasks.length > 0) {
+            // Se tem tarefas, acompanha a largura do visualizador com o Max-Width
+            addBtn.style.background = 'transparent';
+            addBtn.style.border = 'none';
+            addBtn.style.color = '#64748b';
+            addBtn.style.textDecoration = 'underline';
+            addBtn.style.padding = '2px';
+            addBtn.style.width = DYNAMIC_WIDTH;
+            addBtn.style.maxWidth = MAX_WIDTH;
+            addBtn.style.margin = '0 auto';
+        } else {
+            // Se não tem tarefas (Caixa crua), reseta as larguras limites para o botão base normal
+            addBtn.style.background = '';
+            addBtn.style.border = '1px dashed #cbd5e1';
+            addBtn.style.color = '';
+            addBtn.style.textDecoration = 'none';
+            addBtn.style.padding = '8px';
+            addBtn.style.width = '100%';
+            addBtn.style.maxWidth = 'none'; // Remove a restrição
+            addBtn.style.margin = '0';
+        }
+    }
+
+    updateBoxSummary(box);
+    updateAllLines();
+}
+
+// 5. Permite clicar na bolinha da tarefa sutil para marcar como "Concluída" direto pelo mapa
+window.toggleMinimalStatus = function(e, boxId, taskIndex) {
+    e.stopPropagation();
+    if (!state.isEditMode) return;
+    const box = document.getElementById(boxId);
+    const store = box.querySelector('.task-data-store');
+    const task = store.querySelectorAll('.task-item')[taskIndex];
+    const btn = task.querySelector('.task-status-toggle');
+    cycleTaskStatus(btn); // Muda no input real escondido
+    updateMinimalTaskView(boxId); // Atualiza a tela
 }
 
 
