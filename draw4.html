@@ -1944,6 +1944,13 @@ body.playing-anim .conn-group:not(.anim-participant) {
 
         <div style="width: 1px; height: 30px; background: #ddd; margin: 0 5px;"></div>
 
+        <div id="anim-ready-toast" class="no-pan" style="display:none; position:fixed; bottom:80px; left:50%; transform:translateX(-50%); background:#0f172a; color:white; padding:12px 24px; border-radius:30px; z-index:999999; align-items:center; gap:15px; box-shadow:0 10px 25px rgba(0,0,0,0.5); border:1px solid #334155; font-size:14px; animation:slideUpFade 0.3s ease-out;">
+            <span id="anim-ready-title" style="font-weight:bold; color:#10b981;">🎬 Mapa Preparado</span>
+            <div style="width:1px; height:20px; background:#334155;"></div>
+            <button onclick="executeAnimationFromReady()" style="background:#10b981; color:white; border:none; padding:6px 16px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:13px; transition:transform 0.1s;">▶ Iniciar</button>
+            <button onclick="cancelReadyAnimation()" style="background:transparent; color:#94a3b8; border:1px solid #475569; padding:5px 12px; border-radius:20px; cursor:pointer; font-size:12px;">Cancelar</button>
+        </div>
+
         <div id="anim-playback-controls" class="no-pan" style="display:none; align-items:center; background:#10b981; border-radius:4px; padding:2px;">
             <button class="btn-primary" style="background:transparent; margin:0; padding:6px 10px; box-shadow:none;" onclick="playAnimation()" title="Reproduzir Apresentação">▶ Tocar</button>
             <div style="width: 1px; height: 20px; background: rgba(255,255,255,0.3); margin: 0 2px;"></div>
@@ -5203,53 +5210,6 @@ let animPlayer = {
     timerId: null
 };
 
-function startPlayback(animId) {
-    const anim = savedAnimations.find(a => a.id === animId);
-    if (!anim) return;
-
-    // Fecha o menu de salvos
-    document.getElementById('anim-dropdown-container').style.display = 'none';
-    
-    // Reseta o estado do player
-    animPlayer.sequence = anim.sequence;
-    animPlayer.currentIndex = 0;
-    animPlayer.speed = parseFloat(document.getElementById('player-speed-select').value) || 1;
-    animPlayer.isPlaying = true;
-    
-    // Atualiza UI
-    document.getElementById('anim-player-bar').style.display = 'flex';
-    updatePlayerBtn();
-    
-    showToast(`▶ Iniciando "${anim.title}"...`);
-
-    // Inicia o Modo Spotlight (Esbranquiçado global)
-    document.body.classList.add('playing-anim');
-
-    // Marca os participantes e seus pais para não sumirem
-    document.querySelectorAll('.box, .note, .conn-group').forEach(el => el.classList.remove('anim-participant', 'anim-current-focus'));
-    
-    animPlayer.sequence.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            el.classList.add('anim-participant');
-            let parentBox = el.parentElement.closest('.box');
-            while (parentBox) {
-                parentBox.classList.add('anim-participant');
-                parentBox = parentBox.parentElement.closest('.box');
-            }
-        }
-    });
-
-    connections.forEach(c => {
-        if (animPlayer.sequence.includes(c.sid) && animPlayer.sequence.includes(c.tid)) {
-            const group = document.getElementById(c.id);
-            if (group) group.classList.add('anim-participant');
-        }
-    });
-
-    // Roda o primeiro passo
-    renderAnimStep();
-}
 
 async function renderAnimStep() {
     clearTimeout(animPlayer.timerId); // Limpa qualquer timer pendente
@@ -5391,6 +5351,182 @@ async function smoothPanToBox(box, speed) {
     await new Promise(r => setTimeout(r, 850 / speed));
     worldEl.style.transition = 'none'; 
 }
+
+// --- PREPARAÇÃO INTELIGENTE DO MAPA ---
+// Varre a sequência e garante que nenhum pai/avô esteja colapsado
+// --- PREPARAÇÃO INTELIGENTE DO MAPA ---
+function autoExpandForAnimation(sequence) {
+    let changedSomething = false;
+
+    sequence.forEach(id => {
+        let el = document.getElementById(id);
+        if (!el) return;
+        
+        // Coleta todos os pais/avós em uma lista
+        let parentsToOpen = [];
+        let parentBox = el.parentElement.closest('.box');
+        
+        while (parentBox) {
+            if (parentBox.classList.contains('collapsed-mode')) {
+                parentsToOpen.push(parentBox);
+            }
+            parentBox = parentBox.parentElement.closest('.box');
+        }
+        
+        // Inverte a lista para abrir de cima para baixo (Avô -> Pai -> Filho)
+        parentsToOpen.reverse().forEach(pBox => {
+            pBox.classList.remove('collapsed-mode');
+            
+            // Atualiza o botão visual
+            const toggleBtn = pBox.querySelector('.btn-toggle');
+            if (toggleBtn) {
+                toggleBtn.innerText = '▼';
+                toggleBtn.title = 'Colapsar';
+            }
+            changedSomething = true;
+        });
+    });
+
+    return changedSomething;
+}
+
+let pendingAnimIdForReady = null; // Guarda a animação em espera
+
+// --- FASE 1: PREPARAÇÃO GRADUAL DO MAPA ---
+// --- FASE 1: PREPARAÇÃO GRADUAL DO MAPA (Corrigida) ---
+async function prepareMapForAnimation(sequence) {
+    let parentsToOpen = [];
+
+    // 1. Encontra todas as caixas fechadas que precisam abrir
+    sequence.forEach(id => {
+        let el = document.getElementById(id);
+        if (!el) return;
+        
+        let parentBox = el.parentElement.closest('.box');
+        while (parentBox) {
+            if (parentBox.classList.contains('collapsed-mode') && !parentsToOpen.includes(parentBox)) {
+                parentsToOpen.push(parentBox);
+            }
+            parentBox = parentBox.parentElement.closest('.box');
+        }
+    });
+
+    if (parentsToOpen.length > 0) {
+        // 2. Ordena da caixa mais Externa (Avô) para a mais Interna (Neto)
+        parentsToOpen.sort((a, b) => {
+            let depthA = 0, currA = a;
+            while(currA.parentElement && currA.parentElement.closest('.box')) { depthA++; currA = currA.parentElement.closest('.box'); }
+            
+            let depthB = 0, currB = b;
+            while(currB.parentElement && currB.parentElement.closest('.box')) { depthB++; currB = currB.parentElement.closest('.box'); }
+            
+            return depthA - depthB; 
+        });
+
+        // 3. Abre uma por uma usando a função NATIVA do seu sistema
+        for (let i = 0; i < parentsToOpen.length; i++) {
+            let pBox = parentsToOpen[i];
+            
+            // Pega o botão de colapsar daquela caixa específica
+            const toggleBtn = pBox.querySelector('.btn-toggle');
+            
+            // Verifica se está fechada e chama a SUA função original para restaurar tamanhos e filhas
+            if (pBox.classList.contains('collapsed-mode') && toggleBtn && typeof handleSmartToggle === 'function') {
+                handleSmartToggle(pBox.id, toggleBtn);
+            } else {
+                // Fallback de segurança caso o botão não seja encontrado
+                pBox.classList.remove('collapsed-mode');
+            }
+            
+            // Força o navegador a desenhar a caixa já restaurada
+            void document.body.offsetHeight;
+            updateAllLines();
+            
+            // Pausa visível de 400ms para você ver a caixa abrindo antes de ir para a próxima
+            await new Promise(r => setTimeout(r, 400));
+        }
+        
+        // Pausa de segurança final para as setas colarem perfeitamente
+        await new Promise(r => setTimeout(r, 300));
+        updateAllLines();
+    }
+}
+
+// --- FASE 2: PREPARAR E PERGUNTAR ---
+async function startPlayback(animId) {
+    const anim = savedAnimations.find(a => a.id === animId);
+    if (!anim) return;
+
+    document.getElementById('anim-dropdown-container').style.display = 'none';
+    showToast(`Preparando a geometria para "${anim.title}"...`);
+    
+    // Executa a abertura gradual e visível
+    await prepareMapForAnimation(anim.sequence);
+
+    // Salva a referência e mostra o TOAST (Corrigido)
+    pendingAnimIdForReady = animId;
+    document.getElementById('anim-ready-title').innerText = `🎬 "${anim.title}" Pronto`;
+    document.getElementById('anim-ready-toast').style.display = 'flex'; // <--- CORREÇÃO AQUI
+}
+
+// --- FASE 3: EXECUTAR A APRESENTAÇÃO (Após o Clique) ---
+function executeAnimationFromReady() {
+    // Esconde o Toast (Corrigido)
+    document.getElementById('anim-ready-toast').style.display = 'none'; // <--- CORREÇÃO AQUI
+    
+    if (!pendingAnimIdForReady) return;
+    const anim = savedAnimations.find(a => a.id === pendingAnimIdForReady);
+    if (!anim) return;
+
+    // Preenche o Player
+    animPlayer.sequence = anim.sequence;
+    animPlayer.currentIndex = 0;
+    animPlayer.speed = parseFloat(document.getElementById('player-speed-select').value) || 1;
+    animPlayer.isPlaying = true;
+    
+    // Mostra a barra do Player no canto esquerdo
+    document.getElementById('anim-player-bar').style.display = 'flex';
+    updatePlayerBtn();
+    
+    showToast(`▶ Apresentação em andamento...`);
+
+    // Inicia o Modo Spotlight (Esbranquiçado global)
+    document.body.classList.add('playing-anim');
+
+    // Protege os participantes do esmaecimento
+    document.querySelectorAll('.box, .note, .conn-group').forEach(el => el.classList.remove('anim-participant', 'anim-current-focus'));
+    
+    animPlayer.sequence.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.classList.add('anim-participant');
+            let parentBox = el.parentElement.closest('.box');
+            while (parentBox) {
+                parentBox.classList.add('anim-participant');
+                parentBox = parentBox.parentElement.closest('.box');
+            }
+        }
+    });
+
+    connections.forEach(c => {
+        if (animPlayer.sequence.includes(c.sid) && animPlayer.sequence.includes(c.tid)) {
+            const group = document.getElementById(c.id);
+            if (group) group.classList.add('anim-participant');
+        }
+    });
+
+    // Chama o primeiro slide!
+    renderAnimStep();
+}
+
+// Cancela caso o usuário mude de ideia
+function cancelReadyAnimation() {
+    // Esconde o Toast (Corrigido)
+    document.getElementById('anim-ready-toast').style.display = 'none'; // <--- CORREÇÃO AQUI
+    pendingAnimIdForReady = null;
+    showToast("Apresentação cancelada.");
+}
+
 
 </script>
 
