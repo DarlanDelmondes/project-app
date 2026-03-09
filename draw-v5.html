@@ -1934,6 +1934,46 @@ body.playing-anim .conn-group:not(.anim-participant) {
 
 .task-viewer.collapsed, .add-task-btn.collapsed { display: none !important; }
 
+
+
+
+
+/* ========================================================= */
+/* --- SISTEMA DE VISIBILIDADE INTELIGENTE DAS SETAS --- */
+/* ========================================================= */
+
+/* 1. Esconde todas as setas por padrão com transição suave */
+.conn-group {
+    opacity: 0; 
+    transition: opacity 0.3s ease;
+}
+
+/* 2. Mostra a seta se você passar o mouse exatamente em cima dela */
+.conn-group:hover {
+    opacity: 1 !important;
+}
+
+/* 3. Mostra as setas iluminadas pelo JavaScript (ao passar na caixa) */
+.conn-group.hover-active {
+    opacity: 1 !important;
+}
+
+/* 4. Mostra as setas que fazem parte do filtro ativo (Tags/Labels) */
+body.filtering .conn-group:not(.dimmed) {
+    opacity: 1 !important;
+}
+
+/* 5. Mantém as setas corretas visíveis durante o Modo Apresentação */
+body.playing-anim .conn-group.anim-participant {
+    opacity: 1 !important;
+}
+
+
+
+
+
+
+
     </style>
 </head>
 <body>
@@ -2327,18 +2367,15 @@ function addConnection(sid, spos, tid, tpos, existingId = null) {
 
     // [UPDATED] Update Elastic Parent to consider NOTES as well
     // [UPDATED] Update Elastic Parent to consider NOTES as well
+    // [UPDATED] Update Elastic Parent to consider NOTES as well (Com Matemática Precisa)
     function updateElasticParent(childrenContainer) {
         if (!childrenContainer || !childrenContainer.classList.contains('children-area')) return;
         const parentBox = childrenContainer.closest('.box'); if (!parentBox) return;
         
         // --- LÓGICA DE CAIXA COLAPSADA ---
         if (childrenContainer.classList.contains('collapsed')) {
-            // MUDANÇA: Removemos a matemática que forçava a caixa a encolher.
-            // Agora ela simplesmente mantém o style.width e style.height intocados!
-            
             calcDynamicFont(parentBox);
-            updateAllLines(); // Garante que as setas acompanhem o novo visual centrado
-            
+            updateAllLines(); 
             const gp = parentBox.parentElement; 
             if (gp && gp.classList.contains('children-area')) updateElasticParent(gp); 
             return;
@@ -2355,16 +2392,34 @@ function addConnection(sid, spos, tid, tpos, existingId = null) {
             if (bottom > maxY) maxY = bottom;
         });
         
-        const neededW = maxX + 40; 
-        const neededH = maxY + 120 + 40;
+        // --- A MÁGICA DA PRECISÃO ---
+        const boxRect = parentBox.getBoundingClientRect();
+        const areaRect = childrenContainer.getBoundingClientRect();
+        const currentZoom = (typeof state !== 'undefined' && state.scale) ? state.scale : 1;
+        
+        // Mede a altura exata do cabeçalho atual (Título + Tarefas + Botões)
+        let exactHeaderHeight = (areaRect.top - boxRect.top) / currentZoom;
+        if (exactHeaderHeight < 0 || isNaN(exactHeaderHeight)) exactHeaderHeight = 40; // Fallback de segurança
+
+        // MARGENS DE RESPIRO (PADDING)
+        const PADDING_RIGHT = 40; 
+        const PADDING_BOTTOM = 60; // <--- Aumentado para garantir um fundo bem confortável
+
+        // Calcula a largura e altura exatas necessárias para abraçar os filhos
+        const neededW = maxX + PADDING_RIGHT; 
+        const neededH = exactHeaderHeight + maxY + PADDING_BOTTOM;
+
+        // Tamanho mínimo que você definiu puxando na alça manual
         const manualW = parseFloat(parentBox.dataset.mw) || 240; 
         const manualH = parseFloat(parentBox.dataset.mh) || 220;
         
+        // A caixa assume o maior tamanho: ou o que os filhos precisam, ou o que você definiu manualmente
         parentBox.style.width = Math.max(neededW, manualW) + 'px'; 
         parentBox.style.height = Math.max(neededH, manualH) + 'px';
         
         calcDynamicFont(parentBox);
         
+        // Sobe a árvore (Efeito Cascata)
         const gp = parentBox.parentElement; 
         if (gp && gp.classList.contains('children-area')) updateElasticParent(gp);
         
@@ -4577,25 +4632,49 @@ async function cascadeResizeUp(boxNode) {
     }
 
 // --- SISTEMA DE AUTO-LAYOUT (VARINHA MÁGICA 🪄) ---
+// --- SISTEMA DE AUTO-LAYOUT (VARINHA MÁGICA 🪄) COM LEITURA DE ORDEM ---
 function autoLayoutChildren(boxId) {
     const parentBox = document.getElementById(boxId);
     if (!parentBox) return;
 
-    // Procura a área onde as caixas filhas vivem
     const childrenArea = parentBox.querySelector('.children-area');
     if (!childrenArea) return;
 
-    // Pega apenas as caixas filhas que estão diretamente dentro deste pai
-    const children = Array.from(childrenArea.children).filter(el => el.classList.contains('box'));
+    // Busca as caixas filhas
+    let children = Array.from(childrenArea.children).filter(el => el.classList.contains('box'));
     
     if (children.length === 0) {
         showToast("Não há sub-caixas aqui para organizar.");
         return;
     }
 
-    // Configurações da Margem e Espaçamento
-    const PADDING = 20; // Margem interna da parede da caixa pai
-    const GAP = 25;     // Distância entre uma caixa e outra
+    // --- 1. LEITURA ESPACIAL E ORDENAÇÃO ---
+    // A varinha "olha" para as coordenadas X e Y das caixas antes de mexer nelas
+    children.sort((a, b) => {
+        const aTop = parseFloat(a.style.top) || 0;
+        const bTop = parseFloat(b.style.top) || 0;
+        const aLeft = parseFloat(a.style.left) || 0;
+        const bLeft = parseFloat(b.style.left) || 0;
+
+        // Se a diferença vertical for maior que 40px, considera que estão em "linhas" diferentes
+        if (Math.abs(aTop - bTop) > 40) {
+            return aTop - bTop;
+        }
+        // Se estão na mesma "linha" visual, ordena da esquerda para a direita
+        return aLeft - bLeft;
+    });
+
+    // --- 2. CRIAÇÃO DO CONTROLE DE ORDEM NO PAI ---
+    // Extrai a sequência de IDs e salva como o controle que você pediu na caixa pai
+    const orderIds = children.map(c => c.id);
+    parentBox.dataset.boxOrder = JSON.stringify(orderIds);
+    
+    // Reordena fisicamente no HTML (Isso garante que o Save/Load nativo respeite a nova ordem visual)
+    children.forEach(child => childrenArea.appendChild(child));
+
+    // --- 3. O GRID MATEMÁTICO ---
+    const PADDING = 20; 
+    const GAP = 25;     
     const parentWidth = parentBox.offsetWidth;
 
     let currentX = PADDING;
@@ -4603,7 +4682,6 @@ function autoLayoutChildren(boxId) {
     let maxRowHeight = 0;
 
     children.forEach(child => {
-        // Liga o deslizamento suave
         child.style.transition = 'left 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), top 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)';
 
         const childW = child.offsetWidth;
@@ -4623,20 +4701,16 @@ function autoLayoutChildren(boxId) {
         currentX += childW + GAP;
         if (childH > maxRowHeight) maxRowHeight = childH;
 
-        // Desliga a transição para não atrapalhar o arrastar depois
         setTimeout(() => { child.style.transition = 'none'; }, 450);
     });
 
-    // Reajusta as setas ao final
-    // Inicia a Cascata de Redimensionamento logo após as caixas terminarem de deslizar
+    // Finaliza e aciona a cascata
     setTimeout(async () => {
-        await cascadeResizeUp(parentBox); // Aciona o crescimento Pai -> Avô -> Bisavô
+        await cascadeResizeUp(parentBox);
         updateAllLines();
         markUnsaved();
-        showToast("🪄 Layout e tamanhos ajustados!");
+        showToast("🪄 Layout e tamanhos ajustados na nova ordem!");
     }, 450);
-    
-    showToast("🪄 Caixas alinhadas com sucesso!");
 }
 
 // --- SISTEMA TO-BE (TARGET) ---
@@ -6243,6 +6317,37 @@ function updateMinimalTaskView(boxId) {
     updateAllLines();
 }
 
+
+// =========================================================================
+// --- RADAR DE VISIBILIDADE DAS SETAS (HOVER) ---
+// =========================================================================
+document.addEventListener('mouseover', (e) => {
+    // Não interfere se uma apresentação estiver tocando
+    if (document.body.classList.contains('playing-anim')) return;
+
+    const box = e.target.closest('.box');
+    
+    if (box) {
+        // O mouse entrou numa caixa: varre todas as conexões
+        connections.forEach(c => {
+            const grp = document.getElementById(c.id);
+            if (grp) {
+                // Se a conexão sai (sid) ou entra (tid) nesta caixa, acende!
+                if (c.sid === box.id || c.tid === box.id) {
+                    grp.classList.add('hover-active');
+                } else {
+                    grp.classList.remove('hover-active');
+                }
+            }
+        });
+    } else if (!e.target.closest('.conn-group')) {
+        // Se o mouse saiu das caixas para o fundo vazio, apaga tudo
+        document.querySelectorAll('.conn-group.hover-active').forEach(grp => {
+            grp.classList.remove('hover-active');
+        });
+    }
+});
+
 // 5. Permite clicar na bolinha da tarefa sutil para marcar como "Concluída" direto pelo mapa
 window.toggleMinimalStatus = function(e, boxId, taskIndex) {
     e.stopPropagation();
@@ -6254,6 +6359,8 @@ window.toggleMinimalStatus = function(e, boxId, taskIndex) {
     cycleTaskStatus(btn); // Muda no input real escondido
     updateMinimalTaskView(boxId); // Atualiza a tela
 }
+
+
 
 
 </script>
