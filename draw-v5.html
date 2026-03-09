@@ -6321,32 +6321,36 @@ function updateMinimalTaskView(boxId) {
 // =========================================================================
 // --- RADAR DE VISIBILIDADE DAS SETAS (HOVER) ---
 // =========================================================================
+// =========================================================================
+// --- RADAR DE VISIBILIDADE DAS SETAS (HOVER) - CORRIGIDO ---
+// =========================================================================
+// O "true" no final faz o evento furar o bloqueio (stopPropagation) das caixas!
 document.addEventListener('mouseover', (e) => {
-    // Não interfere se uma apresentação estiver tocando
     if (document.body.classList.contains('playing-anim')) return;
 
     const box = e.target.closest('.box');
     
     if (box) {
-        // O mouse entrou numa caixa: varre todas as conexões
-        connections.forEach(c => {
-            const grp = document.getElementById(c.id);
-            if (grp) {
-                // Se a conexão sai (sid) ou entra (tid) nesta caixa, acende!
-                if (c.sid === box.id || c.tid === box.id) {
-                    grp.classList.add('hover-active');
-                } else {
-                    grp.classList.remove('hover-active');
+        // Acende as setas ligadas à caixa
+        if (typeof connections !== 'undefined') {
+            connections.forEach(c => {
+                const grp = document.getElementById(c.id);
+                if (grp) {
+                    if (c.sid === box.id || c.tid === box.id) {
+                        grp.classList.add('hover-active');
+                    } else {
+                        grp.classList.remove('hover-active');
+                    }
                 }
-            }
-        });
+            });
+        }
     } else if (!e.target.closest('.conn-group')) {
-        // Se o mouse saiu das caixas para o fundo vazio, apaga tudo
+        // Apaga tudo se for para o fundo vazio
         document.querySelectorAll('.conn-group.hover-active').forEach(grp => {
             grp.classList.remove('hover-active');
         });
     }
-});
+}, true); // <--- A MÁGICA ESTÁ NESTE 'true' AQUI!
 
 // 5. Permite clicar na bolinha da tarefa sutil para marcar como "Concluída" direto pelo mapa
 window.toggleMinimalStatus = function(e, boxId, taskIndex) {
