@@ -1985,7 +1985,12 @@ body.playing-anim .conn-group:not(.anim-participant) {
 
 
 
-
+/* Garante que as setas excluídas pelo filtro desaparecem completamente */
+body.filtering .conn-group.dimmed {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    visibility: hidden; /* Oculta totalmente */
+}
 
 
     </style>
@@ -2383,63 +2388,62 @@ function addConnection(sid, spos, tid, tpos, existingId = null) {
     // [UPDATED] Update Elastic Parent to consider NOTES as well
     // [UPDATED] Update Elastic Parent to consider NOTES as well (Com Matemática Precisa)
     // [UPDATED] Update Elastic Parent (Com Obediência Mandatória)
-    function updateElasticParent(childrenContainer) {
-        if (!childrenContainer || !childrenContainer.classList.contains('children-area')) return;
-        const parentBox = childrenContainer.closest('.box'); if (!parentBox) return;
-        
-        // Se estiver colapsada, não muda nada
-        if (childrenContainer.classList.contains('collapsed')) {
-            calcDynamicFont(parentBox);
-            updateAllLines(); 
-            const gp = parentBox.parentElement; 
-            if (gp && gp.classList.contains('children-area')) updateElasticParent(gp); 
-            return;
-        }
-        
-        const children = Array.from(childrenContainer.children).filter(c => c.classList.contains('box') || c.classList.contains('note'));
-        let maxX = 0; let maxY = 0;
-        
-        children.forEach(child => {
-            const right = child.offsetLeft + child.offsetWidth; 
-            const bottom = child.offsetTop + child.offsetHeight;
-            if (right > maxX) maxX = right; 
-            if (bottom > maxY) maxY = bottom;
-        });
-        
-        const boxRect = parentBox.getBoundingClientRect();
-        const areaRect = childrenContainer.getBoundingClientRect();
-        const currentZoom = (typeof state !== 'undefined' && state.scale) ? state.scale : 1;
-        
-        let exactHeaderHeight = (areaRect.top - boxRect.top) / currentZoom;
-        if (exactHeaderHeight < 0 || isNaN(exactHeaderHeight)) exactHeaderHeight = 40; 
-
-        const PADDING_RIGHT = 40; 
-        const PADDING_BOTTOM = 60; 
-
-        const neededW = maxX + PADDING_RIGHT; 
-        const neededH = exactHeaderHeight + maxY + PADDING_BOTTOM;
-
-        const manualW = parseFloat(parentBox.dataset.mw) || 240; 
-        const manualH = parseFloat(parentBox.dataset.mh) || 220;
-        
-        // --- A OBEDIÊNCIA ---
-        if (parentBox.dataset.strictSize === "true") {
-            // Ignora a necessidade dos filhos e obedece cegamente a sua mão!
-            parentBox.style.width = manualW + 'px'; 
-            parentBox.style.height = manualH + 'px';
-        } else {
-            // Comportamento elástico normal
-            parentBox.style.width = Math.max(neededW, manualW) + 'px'; 
-            parentBox.style.height = Math.max(neededH, manualH) + 'px';
-        }
-        
+    // [UPDATED] Update Elastic Parent (Fundo Ajustado)
+function updateElasticParent(childrenContainer) {
+    if (!childrenContainer || !childrenContainer.classList.contains('children-area')) return;
+    const parentBox = childrenContainer.closest('.box'); if (!parentBox) return;
+    
+    // Se estiver colapsada, não muda nada
+    if (childrenContainer.classList.contains('collapsed')) {
         calcDynamicFont(parentBox);
-        
+        updateAllLines(); 
         const gp = parentBox.parentElement; 
-        if (gp && gp.classList.contains('children-area')) updateElasticParent(gp);
-        
-        updateAllLines();
+        if (gp && gp.classList.contains('children-area')) updateElasticParent(gp); 
+        return;
     }
+    
+    const children = Array.from(childrenContainer.children).filter(c => c.classList.contains('box') || c.classList.contains('note'));
+    let maxX = 0; let maxY = 0;
+    
+    children.forEach(child => {
+        const right = child.offsetLeft + child.offsetWidth; 
+        const bottom = child.offsetTop + child.offsetHeight;
+        if (right > maxX) maxX = right; 
+        if (bottom > maxY) maxY = bottom;
+    });
+    
+    const boxRect = parentBox.getBoundingClientRect();
+    const areaRect = childrenContainer.getBoundingClientRect();
+    const currentZoom = (typeof state !== 'undefined' && state.scale) ? state.scale : 1;
+    
+    let exactHeaderHeight = (areaRect.top - boxRect.top) / currentZoom;
+    if (exactHeaderHeight < 0 || isNaN(exactHeaderHeight)) exactHeaderHeight = 40; 
+
+    const PADDING_RIGHT = 40; 
+    const PADDING_BOTTOM = 15; // <--- Reduzido de 60 para 15 (Tira o excesso de fundo)
+
+    const neededW = maxX + PADDING_RIGHT; 
+    const neededH = exactHeaderHeight + maxY + PADDING_BOTTOM;
+
+    const manualW = parseFloat(parentBox.dataset.mw) || 240; 
+    const manualH = parseFloat(parentBox.dataset.mh) || 220;
+    
+    // --- A OBEDIÊNCIA MANUAL ---
+    if (parentBox.dataset.strictSize === "true") {
+        parentBox.style.width = manualW + 'px'; 
+        parentBox.style.height = manualH + 'px';
+    } else {
+        parentBox.style.width = Math.max(neededW, manualW) + 'px'; 
+        parentBox.style.height = Math.max(neededH, manualH) + 'px';
+    }
+    
+    calcDynamicFont(parentBox);
+    
+    const gp = parentBox.parentElement; 
+    if (gp && gp.classList.contains('children-area')) updateElasticParent(gp);
+    
+    updateAllLines();
+}
     
     // [UPDATED] Reparent Box (now handles notes too)
     function reparentBox(box, newParent) {
@@ -5072,16 +5076,25 @@ function executeFilters() {
 
     document.querySelectorAll('.note').forEach(n => n.classList.add('dimmed'));
 
+    // --- A NOVA LÓGICA DE SETAS (ESTRITA) ---
     connections.forEach(c => {
         const group = document.getElementById(c.id);
         if (!group) return;
+        
+        // Verifica se a origem e o destino fazem parte do filtro
         const sVisible = matches.has(c.sid) || ancestors.has(c.sid);
         const tVisible = matches.has(c.tid) || ancestors.has(c.tid);
-        if (sVisible || tVisible) group.classList.remove('dimmed');
-        else group.classList.add('dimmed');
+        
+        // A MÁGICA: Substituímos o || (OU) por && (E)
+        // A seta só sobrevive se AMBAS as pontas estiverem no filtro
+        if (sVisible && tVisible) {
+            group.classList.remove('dimmed');
+        } else {
+            group.classList.add('dimmed');
+        }
     });
 
-    calculateFilterGapStats(); 
+    calculateFilterGapStats();
 }
 
 // O Painel de Analytics (Lê as 3 Dimensões)
