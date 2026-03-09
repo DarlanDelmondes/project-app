@@ -2390,6 +2390,7 @@ function addConnection(sid, spos, tid, tpos, existingId = null) {
     // [UPDATED] Update Elastic Parent (Com Obediência Mandatória)
     // [UPDATED] Update Elastic Parent (Fundo Ajustado)
 // [UPDATED] Update Elastic Parent (Imune ao Zoom e Sem Fundo Extra)
+// [UPDATED] Update Elastic Parent (ZERO Padding no fundo)
 function updateElasticParent(childrenContainer) {
     if (!childrenContainer || !childrenContainer.classList.contains('children-area')) return;
     const parentBox = childrenContainer.closest('.box'); if (!parentBox) return;
@@ -2413,8 +2414,7 @@ function updateElasticParent(childrenContainer) {
         if (bottom > maxY) maxY = bottom;
     });
     
-    // --- A SOLUÇÃO: Medição Nativa (Ignora o Zoom) ---
-    // Em vez de usar a tela, somamos as distâncias internas reais das divs
+    // Medição Nativa (Ignora o Zoom)
     let exactHeaderHeight = 0;
     let currElement = childrenContainer;
     while (currElement && currElement !== parentBox) {
@@ -2422,11 +2422,11 @@ function updateElasticParent(childrenContainer) {
         currElement = currElement.offsetParent;
     }
     
-    // Garantia caso algo falhe
     if (exactHeaderHeight < 10 || isNaN(exactHeaderHeight)) exactHeaderHeight = 40; 
 
     const PADDING_RIGHT = 40; 
-    const PADDING_BOTTOM = 15; // Mantido o valor mínimo que você pediu!
+    // --- REMOVIDO TOTALMENTE COMO PEDIU ---
+    const PADDING_BOTTOM = 0; 
 
     const neededW = maxX + PADDING_RIGHT; 
     const neededH = exactHeaderHeight + maxY + PADDING_BOTTOM;
@@ -2434,7 +2434,7 @@ function updateElasticParent(childrenContainer) {
     const manualW = parseFloat(parentBox.dataset.mw) || 240; 
     const manualH = parseFloat(parentBox.dataset.mh) || 220;
     
-    // --- A OBEDIÊNCIA MANUAL ---
+    // Obediência Manual
     if (parentBox.dataset.strictSize === "true") {
         parentBox.style.width = manualW + 'px'; 
         parentBox.style.height = manualH + 'px';
