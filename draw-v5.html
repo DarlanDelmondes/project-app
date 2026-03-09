@@ -5965,27 +5965,37 @@ function removeAnimStep(index) {
     updateAnimBadges(); // Remove a bolinha do mapa
 }
 
+// Aplica as alterações no banco de dados
 function saveAnimEdits() {
     const anim = savedAnimations.find(a => a.id === currentEditAnimId);
     if (anim) {
         anim.title = document.getElementById('anim-edit-title').value.trim() || "Apresentação sem título";
         anim.sequence = [...tempEditSequence];
-        
         markUnsaved();
         showToast("Apresentação atualizada com sucesso!");
-        closeAnimEditor();
-        updateAnimDropdownUI(); 
     }
+    
+    // Força o desligamento de tudo, quer tenha encontrado a animação ou não
+    closeAnimEditor();
+    if (typeof updateAnimDropdownUI === 'function') updateAnimDropdownUI();
 }
 
+// O botão de "Cancelar" e a finalização do "Salvar" caem aqui
 function closeAnimEditor() {
     document.getElementById('anim-edit-sidebar').style.display = 'none';
+    
+    // Limpa a memória
     currentEditAnimId = null;
     tempEditSequence = [];
-    isEditingAnim = false; // DESLIGA O MODO DE CLIQUE NO MAPA
     
-    document.body.classList.remove('recording-anim'); 
-    document.querySelectorAll('.anim-step-badge').forEach(e => e.remove()); 
+    // --- O TIRO DE SEGURANÇA (DESLIGA OS CLIQUES) ---
+    isEditingAnim = false; 
+    window.isEditingAnim = false; // Garante que a variável global seja morta
+    if (typeof isRecordingAnim !== 'undefined') isRecordingAnim = false;
+
+    // Remove as bolinhas vermelhas e devolve o rato ao normal
+    document.body.classList.remove('recording-anim');
+    document.querySelectorAll('.anim-step-badge').forEach(e => e.remove());
     document.querySelectorAll('.highlight-focus').forEach(el => el.classList.remove('highlight-focus'));
 }
 
