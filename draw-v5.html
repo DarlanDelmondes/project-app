@@ -1941,33 +1941,47 @@ body.playing-anim .conn-group:not(.anim-participant) {
 /* ========================================================= */
 /* --- SISTEMA DE VISIBILIDADE INTELIGENTE DAS SETAS --- */
 /* ========================================================= */
+/* ========================================================= */
+/* --- SISTEMA DE VISIBILIDADE E ANIMAÇÃO DAS SETAS --- */
+/* ========================================================= */
 
-/* 1. Esconde todas as setas por padrão com transição suave */
+/* 1. Definição da Linha (Grossa e Visível) */
 .conn-group {
-    opacity: 0; 
-    transition: opacity 0.3s ease;
+    opacity: 1 !important; /* Sempre Visíveis */
+    transition: none; /* Sem transição de opacidade */
 }
 
-/* 2. Mostra a seta se você passar o mouse exatamente em cima dela */
-.conn-group:hover {
-    opacity: 1 !important;
+/* 2. O visual do "Caminho" da Seta */
+.conn-group .main-path {
+    stroke-width: 4px; /* <--- GROSSURA AUMENTADA */
+    stroke-linecap: round;
+    /* Adiciona um leve rastro para a animação das partículas brilhar */
+    filter: drop-shadow(0 0 1px rgba(16, 185, 129, 0.4)); 
 }
 
-/* 3. Mostra as setas iluminadas pelo JavaScript (ao passar na caixa) */
-.conn-group.hover-active {
-    opacity: 1 !important;
+/* 3. A MÁGICA: Partículas de Movimento (Glowing Particles) */
+/* Nós criamos um rastro tracejado animado sobre a linha principal */
+.conn-group .main-path::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    stroke: rgba(255, 255, 255, 0.8); /* Partículas Brancas e Brilhantes */
+    stroke-width: 2px;
+    stroke-dasharray: 4, 15; /* Define o tamanho da partícula (4px) e o espaço (15px) */
+    stroke-linecap: round;
+    animation: particles-flow 1.5s linear infinite; /* A animação! */
+    filter: blur(1px); /* Suaviza a partícula ✨ */
 }
 
-/* 4. Mostra as setas que fazem parte do filtro ativo (Tags/Labels) */
-body.filtering .conn-group:not(.dimmed) {
-    opacity: 1 !important;
+/* 4. Definição do Movimento da Animação */
+@keyframes particles-flow {
+    from {
+        stroke-dashoffset: 0;
+    }
+    to {
+        stroke-dashoffset: -100px; /* Move o tracejado para trás, criando o fluxo */
+    }
 }
-
-/* 5. Mantém as setas corretas visíveis durante o Modo Apresentação */
-body.playing-anim .conn-group.anim-participant {
-    opacity: 1 !important;
-}
-
 
 
 
@@ -6317,52 +6331,6 @@ function updateMinimalTaskView(boxId) {
     updateAllLines();
 }
 
-
-// =========================================================================
-// --- RADAR DE VISIBILIDADE DAS SETAS (HOVER) ---
-// =========================================================================
-// =========================================================================
-// --- RADAR DE VISIBILIDADE DAS SETAS (HOVER) - CORRIGIDO ---
-// =========================================================================
-// O "true" no final faz o evento furar o bloqueio (stopPropagation) das caixas!
-document.addEventListener('mouseover', (e) => {
-    if (document.body.classList.contains('playing-anim')) return;
-
-    const box = e.target.closest('.box');
-    
-    if (box) {
-        // Acende as setas ligadas à caixa
-        if (typeof connections !== 'undefined') {
-            connections.forEach(c => {
-                const grp = document.getElementById(c.id);
-                if (grp) {
-                    if (c.sid === box.id || c.tid === box.id) {
-                        grp.classList.add('hover-active');
-                    } else {
-                        grp.classList.remove('hover-active');
-                    }
-                }
-            });
-        }
-    } else if (!e.target.closest('.conn-group')) {
-        // Apaga tudo se for para o fundo vazio
-        document.querySelectorAll('.conn-group.hover-active').forEach(grp => {
-            grp.classList.remove('hover-active');
-        });
-    }
-}, true); // <--- A MÁGICA ESTÁ NESTE 'true' AQUI!
-
-// 5. Permite clicar na bolinha da tarefa sutil para marcar como "Concluída" direto pelo mapa
-window.toggleMinimalStatus = function(e, boxId, taskIndex) {
-    e.stopPropagation();
-    if (!state.isEditMode) return;
-    const box = document.getElementById(boxId);
-    const store = box.querySelector('.task-data-store');
-    const task = store.querySelectorAll('.task-item')[taskIndex];
-    const btn = task.querySelector('.task-status-toggle');
-    cycleTaskStatus(btn); // Muda no input real escondido
-    updateMinimalTaskView(boxId); // Atualiza a tela
-}
 
 
 
