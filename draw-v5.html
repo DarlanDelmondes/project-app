@@ -2389,6 +2389,7 @@ function addConnection(sid, spos, tid, tpos, existingId = null) {
     // [UPDATED] Update Elastic Parent to consider NOTES as well (Com Matemática Precisa)
     // [UPDATED] Update Elastic Parent (Com Obediência Mandatória)
     // [UPDATED] Update Elastic Parent (Fundo Ajustado)
+// [UPDATED] Update Elastic Parent (Imune ao Zoom e Sem Fundo Extra)
 function updateElasticParent(childrenContainer) {
     if (!childrenContainer || !childrenContainer.classList.contains('children-area')) return;
     const parentBox = childrenContainer.closest('.box'); if (!parentBox) return;
@@ -2412,15 +2413,20 @@ function updateElasticParent(childrenContainer) {
         if (bottom > maxY) maxY = bottom;
     });
     
-    const boxRect = parentBox.getBoundingClientRect();
-    const areaRect = childrenContainer.getBoundingClientRect();
-    const currentZoom = (typeof state !== 'undefined' && state.scale) ? state.scale : 1;
+    // --- A SOLUÇÃO: Medição Nativa (Ignora o Zoom) ---
+    // Em vez de usar a tela, somamos as distâncias internas reais das divs
+    let exactHeaderHeight = 0;
+    let currElement = childrenContainer;
+    while (currElement && currElement !== parentBox) {
+        exactHeaderHeight += currElement.offsetTop || 0;
+        currElement = currElement.offsetParent;
+    }
     
-    let exactHeaderHeight = (areaRect.top - boxRect.top) / currentZoom;
-    if (exactHeaderHeight < 0 || isNaN(exactHeaderHeight)) exactHeaderHeight = 40; 
+    // Garantia caso algo falhe
+    if (exactHeaderHeight < 10 || isNaN(exactHeaderHeight)) exactHeaderHeight = 40; 
 
     const PADDING_RIGHT = 40; 
-    const PADDING_BOTTOM = 15; // <--- Reduzido de 60 para 15 (Tira o excesso de fundo)
+    const PADDING_BOTTOM = 15; // Mantido o valor mínimo que você pediu!
 
     const neededW = maxX + PADDING_RIGHT; 
     const neededH = exactHeaderHeight + maxY + PADDING_BOTTOM;
