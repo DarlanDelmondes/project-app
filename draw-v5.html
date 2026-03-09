@@ -3622,6 +3622,8 @@ function repairBoxStructure() {
             const mw = sourceEl.dataset.mw;
             const mh = sourceEl.dataset.mh;
             const fScale = sourceEl.dataset.fontScale;
+
+            const strictSize = sourceEl.dataset.strictSize; // <--- ADICIONADO: Lê a trava original
             
             let status = 'neutral';
             if(sourceEl.classList.contains('red-state')) status = 'red';
@@ -3647,6 +3649,8 @@ function repairBoxStructure() {
             if(mw) newEl.dataset.mw = mw; if(mh) newEl.dataset.mh = mh;
             if(fScale) newEl.dataset.fontScale = fScale;
             
+            if(strictSize) newEl.dataset.strictSize = strictSize;
+
             if(status === 'red') newEl.classList.add('red-state');
             else if(status === 'green') newEl.classList.add('green-state');
 
@@ -4229,7 +4233,8 @@ function collectAllTasks() {
                 showTasks: box.classList.contains('show-tasks'),
                 fontScale: box.dataset.fontScale || 1, 
                 parentId: parent ? parent.id : null,
-                targetName: box.dataset.targetName || "", // <--- MUDANÇA AQUI
+                targetName: box.dataset.targetName || "", 
+                strictSize: box.dataset.strictSize, // <--- ADICIONADO AQUI: Salva a trava!
                 tasks: tasks
             });
         });
@@ -4291,6 +4296,8 @@ function collectAllTasks() {
                 el.style.left = d.x; el.style.top = d.y; el.style.width = d.w; el.style.height = d.h;
                 if(d.mw) el.dataset.mw = d.mw; if(d.mh) el.dataset.mh = d.mh;
                 
+                if(d.strictSize) el.dataset.strictSize = d.strictSize;
+
                 if(d.status === 'red') el.classList.add('red-state');
                 else if(d.status === 'green') el.classList.add('green-state');
                 
