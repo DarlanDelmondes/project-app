@@ -2382,11 +2382,12 @@ function addConnection(sid, spos, tid, tpos, existingId = null) {
     // [UPDATED] Update Elastic Parent to consider NOTES as well
     // [UPDATED] Update Elastic Parent to consider NOTES as well
     // [UPDATED] Update Elastic Parent to consider NOTES as well (Com Matemática Precisa)
+    // [UPDATED] Update Elastic Parent (Com Obediência Mandatória)
     function updateElasticParent(childrenContainer) {
         if (!childrenContainer || !childrenContainer.classList.contains('children-area')) return;
         const parentBox = childrenContainer.closest('.box'); if (!parentBox) return;
         
-        // --- LÓGICA DE CAIXA COLAPSADA ---
+        // Se estiver colapsada, não muda nada
         if (childrenContainer.classList.contains('collapsed')) {
             calcDynamicFont(parentBox);
             updateAllLines(); 
@@ -2395,7 +2396,6 @@ function addConnection(sid, spos, tid, tpos, existingId = null) {
             return;
         }
         
-        // --- LÓGICA DE CAIXA EXPANDIDA ---
         const children = Array.from(childrenContainer.children).filter(c => c.classList.contains('box') || c.classList.contains('note'));
         let maxX = 0; let maxY = 0;
         
@@ -2406,34 +2406,35 @@ function addConnection(sid, spos, tid, tpos, existingId = null) {
             if (bottom > maxY) maxY = bottom;
         });
         
-        // --- A MÁGICA DA PRECISÃO ---
         const boxRect = parentBox.getBoundingClientRect();
         const areaRect = childrenContainer.getBoundingClientRect();
         const currentZoom = (typeof state !== 'undefined' && state.scale) ? state.scale : 1;
         
-        // Mede a altura exata do cabeçalho atual (Título + Tarefas + Botões)
         let exactHeaderHeight = (areaRect.top - boxRect.top) / currentZoom;
-        if (exactHeaderHeight < 0 || isNaN(exactHeaderHeight)) exactHeaderHeight = 40; // Fallback de segurança
+        if (exactHeaderHeight < 0 || isNaN(exactHeaderHeight)) exactHeaderHeight = 40; 
 
-        // MARGENS DE RESPIRO (PADDING)
         const PADDING_RIGHT = 40; 
-        const PADDING_BOTTOM = 60; // <--- Aumentado para garantir um fundo bem confortável
+        const PADDING_BOTTOM = 60; 
 
-        // Calcula a largura e altura exatas necessárias para abraçar os filhos
         const neededW = maxX + PADDING_RIGHT; 
         const neededH = exactHeaderHeight + maxY + PADDING_BOTTOM;
 
-        // Tamanho mínimo que você definiu puxando na alça manual
         const manualW = parseFloat(parentBox.dataset.mw) || 240; 
         const manualH = parseFloat(parentBox.dataset.mh) || 220;
         
-        // A caixa assume o maior tamanho: ou o que os filhos precisam, ou o que você definiu manualmente
-        parentBox.style.width = Math.max(neededW, manualW) + 'px'; 
-        parentBox.style.height = Math.max(neededH, manualH) + 'px';
+        // --- A OBEDIÊNCIA ---
+        if (parentBox.dataset.strictSize === "true") {
+            // Ignora a necessidade dos filhos e obedece cegamente a sua mão!
+            parentBox.style.width = manualW + 'px'; 
+            parentBox.style.height = manualH + 'px';
+        } else {
+            // Comportamento elástico normal
+            parentBox.style.width = Math.max(neededW, manualW) + 'px'; 
+            parentBox.style.height = Math.max(neededH, manualH) + 'px';
+        }
         
         calcDynamicFont(parentBox);
         
-        // Sobe a árvore (Efeito Cascata)
         const gp = parentBox.parentElement; 
         if (gp && gp.classList.contains('children-area')) updateElasticParent(gp);
         
@@ -4415,97 +4416,100 @@ function collectAllTasks() {
     }
     
     // --- REDIMENSIONAMENTO UNIFICADO (COM EFEITO TRATOR NO SHIFT) ---
-function initResize(e, boxId, dir) {
-    e.stopPropagation();
-    const box = document.getElementById(boxId);
-    if (!box) return;
+    // --- REDIMENSIONAMENTO UNIFICADO (COM EFEITO TRATOR E TRAVA MANDATÓRIA) ---
+    function initResize(e, boxId, dir) {
+        e.stopPropagation();
+        const box = document.getElementById(boxId);
+        if (!box) return;
 
-    const startX = e.clientX;
-    const startY = e.clientY;
-    
-    // Tamanhos e posições iniciais
-    const startW = parseFloat(box.style.width) || box.offsetWidth;
-    const startH = parseFloat(box.style.height) || box.offsetHeight;
-    const startLeft = parseFloat(box.style.left) || 0;
-
-    // 1. MAPEAMENTO TÁTICO (Quem está no caminho?)
-    const parentContainer = box.parentElement;
-    const siblings = Array.from(parentContainer.children).filter(el => el.classList.contains('box') && el.id !== box.id);
-    
-    const myRightEdge = startLeft + startW;
-    const myBottomEdge = parseFloat(box.style.top) + startH;
-
-    const boxesToPush = siblings.map(sibling => {
-        const sLeft = parseFloat(sibling.style.left);
-        const sTop = parseFloat(sibling.style.top);
-        return {
-            el: sibling,
-            initialLeft: sLeft,
-            initialTop: sTop,
-            isRight: sLeft >= myRightEdge - 20, 
-            isBelow: sTop >= myBottomEdge - 20  
-        };
-    });
-
-    function doResize(ev) {
-        const dx = (ev.clientX - startX) / state.scale;
-        const dy = (ev.clientY - startY) / state.scale;
-
-        let newW = startW;
-        let newH = startH;
-
-        // Lógica para o canto Inferior Direito (br)
-        if (dir === 'br') {
-            newW = Math.max(150, startW + dx);
-            newH = Math.max(80, startH + dy);
-            box.style.width = newW + 'px';
-            box.style.height = newH + 'px';
-        } 
-        // Lógica para o canto Inferior Esquerdo (bl)
-        else if (dir === 'bl') {
-            newW = Math.max(150, startW - dx);
-            newH = Math.max(80, startH + dy);
-            box.style.width = newW + 'px';
-            box.style.height = newH + 'px';
-            if (newW > 150) {
-                box.style.left = (startLeft + dx) + 'px';
-            }
-        }
-
-        // 2. A MÁGICA DO TRATOR (Apenas se puxar pelo canto direito + SHIFT)
-        if (ev.shiftKey && dir === 'br') {
-            const pushX = newW - startW;
-            const pushY = newH - startH;
-
-            boxesToPush.forEach(item => {
-                if (item.isRight) item.el.style.left = (item.initialLeft + pushX) + 'px';
-                if (item.isBelow) item.el.style.top = (item.initialTop + pushY) + 'px';
-            });
-        } else {
-            // Se soltar o SHIFT, as caixas regressam à posição
-            boxesToPush.forEach(item => {
-                if (item.isRight) item.el.style.left = item.initialLeft + 'px';
-                if (item.isBelow) item.el.style.top = item.initialTop + 'px';
-            });
-        }
-
-        // Atualiza a tipografia inteligente e as setas
-        if (typeof calcDynamicFont === 'function') calcDynamicFont(box);
-        updateAllLines();
-    }
-
-    function stopResize() {
-        document.removeEventListener('mousemove', doResize);
-        document.removeEventListener('mouseup', stopResize);
+        const startX = e.clientX;
+        const startY = e.clientY;
         
-        updateAllLines();
-        markUnsaved();
+        const startW = parseFloat(box.style.width) || box.offsetWidth;
+        const startH = parseFloat(box.style.height) || box.offsetHeight;
+        const startLeft = parseFloat(box.style.left) || 0;
+
+        const parentContainer = box.parentElement;
+        const siblings = Array.from(parentContainer.children).filter(el => el.classList.contains('box') && el.id !== box.id);
+        
+        const myRightEdge = startLeft + startW;
+        const myBottomEdge = parseFloat(box.style.top) + startH;
+
+        const boxesToPush = siblings.map(sibling => {
+            const sLeft = parseFloat(sibling.style.left);
+            const sTop = parseFloat(sibling.style.top);
+            return {
+                el: sibling,
+                initialLeft: sLeft,
+                initialTop: sTop,
+                isRight: sLeft >= myRightEdge - 20, 
+                isBelow: sTop >= myBottomEdge - 20  
+            };
+        });
+
+        function doResize(ev) {
+            const dx = (ev.clientX - startX) / state.scale;
+            const dy = (ev.clientY - startY) / state.scale;
+
+            let newW = startW;
+            let newH = startH;
+
+            if (dir === 'br') {
+                newW = Math.max(150, startW + dx);
+                newH = Math.max(80, startH + dy);
+                box.style.width = newW + 'px';
+                box.style.height = newH + 'px';
+            } else if (dir === 'bl') {
+                newW = Math.max(150, startW - dx);
+                newH = Math.max(80, startH + dy);
+                box.style.width = newW + 'px';
+                box.style.height = newH + 'px';
+                if (newW > 150) {
+                    box.style.left = (startLeft + dx) + 'px';
+                }
+            }
+
+            // --- TRAVA MANDATÓRIA DE TAMANHO ---
+            // Salva o tamanho e avisa o sistema que agora QUEM MANDA É O USUÁRIO
+            box.dataset.mw = newW;
+            box.dataset.mh = newH;
+            box.dataset.strictSize = "true";
+
+            if (ev.shiftKey && dir === 'br') {
+                const pushX = newW - startW;
+                const pushY = newH - startH;
+
+                boxesToPush.forEach(item => {
+                    if (item.isRight) item.el.style.left = (item.initialLeft + pushX) + 'px';
+                    if (item.isBelow) item.el.style.top = (item.initialTop + pushY) + 'px';
+                });
+            } else {
+                boxesToPush.forEach(item => {
+                    if (item.isRight) item.el.style.left = item.initialLeft + 'px';
+                    if (item.isBelow) item.el.style.top = item.initialTop + 'px';
+                });
+            }
+
+            if (typeof calcDynamicFont === 'function') calcDynamicFont(box);
+            
+            // Obriga a caixa avó/pai a se atualizar (se você estiver redimensionando uma sub-caixa)
+            const parentArea = box.parentElement;
+            if (parentArea && parentArea.classList.contains('children-area')) updateElasticParent(parentArea);
+            
+            updateAllLines();
+        }
+
+        function stopResize() {
+            document.removeEventListener('mousemove', doResize);
+            document.removeEventListener('mouseup', stopResize);
+            
+            updateAllLines();
+            markUnsaved();
+        }
+
+        document.addEventListener('mousemove', doResize);
+        document.addEventListener('mouseup', stopResize);
     }
-
-    document.addEventListener('mousemove', doResize);
-    document.addEventListener('mouseup', stopResize);
-}
-
 
 // --- AUTO-REDIMENSIONAMENTO EM CASCATA (BOTTOM-UP) ---
 // --- AUTO-REDIMENSIONAMENTO EM CASCATA (BOTTOM-UP) CORRIGIDO ---
@@ -4552,6 +4556,12 @@ async function cascadeResizeUp(boxNode) {
     
     // Agora a altura total soma: Altura EXATA de tudo que está no topo + Tamanho dos Filhos + Rodapé
     const newHeight = Math.max(80, exactHeaderHeight + maxBottom + PADDING_BOTTOM);
+
+// --- DESTRAVA O TAMANHO MANUAL ---
+    // A Varinha Mágica cancela a trava manual e reassume o controle das margens
+    boxNode.dataset.strictSize = "false"; 
+    boxNode.dataset.mw = newWidth;
+    boxNode.dataset.mh = newHeight;
 
     // 1. Liga a animação
     boxNode.style.transition = 'width 0.3s ease-out, height 0.3s ease-out';
