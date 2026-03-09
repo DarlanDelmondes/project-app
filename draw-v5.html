@@ -2326,31 +2326,48 @@ function addConnection(sid, spos, tid, tpos, existingId = null) {
     }
 
     // [UPDATED] Update Elastic Parent to consider NOTES as well
+    // [UPDATED] Update Elastic Parent to consider NOTES as well
     function updateElasticParent(childrenContainer) {
         if (!childrenContainer || !childrenContainer.classList.contains('children-area')) return;
         const parentBox = childrenContainer.closest('.box'); if (!parentBox) return;
         
+        // --- LÓGICA DE CAIXA COLAPSADA ---
         if (childrenContainer.classList.contains('collapsed')) {
-            const manualW = parseFloat(parentBox.dataset.mw) || 200;
-            parentBox.style.width = Math.max(200, manualW) + 'px';
-            parentBox.style.height = Math.max(80, parseFloat(parentBox.dataset.mh) || 80) + 'px';
+            // MUDANÇA: Removemos a matemática que forçava a caixa a encolher.
+            // Agora ela simplesmente mantém o style.width e style.height intocados!
+            
             calcDynamicFont(parentBox);
-            const gp = parentBox.parentElement; if (gp && gp.classList.contains('children-area')) updateElasticParent(gp); 
+            updateAllLines(); // Garante que as setas acompanhem o novo visual centrado
+            
+            const gp = parentBox.parentElement; 
+            if (gp && gp.classList.contains('children-area')) updateElasticParent(gp); 
             return;
         }
         
-        // Include notes in children calculation
+        // --- LÓGICA DE CAIXA EXPANDIDA ---
         const children = Array.from(childrenContainer.children).filter(c => c.classList.contains('box') || c.classList.contains('note'));
         let maxX = 0; let maxY = 0;
+        
         children.forEach(child => {
-            const right = child.offsetLeft + child.offsetWidth; const bottom = child.offsetTop + child.offsetHeight;
-            if (right > maxX) maxX = right; if (bottom > maxY) maxY = bottom;
+            const right = child.offsetLeft + child.offsetWidth; 
+            const bottom = child.offsetTop + child.offsetHeight;
+            if (right > maxX) maxX = right; 
+            if (bottom > maxY) maxY = bottom;
         });
-        const neededW = maxX + 40; const neededH = maxY + 120 + 40;
-        const manualW = parseFloat(parentBox.dataset.mw) || 240; const manualH = parseFloat(parentBox.dataset.mh) || 220;
-        parentBox.style.width = Math.max(neededW, manualW) + 'px'; parentBox.style.height = Math.max(neededH, manualH) + 'px';
+        
+        const neededW = maxX + 40; 
+        const neededH = maxY + 120 + 40;
+        const manualW = parseFloat(parentBox.dataset.mw) || 240; 
+        const manualH = parseFloat(parentBox.dataset.mh) || 220;
+        
+        parentBox.style.width = Math.max(neededW, manualW) + 'px'; 
+        parentBox.style.height = Math.max(neededH, manualH) + 'px';
+        
         calcDynamicFont(parentBox);
-        const gp = parentBox.parentElement; if (gp && gp.classList.contains('children-area')) updateElasticParent(gp);
+        
+        const gp = parentBox.parentElement; 
+        if (gp && gp.classList.contains('children-area')) updateElasticParent(gp);
+        
         updateAllLines();
     }
     
@@ -4477,8 +4494,12 @@ async function cascadeResizeUp(boxNode) {
     // 2. Aguarda crescer
     await new Promise(r => setTimeout(r, 300));
 
-    // 3. Desliga a animação e cola as setas
+    // 3. Desliga a animação, ROTEIA AS SETAS DE FORMA INTELIGENTE e cola-as
     boxNode.style.transition = 'none';
+    
+    // ---> NOVA LINHA MÁGICA AQUI <---
+    smartRouteConnections(); 
+    
     updateAllLines();
 
     // 4. Sobe para o Avô
@@ -6053,6 +6074,79 @@ function closeTaskModal() {
     updateElasticParent(box.querySelector('.children-area'));
     currentTaskBoxId = null;
 }
+
+// =========================================================================
+// --- AUTO-ROTEAMENTO DE SETAS (SMART ROUTING) ---
+// =========================================================================
+// =========================================================================
+// --- AUTO-ROTEAMENTO DE SETAS (SMART ROUTING) - VERSÃO PROPORCIONAL ---
+// =========================================================================
+function smartRouteConnections() {
+    if (typeof connections === 'undefined') return;
+    
+    connections.forEach(c => {
+        const sourceBox = document.getElementById(c.sid || c.sourceId);
+        const targetBox = document.getElementById(c.tid || c.targetId);
+        if (!sourceBox || !targetBox) return;
+
+        // Mede as posições e tamanhos reais na tela
+        const sRect = sourceBox.getBoundingClientRect();
+        const tRect = targetBox.getBoundingClientRect();
+
+        // Encontra os centros
+        const sCenter = { x: sRect.left + sRect.width / 2, y: sRect.top + sRect.height / 2 };
+        const tCenter = { x: tRect.left + tRect.width / 2, y: tRect.top + tRect.height / 2 };
+
+        const dx = tCenter.x - sCenter.x;
+        const dy = tCenter.y - sCenter.y;
+
+        // A MÁGICA: Normaliza a distância pelo raio da caixa.
+        // Isso impede que caixas largas confundam o algoritmo de "em cima/embaixo".
+        const normalizedDx = Math.abs(dx) / (sRect.width / 2);
+        const normalizedDy = Math.abs(dy) / (sRect.height / 2);
+
+        let outPort, inPort;
+
+        // Se a força vertical (proporcional) for maior, estão empilhadas
+        if (normalizedDy > normalizedDx) {
+            if (dy > 0) { 
+                outPort = 'bottom'; // Destino está em Baixo
+                inPort = 'top'; 
+            } else { 
+                outPort = 'top';    // Destino está em Cima
+                inPort = 'bottom'; 
+            }
+        } 
+        // Se a força horizontal for maior, estão lado a lado
+        else {
+            if (dx > 0) { 
+                outPort = 'right'; // Destino está à Direita
+                inPort = 'left'; 
+            } else { 
+                outPort = 'left';  // Destino está à Esquerda
+                inPort = 'right'; 
+            }
+        }
+
+        // FORÇA BRUTA: Atualiza todas as chaves possíveis para garantir que o seu save reconheça
+        c.sPort = outPort; 
+        c.tPort = inPort;
+        c.sport = outPort; 
+        c.tport = inPort;
+        c.startPort = outPort; 
+        c.endPort = inPort;
+        c.startDir = outPort; 
+        c.endDir = inPort;
+        
+        // Garante a alteração visual se o SVG depender do HTML Data
+        const connGroup = document.getElementById(c.id);
+        if (connGroup) {
+            connGroup.dataset.sport = outPort;
+            connGroup.dataset.tport = inPort;
+        }
+    });
+}
+
 
 // 4. Cria o visual da listinha na tela
 // 4. Cria o visual da listinha na tela (Agora Compacta, Fixa e Centralizada)
