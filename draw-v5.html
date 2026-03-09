@@ -1879,6 +1879,69 @@ body.playing-anim .conn-group:not(.anim-participant) {
 
 
 
+/* ========================================================= */
+/* --- BARRA LATERAL DE EDIÇÃO DE ANIMAÇÕES --- */
+/* ========================================================= */
+#anim-edit-sidebar {
+    position: fixed;
+    top: 80px;
+    left: 20px;
+    width: 320px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    border: 1px solid #cbd5e1;
+    z-index: 100000;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    animation: slideRightFade 0.3s ease-out;
+}
+
+@keyframes slideRightFade {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.anim-edit-header { 
+    background: #f8fafc; padding: 15px; border-bottom: 1px solid #e2e8f0; 
+    display: flex; flex-direction: column; gap: 10px;
+}
+
+.anim-edit-header input {
+    font-size: 16px; font-weight: bold; color: #1e293b;
+    border: 1px solid transparent; padding: 4px 8px; border-radius: 4px;
+    background: transparent; outline: none; width: 100%; box-sizing: border-box;
+}
+.anim-edit-header input:focus { background: white; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
+
+.anim-edit-list { 
+    max-height: 60vh; overflow-y: auto; padding: 10px; background: #f1f5f9; flex-grow: 1;
+}
+
+.anim-edit-item {
+    display: flex; align-items: center; justify-content: space-between;
+    background: #fff; border: 1px solid #cbd5e1; margin-bottom: 6px; padding: 8px 12px;
+    border-radius: 6px; font-size: 12px; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+.anim-edit-item:hover { border-color: #3b82f6; box-shadow: 0 4px 8px rgba(59, 130, 246, 0.15); transform: translateX(2px); }
+
+.anim-edit-controls { display: flex; gap: 4px; }
+.anim-edit-btn { 
+    background: #f8fafc; border: 1px solid #e2e8f0; color: #475569; 
+    cursor: pointer; border-radius: 4px; padding: 4px 8px; font-size: 10px; font-weight: bold; transition: all 0.2s;
+}
+.anim-edit-btn:hover:not(:disabled) { background: #e2e8f0; color: #0f172a; }
+.anim-edit-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.anim-edit-btn.del:hover { background: #fee2e2; color: #ef4444; border-color: #fca5a5; }
+
+.anim-edit-footer {
+    padding: 15px; border-top: 1px solid #e2e8f0; background: white;
+    display: flex; justify-content: flex-end; gap: 10px;
+}
+
+
+
 /* --- BARRA DE PLAYER DE ANIMAÇÃO --- */
 #anim-player-bar {
     position: fixed;
@@ -5259,7 +5322,7 @@ function initDrag(e, id) {
     if(spacePressed) return; 
     if(!state.isEditMode) return;
     
-    if (isRecordingAnim) {
+    if (isRecordingAnim || (typeof isEditingAnim !== 'undefined' && isEditingAnim)) {
         e.stopPropagation();
         e.preventDefault();
         recordBoxStep(id);
@@ -5682,7 +5745,19 @@ function toggleAnimationRecord() {
 }
 
 // 2. Registra o clique
+// 2. Registra o clique no mapa (Serve para Gravação Nova e para Edição)
 function recordBoxStep(id) {
+    // SE ESTIVER A EDITAR UMA APRESENTAÇÃO EXISTENTE
+    if (typeof isEditingAnim !== 'undefined' && isEditingAnim) {
+        if (tempEditSequence.includes(id)) return; // Ignora se já estiver na lista
+        
+        tempEditSequence.push(id); // Adiciona ao final da lista de edição
+        renderAnimEditorList();    // Atualiza a barra lateral
+        updateAnimBadges();        // Atualiza as bolinhas vermelhas no mapa
+        return;
+    }
+
+    // SE ESTIVER A GRAVAR UMA NOVA
     if (!isRecordingAnim) return;
     if (currentRecordingSequence.includes(id)) return; 
     
@@ -5785,7 +5860,10 @@ function updateAnimDropdownUI() {
                     <span class="anim-item-steps">Passos: ${anim.sequence.length} caixas</span>
                 </div>
                 <div class="anim-actions">
-                    <button class="anim-btn" style="background:${pinBg}; border:1px solid #cbd5e1; color:${pinColor}; font-size:12px; padding:4px 6px;" onclick="togglePinAnimation('${anim.id}')" title="${anim.pinned ? 'Desafixar Filtro' : 'Fixar na Barra de Filtros'}">📌</button>
+                    <button class="anim-btn" style="background:${pinBg}; border:1px solid #cbd5e1; color:${pinColor}; font-size:12px; padding:4px 6px;" onclick="togglePinAnimation('${anim.id}')" title="${anim.pinned ? 'Desafixar Filtro' : 'Fixar na Barra'}">📌</button>
+                    
+                    <button class="anim-btn" style="background:#fef9c3; color:#ca8a04; border:1px solid #fde047; padding:4px 6px; font-size:12px;" onclick="openAnimEditor('${anim.id}')" title="Editar Ordem e Nome">✏️</button>
+                    
                     <button class="anim-btn anim-btn-del" onclick="deleteAnimation('${anim.id}')" title="Excluir">🗑️</button>
                     <button class="anim-btn anim-btn-play" onclick="startPlayback('${anim.id}')">▶ Tocar</button>
                 </div>
@@ -5793,6 +5871,198 @@ function updateAnimDropdownUI() {
         `;
     });
     listContainer.innerHTML = html;
+}
+
+// =========================================================================
+// --- EDITOR DE ANIMAÇÕES (REORDENAR E EDITAR) ---
+// =========================================================================
+let isEditingAnim = false; // A flag que liga o modo de clique no mapa
+
+function openAnimEditor(animId) {
+    const anim = savedAnimations.find(a => a.id === animId);
+    if (!anim) return;
+    
+    currentEditAnimId = animId;
+    tempEditSequence = [...anim.sequence]; 
+    isEditingAnim = true; // LIGA A INTERCEPTAÇÃO DE CLIQUES
+
+    document.getElementById('anim-dropdown-container').style.display = 'none';
+    document.getElementById('anim-edit-sidebar').style.display = 'flex';
+    document.getElementById('anim-edit-title').value = anim.title;
+
+    // Transforma o mapa num "palco de gravação" (Muda o cursor e bloqueia arrastos)
+    document.body.classList.add('recording-anim');
+
+    renderAnimEditorList();
+    updateAnimBadges(); // Acende as bolinhas vermelhas nas caixas
+}
+
+function renderAnimEditorList() {
+    const list = document.getElementById('anim-edit-list');
+    list.innerHTML = '';
+    
+    if (tempEditSequence.length === 0) {
+        list.innerHTML = '<div style="padding:20px; color:#94a3b8; font-size:12px; text-align:center;">Nenhum passo. Clique nas caixas do mapa para adicionar!</div>';
+        return;
+    }
+
+    tempEditSequence.forEach((boxId, index) => {
+        const box = document.getElementById(boxId);
+        const title = box ? box.querySelector('input.title').value : '<span style="color:#ef4444; font-style:italic;">(Caixa Excluída do Mapa)</span>';
+
+        const item = document.createElement('div');
+        item.className = 'anim-edit-item';
+        
+        item.onmouseenter = () => { if(box) box.classList.add('highlight-focus'); }
+        item.onmouseleave = () => { if(box) box.classList.remove('highlight-focus'); }
+
+        item.innerHTML = `
+            <div style="flex-grow:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right:10px;">
+                <span style="color:#94a3b8; font-family:monospace; margin-right:5px; font-weight:bold;">${index + 1}.</span> 
+                <strong style="color:#334155;">${title}</strong>
+            </div>
+            <div class="anim-edit-controls">
+                <button class="anim-edit-btn" onclick="moveAnimStep(${index}, -1)" ${index === 0 ? 'disabled' : ''} title="Subir">▲</button>
+                <button class="anim-edit-btn" onclick="moveAnimStep(${index}, 1)" ${index === tempEditSequence.length - 1 ? 'disabled' : ''} title="Descer">▼</button>
+                <button class="anim-edit-btn del" onclick="removeAnimStep(${index})" title="Remover da Apresentação">✕</button>
+            </div>
+        `;
+        list.appendChild(item);
+    });
+}
+
+// O Motor das Bolinhas Vermelhas (Sincroniza o Mapa com a Lista)
+function updateAnimBadges() {
+    // 1. Limpa todas as bolinhas antigas do mapa
+    document.querySelectorAll('.anim-step-badge').forEach(e => e.remove());
+    
+    // 2. Desenha as novas baseado na ordem atual da lista
+    tempEditSequence.forEach((boxId, index) => {
+        const box = document.getElementById(boxId);
+        if (box) {
+            const badge = document.createElement('div');
+            badge.className = 'anim-step-badge';
+            badge.innerText = index + 1; // O número da sequência
+            box.appendChild(badge);
+        }
+    });
+}
+
+function moveAnimStep(index, direction) {
+    if (index + direction < 0 || index + direction >= tempEditSequence.length) return;
+    
+    const temp = tempEditSequence[index];
+    tempEditSequence[index] = tempEditSequence[index + direction];
+    tempEditSequence[index + direction] = temp;
+    
+    renderAnimEditorList(); 
+    updateAnimBadges(); // Atualiza os números na tela na mesma hora!
+}
+
+function removeAnimStep(index) {
+    tempEditSequence.splice(index, 1);
+    renderAnimEditorList();
+    updateAnimBadges(); // Remove a bolinha do mapa
+}
+
+function saveAnimEdits() {
+    const anim = savedAnimations.find(a => a.id === currentEditAnimId);
+    if (anim) {
+        anim.title = document.getElementById('anim-edit-title').value.trim() || "Apresentação sem título";
+        anim.sequence = [...tempEditSequence];
+        
+        markUnsaved();
+        showToast("Apresentação atualizada com sucesso!");
+        closeAnimEditor();
+        updateAnimDropdownUI(); 
+    }
+}
+
+function closeAnimEditor() {
+    document.getElementById('anim-edit-sidebar').style.display = 'none';
+    currentEditAnimId = null;
+    tempEditSequence = [];
+    isEditingAnim = false; // DESLIGA O MODO DE CLIQUE NO MAPA
+    
+    document.body.classList.remove('recording-anim'); 
+    document.querySelectorAll('.anim-step-badge').forEach(e => e.remove()); 
+    document.querySelectorAll('.highlight-focus').forEach(el => el.classList.remove('highlight-focus'));
+}
+
+function renderAnimEditorList() {
+    const list = document.getElementById('anim-edit-list');
+    list.innerHTML = '';
+    
+    if (tempEditSequence.length === 0) {
+        list.innerHTML = '<div style="padding:20px; color:#94a3b8; font-size:12px; text-align:center;">Nenhum passo nesta apresentação.</div>';
+        return;
+    }
+
+    tempEditSequence.forEach((boxId, index) => {
+        const box = document.getElementById(boxId);
+        // Se a caixa foi excluída do mapa, avisa o usuário
+        const title = box ? box.querySelector('input.title').value : '<span style="color:#ef4444; font-style:italic;">(Caixa Excluída do Mapa)</span>';
+
+        const item = document.createElement('div');
+        item.className = 'anim-edit-item';
+        
+        // --- A MÁGICA DO HOVER ---
+        // Quando o rato passa no item da lista, a caixa brilha no mapa!
+        item.onmouseenter = () => { if(box) box.classList.add('highlight-focus'); }
+        item.onmouseleave = () => { if(box) box.classList.remove('highlight-focus'); }
+
+        item.innerHTML = `
+            <div style="flex-grow:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right:10px;">
+                <span style="color:#94a3b8; font-family:monospace; margin-right:5px;">${index + 1}.</span> 
+                <strong style="color:#334155;">${title}</strong>
+            </div>
+            <div class="anim-edit-controls">
+                <button class="anim-edit-btn" onclick="moveAnimStep(${index}, -1)" ${index === 0 ? 'disabled' : ''} title="Subir">▲</button>
+                <button class="anim-edit-btn" onclick="moveAnimStep(${index}, 1)" ${index === tempEditSequence.length - 1 ? 'disabled' : ''} title="Descer">▼</button>
+                <button class="anim-edit-btn del" onclick="removeAnimStep(${index})" title="Remover da Apresentação">✕</button>
+            </div>
+        `;
+        list.appendChild(item);
+    });
+}
+
+// Move o item no array temporário
+function moveAnimStep(index, direction) {
+    if (index + direction < 0 || index + direction >= tempEditSequence.length) return;
+    
+    const temp = tempEditSequence[index];
+    tempEditSequence[index] = tempEditSequence[index + direction];
+    tempEditSequence[index + direction] = temp;
+    
+    renderAnimEditorList(); // Re-desenha a lista
+}
+
+function removeAnimStep(index) {
+    tempEditSequence.splice(index, 1);
+    renderAnimEditorList();
+}
+
+// Aplica as alterações no banco de dados
+function saveAnimEdits() {
+    const anim = savedAnimations.find(a => a.id === currentEditAnimId);
+    if (anim) {
+        anim.title = document.getElementById('anim-edit-title').value.trim() || "Apresentação sem título";
+        anim.sequence = [...tempEditSequence];
+        
+        markUnsaved();
+        showToast("Apresentação atualizada com sucesso!");
+        closeAnimEditor();
+        updateAnimDropdownUI(); // Atualiza a lista do dropdown
+    }
+}
+
+function closeAnimEditor() {
+    document.getElementById('anim-edit-sidebar').style.display = 'none';
+    currentEditAnimId = null;
+    tempEditSequence = [];
+    
+    // Garante que nenhuma caixa fique presa brilhando
+    document.querySelectorAll('.highlight-focus').forEach(el => el.classList.remove('highlight-focus'));
 }
 
 // Alterna o estado de "Pinado" e avisa os filtros para atualizarem
@@ -6386,6 +6656,25 @@ function updateMinimalTaskView(boxId) {
     </div>
     <div id="anim-dd-list" class="anim-dd-list">
         </div>
+</div>
+
+
+<div id="anim-edit-sidebar" class="no-pan">
+    <div class="anim-edit-header">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; font-weight:bold; color:#64748b; text-transform:uppercase;">✏️ Editor de Apresentação</span>
+            <span style="cursor:pointer; color:#94a3b8; font-size:20px; font-weight:bold; line-height:1;" onclick="closeAnimEditor()">×</span>
+        </div>
+        <input type="text" id="anim-edit-title" title="Renomear Apresentação">
+    </div>
+    
+    <div id="anim-edit-list" class="anim-edit-list">
+        </div>
+    
+    <div class="anim-edit-footer">
+        <button class="btn-outline" style="font-size:12px; padding:6px 12px;" onclick="closeAnimEditor()">Cancelar</button>
+        <button class="btn-primary" style="font-size:12px; padding:6px 12px;" onclick="saveAnimEdits()">💾 Salvar Ordem</button>
+    </div>
 </div>
 
 
