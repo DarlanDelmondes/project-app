@@ -1134,6 +1134,27 @@ body.filtering .box.highlight-focus { animation: none !important; box-shadow: no
 .box.has-meetings .meeting-badge { display: block; }
 
 
+/* ========================================================= */
+/* --- RELATÓRIO DE PESSOAS (CONTADOR) --- */
+/* ========================================================= */
+.report-stat-card {
+    background: white; border: 1px solid #cbd5e1; border-radius: 8px; padding: 15px; margin-bottom: 15px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02); display: flex; justify-content: space-between; align-items: center;
+    transition: transform 0.2s;
+}
+.report-stat-card:hover { transform: translateX(4px); border-color: #8b5cf6; }
+.report-stat-title { font-size: 14px; font-weight: bold; color: #1e293b; display: flex; align-items: center; gap: 8px; }
+.report-stat-count { 
+    background: #e0e7ff; color: #4338ca; padding: 4px 16px; 
+    border-radius: 20px; font-weight: 900; font-size: 16px; border: 1px solid #c7d2fe;
+}
+
+/* Card do Total Geral (Destaque Escuro) */
+.report-global-card { background: #1e293b; border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+.report-global-card .report-stat-title { color: white; font-size: 16px; }
+.report-global-card .report-stat-count { background: #10b981; color: white; border: none; font-size: 18px; }
+
+
 
 
 /* --- SUB-CABEÇALHOS DO JORNAL --- */
@@ -2216,6 +2237,7 @@ body.filtering .conn-group.dimmed {
         <button id="btn-save" class="btn-primary" onclick="saveCurrentDrawing()">💾 Salvar</button>
         <button class="btn-dark" style="background:#0f766e;" onclick="openTeamModal()">👥 Equipes</button>
         <button class="btn-dark" style="background:#4338ca;" onclick="openAgendaModal()">🗓️ Agenda</button>
+        <button class="btn-dark" style="background:#8b5cf6;" onclick="openPeopleReportModal()">📊 Pessoas</button>
         <div id="last-saved-msg"></div>
         <div style="width: 1px; height: 30px; background: #ddd; margin: 0 5px;"></div>
         <button class="btn-outline" onclick="exportJSON()" title="Baixar .json">⬇ JSON</button>
@@ -7296,6 +7318,121 @@ function copyTeamsText() {
 }
 
 
+
+
+// =========================================================================
+// --- RELATÓRIO E CONTADOR DE PESSOAS ---
+// =========================================================================
+
+function openPeopleReportModal() {
+    if (!state.isEditMode) return;
+    renderPeopleReport();
+    document.getElementById('people-report-modal-overlay').style.display = 'flex';
+}
+
+function closePeopleReportModal() {
+    document.getElementById('people-report-modal-overlay').style.display = 'none';
+}
+function renderPeopleReport() {
+    const labelCounts = {}; // Armazena um Set para cada label
+    const globalPeople = new Set(); // Armazena a FORÇA DE TRABALHO TOTAL
+
+    // --- A MÁGICA ADICIONADA: Pré-carrega TODO MUNDO das Equipes ---
+    if (typeof globalTeams !== 'undefined') {
+        globalTeams.forEach(team => {
+            team.members.forEach(m => {
+                if (m.name && m.name.trim() !== '') {
+                    globalPeople.add(m.name.trim());
+                }
+            });
+        });
+    }
+
+    // Função interna de alocação
+    function addPersonToLabel(personName, labelName) {
+        if (!personName || personName === 'Nenhum') return;
+        const cleanPerson = personName.trim();
+        const cleanLabel = (labelName || "Sem Label").trim().toUpperCase();
+        
+        const team = (typeof globalTeams !== 'undefined') ? globalTeams.find(t => t.name.toLowerCase() === cleanPerson.toLowerCase()) : null;
+        
+        if (team) {
+            team.members.forEach(m => {
+                if (m.name) {
+                    globalPeople.add(m.name.trim()); // Pega os digitados manualmente também
+                    if (!labelCounts[cleanLabel]) labelCounts[cleanLabel] = new Set();
+                    labelCounts[cleanLabel].add(m.name.trim());
+                }
+            });
+        } else {
+            globalPeople.add(cleanPerson);
+            if (!labelCounts[cleanLabel]) labelCounts[cleanLabel] = new Set();
+            labelCounts[cleanLabel].add(cleanPerson);
+        }
+    }
+
+    // Varre todas as caixas do mapa para ver quem está alocado
+    document.querySelectorAll('.box').forEach(box => {
+        const title = box.querySelector('input.title').value || '';
+        
+        let boxLabels = [];
+        const regex = /(?:🏷️|#)\s*([A-Za-z0-9_À-ÿ-]+)/g;
+        let match;
+        while ((match = regex.exec(title)) !== null) {
+            boxLabels.push(match[1]);
+        }
+        if (boxLabels.length === 0) boxLabels.push("Sem Label"); 
+
+        // Pega de Reuniões
+        box.querySelectorAll('.attendee-pill span:first-child').forEach(span => {
+            const person = span.innerText;
+            boxLabels.forEach(lbl => addPersonToLabel(person, lbl));
+        });
+
+        // Pega de Tarefas
+        box.querySelectorAll('.task-item').forEach(task => {
+            const ownerEl = task.querySelector('.task-owner');
+            const labelEl = task.querySelector('.task-label');
+            
+            if (ownerEl && ownerEl.innerText !== 'Nenhum' && ownerEl.innerText !== '') {
+                const owner = ownerEl.innerText;
+                const taskLabel = (labelEl && labelEl.innerText.trim() !== '') ? labelEl.innerText : boxLabels[0];
+                addPersonToLabel(owner, taskLabel);
+            }
+        });
+    });
+
+    // --- MONTAGEM DA INTERFACE ---
+    const container = document.getElementById('people-report-body');
+    let html = `
+        <div class="report-stat-card report-global-card">
+            <span class="report-stat-title">🌍 Força de Trabalho Total</span>
+            <span class="report-stat-count">${globalPeople.size}</span>
+        </div>
+        <h4 style="margin: 20px 0 10px 0; color: #475569; font-size: 12px; text-transform: uppercase;">Pessoas Alocadas por Label</h4>
+    `;
+
+    const sortedLabels = Object.keys(labelCounts).sort();
+    
+    if (sortedLabels.length === 0 || (sortedLabels.length === 1 && sortedLabels[0] === "SEM LABEL" && labelCounts["SEM LABEL"].size === 0)) {
+        html += `<div style="text-align:center; color:#94a3b8; font-size: 12px; margin-top:20px;">Nenhuma pessoa alocada no mapa no momento.</div>`;
+    } else {
+        sortedLabels.forEach(lbl => {
+            const count = labelCounts[lbl].size;
+            if (lbl === "SEM LABEL" && count === 0) return;
+            
+            html += `
+                <div class="report-stat-card">
+                    <span class="report-stat-title">🏷️ ${lbl}</span>
+                    <span class="report-stat-count">${count}</span>
+                </div>
+            `;
+        });
+    }
+
+    container.innerHTML = html;
+}
+
 // =========================================================================
 // --- EXPORTAR E IMPORTAR EQUIPES ---
 // =========================================================================
@@ -7475,6 +7612,20 @@ function importTeams(event) {
                 
             </div>
         </div>
+    </div>
+</div>
+
+<div id="people-report-modal-overlay" class="modal-overlay">
+    <div class="modal-panel no-pan" style="width: 450px; max-height: 80vh; display: flex; flex-direction: column;">
+        <div class="dash-header">
+            <div>
+                <span class="dash-title">📊 Relatório de Engajamento</span>
+                <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Contagem de pessoas únicas envolvidas por Label.</div>
+            </div>
+            <span class="dash-close" onclick="closePeopleReportModal()">×</span>
+        </div>
+        <div class="dash-content" id="people-report-body" style="background: #f1f5f9; padding: 20px; overflow-y: auto; flex-grow: 1;">
+            </div>
     </div>
 </div>
 
