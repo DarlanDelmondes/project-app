@@ -7260,6 +7260,42 @@ function jumpToMeetingBox(boxId) {
 }
 
 
+function copyTeamsText() {
+    if (globalTeams.length === 0) {
+        showToast("⚠️ Não há equipes cadastradas para copiar.");
+        return;
+    }
+
+    // Monta o cabeçalho
+    let textOut = "👥 *Lista de Equipes e Talentos*\n\n";
+
+    // Varre todas as equipes e formata
+    globalTeams.forEach(team => {
+        textOut += `🔹 *${team.name}*\n`;
+        
+        if (team.members.length === 0) {
+            textOut += `   (Sem membros)\n`;
+        } else {
+            team.members.forEach(m => {
+                const nome = m.name || "Sem Nome";
+                const emailPart = m.email ? ` - ${m.email}` : '';
+                // Formato: • João (Líder) - joao@email.com
+                textOut += `   • ${nome} (${m.role})${emailPart}\n`;
+            });
+        }
+        textOut += `\n`; // Espaço entre equipes
+    });
+
+    // Envia o texto formatado para a Área de Transferência
+    navigator.clipboard.writeText(textOut).then(() => {
+        showToast("✅ Lista copiada! Pronta para colar no Chat.");
+    }).catch(err => {
+        console.error("Erro ao copiar: ", err);
+        showToast("❌ Erro ao copiar o texto. O seu navegador pode ter bloqueado.");
+    });
+}
+
+
 // =========================================================================
 // --- EXPORTAR E IMPORTAR EQUIPES ---
 // =========================================================================
@@ -7385,6 +7421,8 @@ function importTeams(event) {
                     
                     <button class="btn-outline" style="color: #0f766e; border-color: #ccfbf1; background: #f0fdfa;" onclick="exportTeams()" title="Baixar lista de equipes">⬇️ Exportar</button>
                     <button class="btn-outline" style="color: #0f766e; border-color: #ccfbf1; background: #f0fdfa;" onclick="document.getElementById('import-teams-file').click()" title="Carregar lista de equipes">⬆️ Importar</button>
+                    
+                    <button class="btn-outline" style="color: #4f46e5; border-color: #e0e7ff; background: #eef2ff;" onclick="copyTeamsText()" title="Copiar lista como texto para o Chat">📋 Copiar Texto</button>
                     
                     <input type="file" id="import-teams-file" accept=".json" style="display:none" onchange="importTeams(event)">
                 </div>
