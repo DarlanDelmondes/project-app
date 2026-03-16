@@ -959,6 +959,20 @@ body.filtering .box.highlight-focus { animation: none !important; box-shadow: no
             cursor: text;
         }
 
+        /* --- BARRA DE ARRASTO DO POST-IT --- */
+        .note-drag-handle {
+            height: 18px;
+            width: 100%;
+            cursor: grab;
+            background: rgba(0, 0, 0, 0.06);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            flex-shrink: 0;
+            border-radius: 2px 2px 0 0;
+        }
+        .note-drag-handle:active {
+            cursor: grabbing;
+        }
+
 /* --- CONTAINER DE CARDS LADO A LADO --- */
 .insights-container {
     display: flex;
@@ -1074,6 +1088,50 @@ body.filtering .box.highlight-focus { animation: none !important; box-shadow: no
         filter: drop-shadow(0 15px 10px rgba(0,0,0,0.15));
     }
 }
+
+
+
+
+/* ========================================================= */
+/* --- SISTEMA DE REUNIÕES (MEETINGS) --- */
+/* ========================================================= */
+.meeting-item { 
+    background: white; border: 1px solid #cbd5e1; border-radius: 8px; 
+    padding: 12px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+.meeting-row-1 { display: flex; gap: 10px; align-items: center; }
+.meeting-title { flex-grow: 1; border: none; border-bottom: 1px dashed #cbd5e1; font-weight: bold; color: #1e293b; outline: none; padding: 4px; font-size: 14px;}
+.meeting-title:focus { border-bottom-color: #6366f1; background: #f8fafc; }
+.meeting-date { border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px; font-size: 12px; color: #475569; outline: none; }
+.meeting-invite-lbl { font-size: 11px; display: flex; align-items: center; gap: 4px; color: #64748b; cursor: pointer; font-weight: bold; }
+.meeting-invite-chk { accent-color: #4f46e5; width: 14px; height: 14px; cursor: pointer; }
+
+/* Campo de Convidados (Tags/Pills) */
+.attendees-container { 
+    display: flex; flex-wrap: wrap; gap: 5px; align-items: center; 
+    border: 1px solid #e2e8f0; padding: 6px; border-radius: 4px; background: #f8fafc; min-height: 32px; cursor: text;
+}
+.attendee-pill { 
+    background: #e0e7ff; color: #4338ca; font-size: 11px; padding: 2px 8px; 
+    border-radius: 12px; display: flex; align-items: center; gap: 4px; font-weight: bold; border: 1px solid #c7d2fe;
+}
+.attendee-pill-del { cursor: pointer; color: #818cf8; font-size: 14px; line-height: 1; padding-bottom: 2px; }
+.attendee-pill-del:hover { color: #312e81; }
+.attendee-input { border: none; outline: none; background: transparent; font-size: 12px; flex-grow: 1; min-width: 150px; color: #334155; }
+
+.meeting-del-btn { color: #ef4444; background: transparent; border: none; cursor: pointer; font-weight: bold; font-size: 18px; padding: 0 5px; opacity: 0.5; transition: opacity 0.2s; }
+.meeting-item:hover .meeting-del-btn { opacity: 1; }
+.meeting-del-btn:hover { color: #b91c1c; }
+
+/* Badge na Caixa (Avisa que há reuniões) */
+.meeting-badge {
+    position: absolute; top: -12px; right: 15px;
+    background: #e0e7ff; color: #4338ca; border: 1px solid #818cf8;
+    font-size: 10px; font-weight: 900; padding: 3px 8px; border-radius: 10px;
+    display: none; pointer-events: none; z-index: 60; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+.box.has-meetings .meeting-badge { display: block; }
 
 
 
@@ -1811,6 +1869,31 @@ body.playing-anim .conn-group:not(.anim-participant) {
 
 
 
+/* ========================================================= */
+/* --- GESTOR DE EQUIPES E AUTO-EMAILS --- */
+/* ========================================================= */
+.team-card { background: #fff; border: 1px solid #cbd5e1; padding: 15px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+.team-header { display: flex; justify-content: space-between; font-size: 14px; font-weight: 800; color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px; }
+.team-member { display: flex; gap: 8px; margin-bottom: 6px; align-items: center; }
+.team-member input { border: 1px solid #cbd5e1; padding: 6px; border-radius: 4px; outline: none; font-size: 12px; color: #334155; }
+.team-member input:focus { border-color: #3b82f6; }
+.team-member select { border: 1px solid #cbd5e1; padding: 6px; border-radius: 4px; outline: none; font-size: 12px; font-weight: bold; background: #f8fafc; }
+
+/* Novo campo de E-mails na Reunião */
+.meeting-emails-out { 
+    width: 100%; border: 1px dashed #94a3b8; background: #f0f9ff; color: #0284c7; 
+    font-size: 11px; padding: 8px; border-radius: 4px; cursor: copy; margin-top: 5px; 
+    outline: none; transition: all 0.2s; font-family: monospace; font-weight: bold;
+}
+.meeting-emails-out:hover { background: #e0f2fe; border-color: #38bdf8; }
+
+
+
+
+
+
+
+
 /* --- MENU DROPDOWN DE ANIMAÇÕES --- */
 #anim-dropdown-container {
     position: fixed;
@@ -2056,6 +2139,39 @@ body.filtering .conn-group.dimmed {
 }
 
 
+
+/* ========================================================= */
+/* --- DASHBOARD DE AGENDA (CALENDÁRIO E CONVITES) --- */
+/* ========================================================= */
+.agenda-layout { display: flex; flex-direction: column; gap: 20px; height: 100%; }
+
+/* Calendário da Semana */
+.agenda-week-container { background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 15px; flex-shrink: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+.agenda-week-title { font-size: 15px; font-weight: 900; color: #1e293b; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+.agenda-week-grid { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; }
+.agenda-day-col { flex: 1; min-width: 140px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; display: flex; flex-direction: column; }
+.agenda-day-header { padding: 8px; text-align: center; font-size: 12px; font-weight: bold; color: #475569; border-bottom: 2px solid #cbd5e1; background: #f1f5f9; border-radius: 6px 6px 0 0; }
+.agenda-day-header.today { border-bottom-color: #3b82f6; color: #1d4ed8; background: #eff6ff; }
+.agenda-day-body { padding: 8px; flex-grow: 1; display: flex; flex-direction: column; gap: 8px; min-height: 80px; }
+
+/* Listas de Status (Enviados / Não Enviados) */
+.agenda-status-grid { display: flex; gap: 15px; flex-grow: 1; min-height: 0; }
+.agenda-status-col { flex: 1; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+.agenda-status-header { padding: 12px 15px; font-weight: bold; font-size: 14px; display: flex; justify-content: space-between; align-items: center; color: white; }
+.agenda-status-header.pending { background: #f59e0b; } /* Laranja para pendentes */
+.agenda-status-header.sent { background: #10b981; }    /* Verde para enviados */
+.agenda-status-body { padding: 15px; overflow-y: auto; flex-grow: 1; display: flex; flex-direction: column; gap: 10px; background: #f8fafc; }
+
+/* Card da Reunião */
+.agenda-card { background: white; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px; cursor: pointer; transition: all 0.2s; border-left: 4px solid #94a3b8; }
+.agenda-card:hover { transform: translateX(3px); border-color: #3b82f6; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+.agenda-card.urgent { border-left-color: #ef4444; } /* Vermelho para hoje/atrasado */
+.agenda-card.ok { border-left-color: #10b981; }
+.agenda-card-box-name { font-size: 10px; background: #e2e8f0; color: #475569; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 5px; font-weight: bold; }
+.agenda-card-title { font-size: 13px; font-weight: bold; color: #0f172a; margin-bottom: 4px; }
+.agenda-card-meta { font-size: 11px; color: #64748b; display: flex; justify-content: space-between; }
+
+
     </style>
 </head>
 <body>
@@ -2098,6 +2214,8 @@ body.filtering .conn-group.dimmed {
         <button class="btn-dark" onclick="openDashboard()">📂 Projetos</button>
         <button class="btn-dark" onclick="openJournal()">📰 Jornal</button>
         <button id="btn-save" class="btn-primary" onclick="saveCurrentDrawing()">💾 Salvar</button>
+        <button class="btn-dark" style="background:#0f766e;" onclick="openTeamModal()">👥 Equipes</button>
+        <button class="btn-dark" style="background:#4338ca;" onclick="openAgendaModal()">🗓️ Agenda</button>
         <div id="last-saved-msg"></div>
         <div style="width: 1px; height: 30px; background: #ddd; margin: 0 5px;"></div>
         <button class="btn-outline" onclick="exportJSON()" title="Baixar .json">⬇ JSON</button>
@@ -2199,6 +2317,28 @@ body.filtering .conn-group.dimmed {
         </div>
         <div style="padding: 15px; border-top: 1px solid #e2e8f0; text-align: right; background: white;">
             <button class="btn-primary" onclick="closeTaskModal()">Concluído / Salvar</button>
+        </div>
+    </div>
+</div>
+
+
+<div id="meeting-modal-overlay" class="modal-overlay">
+    <div class="modal-panel no-pan" style="width: 650px; max-height: 85vh;">
+        <div class="dash-header">
+            <div>
+                <span class="dash-title">📅 Reuniões Pendentes</span>
+                <div style="font-size: 12px; color: #64748b; margin-top: 4px;" id="meeting-modal-subtitle">Caixa: Nome</div>
+            </div>
+            <span class="dash-close" onclick="closeMeetingModal()">×</span>
+        </div>
+        <div class="dash-content" style="background: #f1f5f9; flex-grow: 1; overflow-y: auto; padding: 20px;">
+            
+            <div id="meeting-modal-body" style="display:flex; flex-direction:column;"></div>
+            
+            <button class="add-task-btn no-pan" style="margin-top:15px; background:white; padding:12px; font-size: 13px; font-weight: bold; border: 1px dashed #94a3b8; border-radius: 8px; cursor:pointer; width:100%; color:#475569; transition:background 0.2s;" onclick="addMeetingToModal()" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='white'">+ Agendar Nova Reunião</button>
+        </div>
+        <div style="padding: 15px; border-top: 1px solid #e2e8f0; text-align: right; background: white;">
+            <button class="btn-primary" onclick="closeMeetingModal()">Concluído / Salvar</button>
         </div>
     </div>
 </div>
@@ -2578,23 +2718,23 @@ function updateElasticParent(childrenContainer) {
 
     function createNoteElement(id, textVal, x, y, w = 150, h = 150, parent = world) {
         const el = document.createElement('div');
-        el.className = 'note no-pan-strict'; 
+        
+        // A MÁGICA: Removi o "no-pan-strict" daqui! 
+        // Agora a nota está livre para ser arrastada.
+        el.className = 'note'; 
         el.id = id;
         el.style.left = x + 'px'; 
         el.style.top = y + 'px';
         el.style.width = w + 'px'; 
         el.style.height = h + 'px';
         
+        // O interior continua igual, protegendo apenas o texto e os botões
         el.innerHTML = `
+            <div class="note-drag-handle" onmousedown="initDrag(event, '${id}')" title="Arraste a nota por aqui"></div>
             <textarea class="note-textarea no-pan-strict" oninput="markUnsaved()">${textVal}</textarea>
             <div class="note-delete no-pan-strict" onclick="deleteNote('${id}')">×</div>
             <div class="resizer bottom-right no-pan-strict" onmousedown="initResize(event, '${id}', 'br')"></div>
         `;
-        
-        // Dragging the note body (not textarea)
-        el.onmousedown = (e) => {
-            if(e.target === el) initDrag(e, id);
-        };
         
         parent.appendChild(el);
         return el;
@@ -3428,6 +3568,7 @@ function createBoxElement(id, titleVal = "Novo Item") {
     el.innerHTML = `
         <div class="context-path"></div> 
         <div class="target-badge"></div>
+        <div class="meeting-badge"></div>
         
         <div class="box-title-bar" onmousedown="initDrag(event, '${id}')" ondblclick="enableTitleEdit('${id}')">
             <div class="child-indicator" title="Contém itens"></div>
@@ -3443,6 +3584,7 @@ function createBoxElement(id, titleVal = "Novo Item") {
                 <button class="icon-btn btn-font no-pan" onclick="setBoxTarget('${id}')" title="Atribuir Cenário/Target">🎯</button>
                 
                 <button class="icon-btn btn-font no-pan" onclick="toggleTaskView('${id}')" title="Tarefas">📋</button>
+                <button class="icon-btn btn-font no-pan" onclick="openMeetingModal('${id}')" title="Gerenciar Reuniões">📅</button>
                 <button class="icon-btn btn-font no-pan" onclick="addNoteToBox('${id}')" title="Adicionar Nota">📝</button>
                 <div class="separator"></div>
                 <button class="icon-btn btn-font no-pan" onclick="adjustFontSize('${id}', -0.1)" title="Diminuir Texto">A-</button>
@@ -3462,7 +3604,8 @@ function createBoxElement(id, titleVal = "Novo Item") {
             <button class="add-task-btn no-pan" onclick="openTaskModal('${id}', true)">+ Nova Tarefa</button>
             
             <div class="task-data-store" style="display:none;"></div>
-            
+            <div class="meeting-data-store" style="display:none;"></div>
+
             <div class="children-area" id="area-${id}"></div>
         </div>
         
@@ -3743,6 +3886,20 @@ function repairBoxStructure() {
                 });
                 // Renderiza a listinha sutil na caixa clonada
                 updateMinimalTaskView(newEl.id);
+            }
+
+            // Clona as Reuniões
+            const sourceMeetings = sourceEl.querySelectorAll('.meeting-data-store .meeting-item');
+            if(sourceMeetings.length > 0) {
+                const mStore = newEl.querySelector('.meeting-data-store');
+                sourceMeetings.forEach(mItem => {
+                    const title = mItem.querySelector('.meeting-title').value;
+                    const date = mItem.querySelector('.meeting-date').value;
+                    const inviteSent = mItem.querySelector('.meeting-invite-chk').checked;
+                    const attendees = Array.from(mItem.querySelectorAll('.attendee-pill span:first-child')).map(span => span.innerText);
+                    mStore.appendChild(createMeetingElement(title, date, inviteSent, attendees));
+                });
+                updateMeetingBadge(newEl.id);
             }
 
             // 2. Clona os Filhos Recursivamente
@@ -4282,6 +4439,16 @@ function collectAllTasks() {
                 }
             });
 
+
+            const meetings = [];
+            box.querySelectorAll('.meeting-data-store .meeting-item').forEach(mItem => {
+                const title = mItem.querySelector('.meeting-title').value;
+                const date = mItem.querySelector('.meeting-date').value;
+                const inviteSent = mItem.querySelector('.meeting-invite-chk').checked;
+                const attendees = Array.from(mItem.querySelectorAll('.attendee-pill span:first-child')).map(span => span.innerText);
+                meetings.push({ title, date, inviteSent, attendees });
+            });
+
             // Get status safely
             let status = 'neutral';
             if(box.classList.contains('red-state')) status = 'red';
@@ -4322,6 +4489,7 @@ function collectAllTasks() {
             boxes: items, 
             connections: connections, 
             viewport: state,
+            teams: globalTeams, // <--- ADICIONADO AQUI
             savedAnimations: savedAnimations // <--- ARRAY ATUALIZADO
         };
     }
@@ -4331,7 +4499,9 @@ function collectAllTasks() {
 
         // --- RECUPERAÇÃO DA LISTA DE ANIMAÇÕES ---
         savedAnimations = data.savedAnimations || [];
+        globalTeams = data.teams || []; // <--- ADICIONADO AQUI
         updateAnimDropdownUI(); // Já atualiza o número no botão vermelho
+        updateAttendeeDatalist(); // <--- PREPARA O AUTO-COMPLETAR AQUI
         // -----------------------------------------
 
 
@@ -4390,6 +4560,15 @@ function collectAllTasks() {
 
                 if(d.tasks && d.tasks.length > 0) {
                     d.tasks.forEach(t => renderTask(tStore, t.text, t.status, t.owner, t.date, t.label, t.retries));
+                }
+
+                // Restaura as Reuniões
+                const mStore = el.querySelector('.meeting-data-store');
+                if(d.meetings && d.meetings.length > 0) {
+                    d.meetings.forEach(m => {
+                        mStore.appendChild(createMeetingElement(m.title, m.date, m.inviteSent, m.attendees));
+                    });
+                    updateMeetingBadge(el.id);
                 }
 
                 // Transforma os dados em interface minimalista
@@ -4749,8 +4928,9 @@ function autoLayoutChildren(boxId) {
     if (!childrenArea) return;
 
     // Busca as caixas filhas
-    let children = Array.from(childrenArea.children).filter(el => el.classList.contains('box'));
-    
+    // Busca as caixas filhas e AS NOTAS
+    let children = Array.from(childrenArea.children).filter(el => el.classList.contains('box') || el.classList.contains('note'));
+
     if (children.length === 0) {
         showToast("Não há sub-caixas aqui para organizar.");
         return;
@@ -5504,7 +5684,8 @@ function initDrag(e, id) {
             if (target && !dragItem.contains(target)) { currentDropTarget = target; currentDropTarget.classList.add('drop-active'); }
             
             // Atualiza elástico se for caixa
-            if(dragItem.classList.contains('box')) {
+            // Atualiza elástico se for caixa OU nota
+            if(dragItem.classList.contains('box') || dragItem.classList.contains('note')) {
                 updateElasticParent(dragItem.parentElement); 
             }
         }
@@ -6655,8 +6836,498 @@ function updateMinimalTaskView(boxId) {
     updateAllLines();
 }
 
+// =========================================================================
+// --- GERENCIADOR DE REUNIÕES ---
+// =========================================================================
+let currentMeetingBoxId = null;
+
+function openMeetingModal(boxId) {
+    if (!state.isEditMode) return;
+    currentMeetingBoxId = boxId;
+    const box = document.getElementById(boxId);
+    const store = box.querySelector('.meeting-data-store');
+    const modalBody = document.getElementById('meeting-modal-body');
+    
+    document.getElementById('meeting-modal-subtitle').innerText = `Caixa: ${box.querySelector('input.title').value || 'Sem título'}`;
+
+    // Move os inputs da caixa para o modal temporariamente
+    modalBody.innerHTML = '';
+    while (store.firstChild) {
+        modalBody.appendChild(store.firstChild);
+    }
+
+    document.getElementById('meeting-modal-overlay').style.display = 'flex';
+}
+
+function closeMeetingModal() {
+    if (!currentMeetingBoxId) return;
+    const box = document.getElementById(currentMeetingBoxId);
+    const store = box.querySelector('.meeting-data-store');
+    const modalBody = document.getElementById('meeting-modal-body');
+
+    // Devolve para a caixa
+    while (modalBody.firstChild) {
+        store.appendChild(modalBody.firstChild);
+    }
+
+    document.getElementById('meeting-modal-overlay').style.display = 'none';
+    updateMeetingBadge(currentMeetingBoxId);
+    currentMeetingBoxId = null;
+    markUnsaved();
+}
+
+// Cria a estrutura HTML da reunião
+// Cria a estrutura HTML da reunião (COM CAMPO DE E-MAIL E DATALIST)
+function createMeetingElement(title = "", date = "", inviteSent = false, attendees = []) {
+    const div = document.createElement('div');
+    div.className = 'meeting-item no-pan';
+    
+    // Agora o botão 'X' de deletar a pill dispara a atualização dos e-mails!
+    const attendeesHtml = attendees.map(a => `<div class="attendee-pill no-pan"><span>${a}</span><span class="attendee-pill-del" onclick="const mi = this.closest('.meeting-item'); this.parentElement.remove(); updateMeetingEmails(mi); markUnsaved();">×</span></div>`).join('');
+
+    div.innerHTML = `
+        <div class="meeting-row-1 no-pan">
+            <input class="meeting-title no-pan" value="${title}" placeholder="Assunto da Reunião..." oninput="markUnsaved()">
+            <input type="date" class="meeting-date no-pan" value="${date}" onchange="markUnsaved()">
+            <label class="meeting-invite-lbl no-pan">
+                <input type="checkbox" class="meeting-invite-chk no-pan" ${inviteSent ? 'checked' : ''} onchange="markUnsaved()"> Convite Enviado
+            </label>
+            <button class="meeting-del-btn no-pan" onclick="this.closest('.meeting-item').remove(); markUnsaved();" title="Excluir Reunião">×</button>
+        </div>
+        <div class="attendees-container no-pan" onclick="this.querySelector('.attendee-input').focus()">
+            ${attendeesHtml}
+            <input class="attendee-input no-pan" list="attendee-datalist" placeholder="Adicionar convidado (Enter)..." onkeydown="handleAttendeeInput(event, this)" onchange="handleAttendeeSelect(this)">
+        </div>
+        <input type="text" class="meeting-emails-out no-pan" readonly placeholder="E-mails para convite (adicione pessoas acima para gerar)" onclick="this.select(); document.execCommand('copy'); showToast('✅ E-mails copiados para a área de transferência!')" title="Clique para Copiar">
+    `;
+    
+    // Atualiza os e-mails assim que cria o elemento (útil no load da página)
+    setTimeout(() => updateMeetingEmails(div), 0);
+    return div;
+}
+
+// Motor de Tags (Pills) - Atualizado
+function handleAttendeeInput(e, input) {
+    if (e.key === 'Enter' || e.key === ',') {
+        e.preventDefault();
+        addPillToMeeting(input);
+    }
+}
+
+// Captura o clique no auto-completar do mouse
+function handleAttendeeSelect(input) {
+    // Timeout breve para o navegador preencher o value antes de pegarmos
+    setTimeout(() => { if (input.value.trim() !== '') addPillToMeeting(input); }, 50);
+}
+
+function addPillToMeeting(input) {
+    const val = input.value.trim().replace(/,$/, '');
+    if (val) {
+        const pill = document.createElement('div');
+        pill.className = 'attendee-pill no-pan';
+        pill.innerHTML = `<span>${val}</span><span class="attendee-pill-del" onclick="const mi = this.closest('.meeting-item'); this.parentElement.remove(); updateMeetingEmails(mi); markUnsaved();">×</span>`;
+        input.parentElement.insertBefore(pill, input);
+        input.value = '';
+        
+        // Magia: Recalcula os e-mails após adicionar!
+        updateMeetingEmails(input.closest('.meeting-item'));
+        markUnsaved();
+    }
+}
+
+// O CÉREBRO: Varre as pills, consulta o BD Global de Equipes e gera o texto com ponto e vírgula
+function updateMeetingEmails(meetingItem) {
+    if (!meetingItem) return;
+    const attendees = Array.from(meetingItem.querySelectorAll('.attendee-pill span:first-child')).map(span => span.innerText);
+    const emailSet = new Set();
+    
+    attendees.forEach(name => {
+        const cleanName = name.trim().toLowerCase();
+        
+        // 1. Verifica se a tag é o nome de uma EQUIPE inteira
+        const team = globalTeams.find(t => t.name.toLowerCase() === cleanName);
+        if (team) {
+            team.members.forEach(m => { if(m.email) emailSet.add(m.email.trim()); });
+        } else {
+            // 2. Verifica se a tag é o nome de uma PESSOA
+            globalTeams.forEach(t => {
+                const person = t.members.find(m => m.name.toLowerCase() === cleanName);
+                if (person && person.email) emailSet.add(person.email.trim());
+            });
+        }
+    });
+    
+    const outInput = meetingItem.querySelector('.meeting-emails-out');
+    if (outInput) {
+        const emailsStr = Array.from(emailSet).join('; ');
+        outInput.value = emailsStr;
+        if (emailsStr === '') outInput.placeholder = "E-mails para convite (adicione pessoas acima para gerar)";
+    }
+}
+
+function addMeetingToModal() {
+    const modalBody = document.getElementById('meeting-modal-body');
+    modalBody.appendChild(createMeetingElement());
+    markUnsaved();
+    
+    // Rola para baixo
+    const content = document.querySelector('#meeting-modal-overlay .dash-content');
+    setTimeout(() => content.scrollTop = content.scrollHeight, 50);
+}
+
+// Motor de Tags (Pills) para Convidados
+function handleAttendeeInput(e, input) {
+    if (e.key === 'Enter' || e.key === ',') {
+        e.preventDefault();
+        const val = input.value.trim().replace(/,$/, '');
+        if (val) {
+            const pill = document.createElement('div');
+            pill.className = 'attendee-pill no-pan';
+            pill.innerHTML = `<span>${val}</span><span class="attendee-pill-del" onclick="this.parentElement.remove(); markUnsaved();">×</span>`;
+            input.parentElement.insertBefore(pill, input);
+            input.value = '';
+            markUnsaved();
+        }
+    }
+}
+
+function updateMeetingBadge(boxId) {
+    const box = document.getElementById(boxId);
+    if (!box) return;
+    const store = box.querySelector('.meeting-data-store');
+    const meetings = store.querySelectorAll('.meeting-item');
+    const badge = box.querySelector('.meeting-badge');
+    
+    if (meetings.length > 0) {
+        box.classList.add('has-meetings');
+        badge.innerText = `📅 ${meetings.length}`;
+    } else {
+        box.classList.remove('has-meetings');
+    }
+}
 
 
+
+
+// =========================================================================
+// --- GESTOR DE EQUIPES E AUTO-COMPLETAR ---
+// =========================================================================
+let globalTeams = [];
+
+function openTeamModal() {
+    if (!state.isEditMode) return;
+    renderTeamManager();
+    document.getElementById('team-modal-overlay').style.display = 'flex';
+}
+
+function closeTeamModal() {
+    document.getElementById('team-modal-overlay').style.display = 'none';
+    updateAttendeeDatalist(); // Atualiza o auto-completar ao fechar
+    markUnsaved();
+}
+
+function addTeam() {
+    globalTeams.push({ id: 't_' + Date.now(), name: 'Nova Equipe', members: [] });
+    renderTeamManager();
+}
+
+function addMember(teamId) {
+    const team = globalTeams.find(t => t.id === teamId);
+    if (team) {
+        team.members.push({ name: '', email: '', role: 'Membro' });
+        renderTeamManager();
+    }
+}
+
+function removeTeam(teamId) {
+    if(confirm("Excluir equipe inteira?")) {
+        globalTeams = globalTeams.filter(t => t.id !== teamId);
+        renderTeamManager();
+    }
+}
+
+function removeMember(teamId, index) {
+    const team = globalTeams.find(t => t.id === teamId);
+    if (team) {
+        team.members.splice(index, 1);
+        renderTeamManager();
+    }
+}
+
+function renderTeamManager() {
+    const container = document.getElementById('team-modal-body');
+    if (globalTeams.length === 0) {
+        container.innerHTML = '<div style="text-align:center; color:#94a3b8; padding:30px;">Nenhuma equipe cadastrada. Clique em "+ Nova Equipe".</div>';
+        return;
+    }
+
+    let html = '';
+    globalTeams.forEach(team => {
+        let membersHtml = '';
+        team.members.forEach((m, i) => {
+            membersHtml += `
+                <div class="team-member">
+                    <input type="text" placeholder="Nome" value="${m.name}" style="flex-grow:1;" onchange="updateMemberData('${team.id}', ${i}, 'name', this.value)">
+                    <input type="email" placeholder="E-mail" value="${m.email}" style="flex-grow:1.5;" onchange="updateMemberData('${team.id}', ${i}, 'email', this.value)">
+                    <select onchange="updateMemberData('${team.id}', ${i}, 'role', this.value)">
+                        <option value="Líder" ${m.role === 'Líder' ? 'selected' : ''}>Líder</option>
+                        <option value="Membro" ${m.role === 'Membro' ? 'selected' : ''}>Membro</option>
+                        <option value="Externo" ${m.role === 'Externo' ? 'selected' : ''}>Externo</option>
+                    </select>
+                    <button class="icon-btn btn-delete" style="color:#ef4444;" onclick="removeMember('${team.id}', ${i})">×</button>
+                </div>
+            `;
+        });
+
+        html += `
+            <div class="team-card">
+                <div class="team-header">
+                    <input type="text" value="${team.name}" style="border:none; font-weight:bold; font-size:14px; outline:none; color:#0f766e;" onchange="updateTeamName('${team.id}', this.value)" placeholder="Nome da Equipe...">
+                    <button class="icon-btn" style="color:#ef4444;" onclick="removeTeam('${team.id}')">Excluir Equipe</button>
+                </div>
+                ${membersHtml}
+                <button class="btn-outline" style="font-size:11px; padding:4px 8px; margin-top:8px;" onclick="addMember('${team.id}')">+ Add Pessoa</button>
+            </div>
+        `;
+    });
+    container.innerHTML = html;
+}
+
+function updateTeamName(id, val) { const t = globalTeams.find(x => x.id === id); if(t) t.name = val; }
+function updateMemberData(teamId, idx, field, val) { const t = globalTeams.find(x => x.id === teamId); if(t && t.members[idx]) t.members[idx][field] = val; }
+
+// Atualiza o <datalist> HTML para o auto-completar nativo
+function updateAttendeeDatalist() {
+    const dl = document.getElementById('attendee-datalist');
+    if (!dl) return;
+    let html = '';
+    globalTeams.forEach(t => {
+        if(t.name) html += `<option value="${t.name}">Equipe Inteira</option>`;
+        t.members.forEach(m => {
+            if(m.name) html += `<option value="${m.name}">${t.name} - ${m.role}</option>`;
+        });
+    });
+    dl.innerHTML = html;
+}
+
+
+
+// =========================================================================
+// --- DASHBOARD DE AGENDA GLOBAL ---
+// =========================================================================
+
+function openAgendaModal() {
+    renderAgendaDashboard();
+    document.getElementById('agenda-modal-overlay').style.display = 'flex';
+}
+
+function closeAgendaModal() {
+    document.getElementById('agenda-modal-overlay').style.display = 'none';
+}
+
+function renderAgendaDashboard() {
+    // 1. Extrair estritamente 1 item por Reunião (ignora a quantidade de pessoas para não duplicar)
+    let allMeetings = [];
+    document.querySelectorAll('.box').forEach(box => {
+        const boxTitle = box.querySelector('input.title').value || 'Caixa sem nome';
+        const boxId = box.id;
+        
+        // Pega apenas o bloco raiz de cada reunião
+        box.querySelectorAll('.meeting-data-store > .meeting-item').forEach(mItem => {
+            allMeetings.push({
+                boxId: boxId,
+                boxTitle: boxTitle,
+                title: mItem.querySelector('.meeting-title').value || '(Sem Assunto)',
+                date: mItem.querySelector('.meeting-date').value,
+                inviteSent: mItem.querySelector('.meeting-invite-chk').checked
+            });
+        });
+    });
+
+    // 2. Prepara a Semana Atual
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const todayStr = today.toISOString().split('T')[0];
+    
+    // Calcula a Segunda-feira desta semana
+    const dayOfWeek = today.getDay(); 
+    const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); 
+    const monday = new Date(today.setDate(diff));
+    
+    const weekDays = [];
+    const dayNames = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex'];
+    
+    // Cria colunas de Segunda a Sexta
+    for(let i=0; i<5; i++) {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
+        const dStr = d.toISOString().split('T')[0];
+        weekDays.push({
+            dateStr: dStr,
+            isToday: dStr === todayStr,
+            label: `${dayNames[i]} (${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')})`,
+            meetings: []
+        });
+    }
+
+    // 3. Distribui as Reuniões Únicas
+    let pending = [];
+    let sent = [];
+
+    allMeetings.forEach(m => {
+        if(m.inviteSent) sent.push(m);
+        else pending.push(m);
+
+        if(m.date) {
+            const dayCol = weekDays.find(wd => wd.dateStr === m.date);
+            if(dayCol) dayCol.meetings.push(m);
+        }
+    });
+
+    // 4. Renderiza o Calendário
+    const gridEl = document.getElementById('agenda-week-grid');
+    gridEl.innerHTML = '';
+    weekDays.forEach(wd => {
+        const col = document.createElement('div');
+        col.className = 'agenda-day-col';
+        
+        let cardsHtml = wd.meetings.map(m => createAgendaCardHTML(m, wd.isToday)).join('');
+        if(cardsHtml === '') cardsHtml = `<div style="text-align:center; font-size:11px; color:#94a3b8; margin-top:10px;">Livre</div>`;
+
+        col.innerHTML = `
+            <div class="agenda-day-header ${wd.isToday ? 'today' : ''}">${wd.label}</div>
+            <div class="agenda-day-body">${cardsHtml}</div>
+        `;
+        gridEl.appendChild(col);
+    });
+
+    // 5. Renderiza as Listas
+    document.getElementById('agenda-count-pending').innerText = pending.length;
+    document.getElementById('agenda-list-pending').innerHTML = pending.map(m => createAgendaCardHTML(m, !m.date || m.date <= todayStr)).join('') || '<div style="color:#94a3b8; font-size:12px; text-align:center;">Nenhum convite pendente.</div>';
+    
+    document.getElementById('agenda-count-sent').innerText = sent.length;
+    document.getElementById('agenda-list-sent').innerHTML = sent.map(m => createAgendaCardHTML(m, false)).join('') || '<div style="color:#94a3b8; font-size:12px; text-align:center;">Nenhum convite enviado.</div>';
+}
+
+// Gera o visual do Card clicável "Puro" (Sem contagem de pessoas)
+function createAgendaCardHTML(m, isUrgent) {
+    const statusClass = m.inviteSent ? 'ok' : (isUrgent ? 'urgent' : '');
+    const dateText = m.date ? m.date.split('-').reverse().join('/') : 'Sem data';
+    
+    return `
+        <div class="agenda-card ${statusClass} no-pan" onclick="jumpToMeetingBox('${m.boxId}')" title="Clique para ir até a caixa">
+            <div class="agenda-card-box-name">📦 ${m.boxTitle}</div>
+            <div class="agenda-card-title">${m.title}</div>
+            <div class="agenda-card-meta">
+                <span>📅 ${dateText}</span>
+            </div>
+        </div>
+    `;
+}
+
+// Gera o visual do Card clicável
+function createAgendaCardHTML(m, isUrgent) {
+    const statusClass = m.inviteSent ? 'ok' : (isUrgent ? 'urgent' : '');
+    const dateText = m.date ? m.date.split('-').reverse().join('/') : 'Sem data';
+    
+    return `
+        <div class="agenda-card ${statusClass} no-pan" onclick="jumpToMeetingBox('${m.boxId}')" title="Clique para ir até a caixa">
+            <div class="agenda-card-box-name">📦 ${m.boxTitle}</div>
+            <div class="agenda-card-title">${m.title}</div>
+            <div class="agenda-card-meta">
+                <span>📅 ${dateText}</span>
+                <span>👥 ${m.attendeesCount} pess.</span>
+            </div>
+        </div>
+    `;
+}
+
+// O SUPERPODER: Clica no card e o mapa viaja até lá
+function jumpToMeetingBox(boxId) {
+    closeAgendaModal();
+    const box = document.getElementById(boxId);
+    if(box) {
+        // Tenta centralizar a tela usando a API nativa do navegador
+        box.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+        
+        // Faz a caixa piscar para você ver onde ela está
+        box.classList.add('highlight-focus');
+        setTimeout(() => box.classList.remove('highlight-focus'), 2500);
+        
+        // Abre automaticamente o gerenciador de reuniões dela!
+        setTimeout(() => openMeetingModal(boxId), 600);
+    }
+}
+
+
+// =========================================================================
+// --- EXPORTAR E IMPORTAR EQUIPES ---
+// =========================================================================
+
+function exportTeams() {
+    if (globalTeams.length === 0) {
+        showToast("⚠️ Não há equipes cadastradas para exportar.");
+        return;
+    }
+    
+    // Converte as equipes para texto JSON formatado
+    const dataStr = JSON.stringify(globalTeams, null, 2);
+    const blob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    
+    // Cria um link invisível e clica nele para forçar o download
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `minhas_equipes_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    showToast("✅ Equipes exportadas com sucesso!");
+}
+
+function importTeams(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const importedTeams = JSON.parse(e.target.result);
+            
+            if (Array.isArray(importedTeams)) {
+                // Pergunta ao usuário se ele quer Apagar o atual ou Juntar tudo
+                const overwrite = confirm("Clique em [OK] para SUBSTITUIR as equipes atuais pelo arquivo.\n\nClique em [Cancelar] para MESCLAR (juntar as importadas com as que já estão aqui).");
+                
+                if (overwrite) {
+                    globalTeams = importedTeams;
+                } else {
+                    // Previne conflitos de ID ao mesclar gerando IDs novos
+                    importedTeams.forEach(t => {
+                        t.id = 't_' + Date.now() + Math.floor(Math.random() * 10000);
+                        globalTeams.push(t);
+                    });
+                }
+
+                renderTeamManager();
+                updateAttendeeDatalist(); // Atualiza a lista do auto-completar
+                markUnsaved(); // Avisa o sistema para ativar o botão de salvar mapa
+                showToast("✅ Equipes importadas com sucesso!");
+                
+            } else {
+                showToast("❌ Erro: Formato de arquivo inválido.");
+            }
+        } catch (err) {
+            showToast("❌ Erro ao ler o arquivo JSON.");
+            console.error(err);
+        }
+    };
+    reader.readAsText(file);
+    
+    // Reseta o input para permitir importar o mesmo arquivo duas vezes seguidas, se necessário
+    event.target.value = ''; 
+}
 
 
 </script>
@@ -6695,6 +7366,79 @@ function updateMinimalTaskView(boxId) {
     </div>
 </div>
 
+
+<div id="team-modal-overlay" class="modal-overlay">
+    <div class="modal-panel no-pan" style="width: 700px; max-height: 85vh;">
+        <div class="dash-header">
+            <div>
+                <span class="dash-title">👥 Gestor de Equipes & Talentos</span>
+                <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Pessoas cadastradas aqui aparecem no auto-completar das reuniões.</div>
+            </div>
+            <span class="dash-close" onclick="closeTeamModal()">×</span>
+        </div>
+        <div class="dash-content" id="team-modal-body" style="background: #f1f5f9; flex-grow: 1; overflow-y: auto; padding: 20px;">
+            </div>
+            <div style="padding: 15px; border-top: 1px solid #e2e8f0; display:flex; justify-content:space-between; align-items: center; background: white;">
+                <div style="display:flex; gap: 8px;">
+                    <button class="btn-outline" onclick="addTeam()">+ Nova Equipe</button>
+                    <div style="width: 1px; height: 20px; background: #cbd5e1; margin: auto 5px;"></div>
+                    
+                    <button class="btn-outline" style="color: #0f766e; border-color: #ccfbf1; background: #f0fdfa;" onclick="exportTeams()" title="Baixar lista de equipes">⬇️ Exportar</button>
+                    <button class="btn-outline" style="color: #0f766e; border-color: #ccfbf1; background: #f0fdfa;" onclick="document.getElementById('import-teams-file').click()" title="Carregar lista de equipes">⬆️ Importar</button>
+                    
+                    <input type="file" id="import-teams-file" accept=".json" style="display:none" onchange="importTeams(event)">
+                </div>
+                
+                <button class="btn-primary" onclick="closeTeamModal()">💾 Salvar Talentos</button>
+            </div>
+    </div>
+</div>
+
+<datalist id="attendee-datalist"></datalist>
+
+
+
+<div id="agenda-modal-overlay" class="modal-overlay">
+    <div class="modal-panel no-pan" style="width: 900px; height: 85vh; display: flex; flex-direction: column;">
+        <div class="dash-header">
+            <div>
+                <span class="dash-title">🗓️ Centro de Comando de Reuniões</span>
+                <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Visão global de todas as agendas cadastradas nas caixas do mapa.</div>
+            </div>
+            <span class="dash-close" onclick="closeAgendaModal()">×</span>
+        </div>
+        
+        <div class="dash-content" style="background: #f1f5f9; padding: 20px; flex-grow: 1; overflow: hidden; display: flex; flex-direction: column;">
+            <div class="agenda-layout">
+                
+                <div class="agenda-week-container">
+                    <div class="agenda-week-title">📅 Calendário (Esta Semana)</div>
+                    <div class="agenda-week-grid" id="agenda-week-grid">
+                        </div>
+                </div>
+
+                <div class="agenda-status-grid">
+                    <div class="agenda-status-col">
+                        <div class="agenda-status-header pending">
+                            <span>⏳ Convites a Enviar</span>
+                            <span id="agenda-count-pending" style="background:rgba(0,0,0,0.2); padding:2px 8px; border-radius:12px; font-size:12px;">0</span>
+                        </div>
+                        <div class="agenda-status-body" id="agenda-list-pending"></div>
+                    </div>
+                    
+                    <div class="agenda-status-col">
+                        <div class="agenda-status-header sent">
+                            <span>✅ Convites Enviados</span>
+                            <span id="agenda-count-sent" style="background:rgba(0,0,0,0.2); padding:2px 8px; border-radius:12px; font-size:12px;">0</span>
+                        </div>
+                        <div class="agenda-status-body" id="agenda-list-sent"></div>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+</div>
 
 </body>
 </html>
