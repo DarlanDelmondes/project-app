@@ -5322,7 +5322,11 @@ function initDrag(e, id) {
     if(spacePressed) return; 
     if(!state.isEditMode) return;
     
-    if (isRecordingAnim || (typeof isEditingAnim !== 'undefined' && isEditingAnim)) {
+    // Trava de segurança extra forte: Só intercepta se os modos estiverem ESTRITAMENTE ligados
+    const isRec = typeof isRecordingAnim !== 'undefined' && isRecordingAnim === true;
+    const isEd = typeof isEditingAnim !== 'undefined' && isEditingAnim === true;
+
+    if (isRec || isEd) {
         e.stopPropagation();
         e.preventDefault();
         recordBoxStep(id);
