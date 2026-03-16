@@ -4393,7 +4393,6 @@ function collectAllTasks() {
                 }
 
                 // Transforma os dados em interface minimalista
-                updateMinimalTaskView(el.id);
                 // -------------------------------------------------------------
     
                 boxMap[d.id] = { el, parentId: d.parentId }; //atencao
@@ -4407,7 +4406,12 @@ function collectAllTasks() {
             } else {
                 world.appendChild(item.el); 
             }
-            if(item.el.classList.contains('box')) calcDynamicFont(item.el);
+            
+            // --- MUDANÇA AQUI: Agora que a caixa está na tela, aplicamos o visual! ---
+            if(item.el.classList.contains('box')) {
+                calcDynamicFont(item.el);
+                updateMinimalTaskView(item.el.id); // <--- ADICIONADO AQUI NO LUGAR CERTO
+            }
         });
         
         // Reconstrói conexões
