@@ -2241,6 +2241,7 @@ body.filtering .conn-group.dimmed {
 <div id="ui-layer">
     <div id="toolbar" class="no-pan">
         <button class="btn-primary" onclick="addRootBox()">+ Nova Caixa</button>
+        <button class="btn-outline" style="padding: 8px;" onclick="collapseAllBoxes()" title="Fechar/Recolher todas as caixas">🔽</button>
 
         <div style="width: 1px; height: 30px; background: #ddd; margin: 0 5px;"></div>
 
@@ -4459,6 +4460,25 @@ function collectAllTasks() {
             const btn = box.querySelector('.actions-balloon .btn-toggle');
             performToggle(box.id, btn); 
         });
+    }
+
+    function collapseAllBoxes() {
+        if (!state.isEditMode) return;
+        let changed = false;
+        
+        // Varre apenas as caixas que NÃO estão colapsadas
+        document.querySelectorAll('.box:not(.collapsed-mode)').forEach(box => {
+            const btn = box.querySelector('.actions-balloon .btn-toggle');
+            performToggle(box.id, btn); // Usa a sua função nativa de animação e fontes
+            changed = true;
+        });
+        
+        if (changed) {
+            showToast("Todas as caixas foram recolhidas.");
+            markUnsaved(); // Avisa o sistema que houve mudança visual
+        } else {
+            showToast("As caixas já estão recolhidas.");
+        }
     }
     
     function saveDataInternal() {
