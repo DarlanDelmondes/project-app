@@ -3933,8 +3933,12 @@ function repairBoxStructure() {
             if(sourceMeetings.length > 0) {
                 const mStore = newEl.querySelector('.meeting-data-store');
                 sourceMeetings.forEach(mItem => {
+                    
+                    // --- TRAVA ANTI-DUPLICAÇÃO NA CLONAGEM ---
+                    if (mItem.closest('.box') !== sourceEl) return;
+                    
                     const title = mItem.querySelector('.meeting-title').value;
-                    const teamsGroup = mItem.querySelector('.meeting-teams-group').value; // <--- COPIA O TEAMS
+                    const teamsGroup = mItem.querySelector('.meeting-teams-group').value; 
                     const date = mItem.querySelector('.meeting-date').value;
                     const inviteSent = mItem.querySelector('.meeting-invite-chk').checked;
                     const attendees = Array.from(mItem.querySelectorAll('.attendee-pill span:first-child')).map(span => span.innerText);
@@ -4486,8 +4490,13 @@ function collectAllTasks() {
             // Extract Meetings
             const meetings = [];
             box.querySelectorAll('.meeting-data-store .meeting-item').forEach(mItem => {
+                
+                // --- TRAVA ANTI-DUPLICAÇÃO NO SAVE ---
+                // Garante que só salva a reunião se ela pertencer estritamente a esta caixa!
+                if (mItem.closest('.box') !== box) return; 
+
                 const title = mItem.querySelector('.meeting-title').value;
-                const teamsGroup = mItem.querySelector('.meeting-teams-group').value; // <--- LÊ O TEAMS AQUI
+                const teamsGroup = mItem.querySelector('.meeting-teams-group').value; 
                 const date = mItem.querySelector('.meeting-date').value;
                 const inviteSent = mItem.querySelector('.meeting-invite-chk').checked;
                 const attendees = Array.from(mItem.querySelectorAll('.attendee-pill span:first-child')).map(span => span.innerText);
