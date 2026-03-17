@@ -1156,6 +1156,15 @@ body.filtering .box.highlight-focus { animation: none !important; box-shadow: no
 
 
 
+/* Campo do Grupo do Teams */
+.meeting-teams-group { 
+    border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px 8px; 
+    font-size: 12px; color: #4338ca; outline: none; width: 110px; 
+    background: #f8fafc; font-weight: bold;
+}
+.meeting-teams-group:focus { border-color: #6366f1; background: white; }
+.meeting-teams-group::placeholder { color: #94a3b8; font-weight: normal; }
+
 
 /* --- SUB-CABEÇALHOS DO JORNAL --- */
 .journal-subheader {
@@ -3916,10 +3925,13 @@ function repairBoxStructure() {
                 const mStore = newEl.querySelector('.meeting-data-store');
                 sourceMeetings.forEach(mItem => {
                     const title = mItem.querySelector('.meeting-title').value;
+                    const teamsGroup = mItem.querySelector('.meeting-teams-group').value; // <--- COPIA O TEAMS
                     const date = mItem.querySelector('.meeting-date').value;
                     const inviteSent = mItem.querySelector('.meeting-invite-chk').checked;
                     const attendees = Array.from(mItem.querySelectorAll('.attendee-pill span:first-child')).map(span => span.innerText);
-                    mStore.appendChild(createMeetingElement(title, date, inviteSent, attendees));
+                    
+                    // Clona com o teamsGroup
+                    mStore.appendChild(createMeetingElement(title, date, inviteSent, attendees, teamsGroup));
                 });
                 updateMeetingBadge(newEl.id);
             }
@@ -4462,13 +4474,17 @@ function collectAllTasks() {
             });
 
 
+            // Extract Meetings
             const meetings = [];
             box.querySelectorAll('.meeting-data-store .meeting-item').forEach(mItem => {
                 const title = mItem.querySelector('.meeting-title').value;
+                const teamsGroup = mItem.querySelector('.meeting-teams-group').value; // <--- LÊ O TEAMS AQUI
                 const date = mItem.querySelector('.meeting-date').value;
                 const inviteSent = mItem.querySelector('.meeting-invite-chk').checked;
                 const attendees = Array.from(mItem.querySelectorAll('.attendee-pill span:first-child')).map(span => span.innerText);
-                meetings.push({ title, date, inviteSent, attendees });
+                
+                // Salva com o teamsGroup
+                meetings.push({ title, date, inviteSent, attendees, teamsGroup }); 
             });
 
             // Get status safely
@@ -4588,7 +4604,8 @@ function collectAllTasks() {
                 const mStore = el.querySelector('.meeting-data-store');
                 if(d.meetings && d.meetings.length > 0) {
                     d.meetings.forEach(m => {
-                        mStore.appendChild(createMeetingElement(m.title, m.date, m.inviteSent, m.attendees));
+                        // Passa o teamsGroup (ou texto vazio se for uma reunião antiga)
+                        mStore.appendChild(createMeetingElement(m.title, m.date, m.inviteSent, m.attendees, m.teamsGroup || ""));
                     });
                     updateMeetingBadge(el.id);
                 }
@@ -6900,19 +6917,22 @@ function closeMeetingModal() {
 
 // Cria a estrutura HTML da reunião
 // Cria a estrutura HTML da reunião (COM CAMPO DE E-MAIL E DATALIST)
-function createMeetingElement(title = "", date = "", inviteSent = false, attendees = []) {
+// Cria a estrutura HTML da reunião (COM GRUPO DO TEAMS)
+function createMeetingElement(title = "", date = "", inviteSent = false, attendees = [], teamsGroup = "") {
     const div = document.createElement('div');
     div.className = 'meeting-item no-pan';
     
-    // Agora o botão 'X' de deletar a pill dispara a atualização dos e-mails!
     const attendeesHtml = attendees.map(a => `<div class="attendee-pill no-pan"><span>${a}</span><span class="attendee-pill-del" onclick="const mi = this.closest('.meeting-item'); this.parentElement.remove(); updateMeetingEmails(mi); markUnsaved();">×</span></div>`).join('');
 
     div.innerHTML = `
         <div class="meeting-row-1 no-pan">
             <input class="meeting-title no-pan" value="${title}" placeholder="Assunto da Reunião..." oninput="markUnsaved()">
+            
+            <input class="meeting-teams-group no-pan" value="${teamsGroup}" placeholder="💬 Grupo Teams..." oninput="markUnsaved()" title="Nome do Grupo/Canal do Teams">
+            
             <input type="date" class="meeting-date no-pan" value="${date}" onchange="markUnsaved()">
             <label class="meeting-invite-lbl no-pan">
-                <input type="checkbox" class="meeting-invite-chk no-pan" ${inviteSent ? 'checked' : ''} onchange="markUnsaved()"> Convite Enviado
+                <input type="checkbox" class="meeting-invite-chk no-pan" ${inviteSent ? 'checked' : ''} onchange="markUnsaved()"> Enviado
             </label>
             <button class="meeting-del-btn no-pan" onclick="this.closest('.meeting-item').remove(); markUnsaved();" title="Excluir Reunião">×</button>
         </div>
@@ -6923,7 +6943,6 @@ function createMeetingElement(title = "", date = "", inviteSent = false, attende
         <input type="text" class="meeting-emails-out no-pan" readonly placeholder="E-mails para convite (adicione pessoas acima para gerar)" onclick="this.select(); document.execCommand('copy'); showToast('✅ E-mails copiados para a área de transferência!')" title="Clique para Copiar">
     `;
     
-    // Atualiza os e-mails assim que cria o elemento (útil no load da página)
     setTimeout(() => updateMeetingEmails(div), 0);
     return div;
 }
@@ -7160,6 +7179,7 @@ function renderAgendaDashboard() {
                 boxId: boxId,
                 boxTitle: boxTitle,
                 title: mItem.querySelector('.meeting-title').value || '(Sem Assunto)',
+                teamsGroup: mItem.querySelector('.meeting-teams-group').value || '', // <--- PEGA PARA O DASHBOARD
                 date: mItem.querySelector('.meeting-date').value,
                 inviteSent: mItem.querySelector('.meeting-invite-chk').checked
             });
@@ -7236,9 +7256,15 @@ function createAgendaCardHTML(m, isUrgent) {
     const statusClass = m.inviteSent ? 'ok' : (isUrgent ? 'urgent' : '');
     const dateText = m.date ? m.date.split('-').reverse().join('/') : 'Sem data';
     
+    // Se o grupo do Teams foi preenchido, cria uma tag bonitinha
+    const teamsTag = m.teamsGroup ? `<span style="background:#e0e7ff; color:#4338ca; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:9px;">💬 ${m.teamsGroup}</span>` : '';
+    
     return `
         <div class="agenda-card ${statusClass} no-pan" onclick="jumpToMeetingBox('${m.boxId}')" title="Clique para ir até a caixa">
-            <div class="agenda-card-box-name">📦 ${m.boxTitle}</div>
+            <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom: 5px;">
+                <div class="agenda-card-box-name">📦 ${m.boxTitle}</div>
+                ${teamsTag}
+            </div>
             <div class="agenda-card-title">${m.title}</div>
             <div class="agenda-card-meta">
                 <span>📅 ${dateText}</span>
