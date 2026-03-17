@@ -4511,8 +4511,9 @@ function collectAllTasks() {
                 fontScale: box.dataset.fontScale || 1, 
                 parentId: parent ? parent.id : null,
                 targetName: box.dataset.targetName || "", 
-                strictSize: box.dataset.strictSize, // <--- ADICIONADO AQUI: Salva a trava!
-                tasks: tasks
+                strictSize: box.dataset.strictSize, 
+                tasks: tasks,
+                meetings: meetings // <--- A MÁGICA QUE FALTAVA ESTÁ AQUI!
             });
         });
         
