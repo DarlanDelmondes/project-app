@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Favoritos Pro</title>
+    <style>
+        :root {
+            --bg: #f0f2f5;
+            --primary: #6200ea;
+            --primary-hover: #4500a8;
+            --card-bg: #ffffff;
+            --text: #333;
+            --border: #ddd;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            padding-bottom: 80px; 
+        }
+
+        /* --- Botão Flutuante e Formulário --- */
+        #fab-add {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 50px;
+            height: 50px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            transition: transform 0.2s, background-color 0.2s;
+            z-index: 1000;
+        }
+        #fab-add:hover { background-color: var(--primary-hover); transform: scale(1.05); }
+
+        #form-popup {
+            position: fixed;
+            bottom: 80px;
+            left: 20px;
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            width: 250px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transform: scale(0);
+            transform-origin: bottom left;
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none; 
+        }
+        #form-popup.show {
+            transform: scale(1);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        input[type="text"] {
+            padding: 8px 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 13px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Toggle Button Group */
+        .toggle-group {
+            display: flex;
+            background: #e9ecef;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            width: 100%;
+        }
+        .toggle-group input[type="radio"] { display: none; }
+        .toggle-group label {
+            flex: 1;
+            text-align: center;
+            padding: 8px 0;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.2s;
+            color: #555;
+            user-select: none;
+        }
+        .toggle-group input[type="radio"]:checked + label {
+            background: var(--primary);
+            color: white;
+            font-weight: bold;
+        }
+
+        button.btn-submit {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 13px;
+            transition: 0.2s;
+        }
+        button.btn-submit:hover { background-color: var(--primary-hover); }
+
+        /* --- Grid & Cards --- */
+        #board {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 12px;
+            align-items: start;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            cursor: grab;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .card:active { cursor: grabbing; }
+        .card.drag-over { border: 2px dashed var(--primary); transform: scale(1.02); }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start; /* Alinha os botões ao topo caso o título tenha várias linhas */
+            border-bottom: 1px solid #f0f0f0;
+            padding-bottom: 6px;
+            gap: 8px; /* Espaço entre o título e as ações */
+        }
+
+        .card-title { 
+            font-weight: 600; 
+            margin: 0; 
+            font-size: 14px; 
+            flex: 1; 
+            word-break: break-word; /* Permite quebrar palavras longas e descer a linha */
+        }
+        
+        .card-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; /* Impede que os botões esmaguem */ }
+        .card-type { font-size: 10px; color: #666; background: #eee; padding: 2px 4px; border-radius: 4px;}
+
+        button.btn-delete { background-color: #dc3545; color: white; border: none; border-radius: 4px; padding: 4px 6px; font-size: 11px; cursor: pointer;}
+        button.btn-delete:hover { background-color: #c82333; }
+        
+        button.btn-edit { background-color: #6c757d; color: white; border: none; border-radius: 4px; padding: 4px 6px; font-size: 11px; cursor: pointer;}
+        button.btn-edit:hover { background-color: #5a6268; }
+
+        button.btn-copy { background-color: #28a745; color: white; border: none; border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer;}
+        button.btn-copy:hover { background-color: #218838; }
+
+        /* --- Groups --- */
+        .group-card { border-top: 4px solid var(--primary); }
+        .group-items { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+        .group-item { 
+            background: #fdfdfd; 
+            padding: 6px 8px; 
+            border-radius: 4px; 
+            border: 1px solid #eee; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            gap: 8px; /* Espaço para não colar no botão */
+            cursor: grab;
+        }
+        .group-item:active { cursor: grabbing; }
+        .group-item.drag-over-item { border: 1px dashed var(--primary); background: #f0f4ff; }
+
+        a { color: var(--primary); text-decoration: none; word-break: break-word; font-size: 12px;}
+        a:hover { text-decoration: underline; }
+        p { margin: 0; word-break: break-word; font-size: 12px; color: #555;}
+        .group-item span { 
+            font-size: 12px; 
+            word-break: break-word; /* Quebra em várias linhas se necessário */
+            flex: 1; /* Ocupa o espaço livre empurrando o botão para a direita */
+        }
+
+        /* --- Toasts --- */
+        #toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 1000;
+        }
+        .toast {
+            background: #333;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 13px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.3s, transform 0.3s;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        .toast.error { background: #dc3545; }
+    </style>
+</head>
+<body>
+
+    <button id="fab-add" onclick="toggleForm()">+</button>
+
+    <div id="form-popup">
+        <input type="text" id="titleInput" placeholder="Título" required>
+        
+        <div class="toggle-group">
+            <input type="radio" id="typeLink" name="typeInput" value="link" checked>
+            <label for="typeLink">Link</label>
+            
+            <input type="radio" id="typeText" name="typeInput" value="text">
+            <label for="typeText">Texto</label>
+        </div>
+
+        <input type="text" id="contentInput" placeholder="URL ou Texto Copiável" required>
+        <button class="btn-submit" onclick="addItem()">Salvar Favorito</button>
+    </div>
+
+    <div id="board">
+        </div>
+
+    <div id="toast-container"></div>
+
+    <script>
+        // --- Estado & LocalStorage ---
+        const STORAGE_KEY = 'favoritosProData';
+        let items = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+
+        function saveData() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+        }
+
+        const board = document.getElementById('board');
+
+        // --- Controle do Formulário ---
+        function toggleForm() {
+            const popup = document.getElementById('form-popup');
+            const fab = document.getElementById('fab-add');
+            
+            popup.classList.toggle('show');
+            
+            if (popup.classList.contains('show')) {
+                fab.innerText = '×';
+                fab.style.backgroundColor = '#dc3545'; 
+                document.getElementById('titleInput').focus();
+            } else {
+                fab.innerText = '+';
+                fab.style.backgroundColor = 'var(--primary)';
+            }
+        }
+
+        // --- Toasts ---
+        function showToast(message, isError = false) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${isError ? 'error' : ''}`;
+            toast.textContent = message;
+            
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.add('show'), 10);
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // --- Renderização ---
+        function render() {
+            board.innerHTML = '';
+            
+            if (items.length === 0) {
+                board.innerHTML = '<p style="color: #777; width: 100%; text-align: left;">Nenhum favorito salvo. Clique no "+" para começar!</p>';
+                return;
+            }
+
+            items.forEach(item => {
+                const card = document.createElement('div');
+                card.className = `card ${item.type === 'group' ? 'group-card' : ''}`;
+                card.draggable = true;
+                card.dataset.id = item.id;
+
+                card.addEventListener('dragstart', handleDragStart);
+                card.addEventListener('dragover', handleDragOver);
+                card.addEventListener('dragleave', handleDragLeave);
+                card.addEventListener('drop', handleDrop);
+
+                let contentHTML = '';
+
+                if (item.type === 'link') {
+                    contentHTML = `<a href="${item.content}" target="_blank">${item.content}</a>`;
+                } else if (item.type === 'text') {
+                    contentHTML = `
+                        <p>${item.content}</p>
+                        <button class="btn-copy" onclick="copyText('${item.content}')">Copiar</button>
+                    `;
+                } else if (item.type === 'group') {
+                    contentHTML = `<div class="group-items">`;
+                    item.children.forEach(child => {
+                        let childAction = child.type === 'link' 
+                            ? `<a href="${child.content}" target="_blank">Abrir</a>`
+                            : `<button class="btn-copy" onclick="copyText('${child.content}')">Copiar</button>`;
+                        
+                        contentHTML += `
+                            <div class="group-item" draggable="true" data-child-id="${child.id}" data-parent-id="${item.id}">
+                                <span><strong>${child.title}</strong></span>
+                                ${childAction}
+                            </div>
+                        `;
+                    });
+                    contentHTML += `</div>`;
+                }
+
+                card.innerHTML = `
+                    <div class="card-header">
+                        <h3 class="card-title">${item.title}</h3>
+                        <div class="card-actions">
+                            <span class="card-type">${item.type}</span>
+                            <button class="btn-edit" onclick="editTitle('${item.id}')" title="Renomear">✎</button>
+                            <button class="btn-delete" onclick="deleteItem('${item.id}')" title="Excluir">X</button>
+                        </div>
+                    </div>
+                    ${contentHTML}
+                `;
+
+                board.appendChild(card);
+            });
+
+            document.querySelectorAll('.group-item').forEach(el => {
+                el.addEventListener('dragstart', handleInnerDragStart);
+                el.addEventListener('dragover', handleInnerDragOver);
+                el.addEventListener('dragleave', handleInnerDragLeave);
+                el.addEventListener('drop', handleInnerDrop);
+            });
+        }
+
+        // --- CRUD ---
+        function addItem() {
+            const title = document.getElementById('titleInput').value.trim();
+            const type = document.querySelector('input[name="typeInput"]:checked').value;
+            const content = document.getElementById('contentInput').value.trim();
+
+            if (!title || !content) {
+                showToast("Preencha o título e o conteúdo!", true);
+                return;
+            }
+
+            items.push({
+                id: Date.now().toString(),
+                type: type,
+                title: title,
+                content: content
+            });
+
+            document.getElementById('titleInput').value = '';
+            document.getElementById('contentInput').value = '';
+            
+            toggleForm(); 
+            saveData();   
+            showToast("Favorito adicionado!");
+            render();
+        }
+
+        function deleteItem(id) {
+            items = items.filter(item => item.id !== id);
+            saveData();
+            showToast("Item removido.");
+            render();
+        }
+
+        function editTitle(id) {
+            const item = items.find(i => i.id === id);
+            if (!item) return;
+
+            const newTitle = prompt("Digite o novo título:", item.title);
+            
+            if (newTitle !== null && newTitle.trim() !== "") {
+                item.title = newTitle.trim();
+                saveData();
+                render();
+                showToast("Título atualizado!");
+            }
+        }
+
+        function copyText(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Texto copiado!');
+            });
+        }
+
+        // --- Drag and Drop: Cards Principais ---
+        let draggedId = null;
+
+        function handleDragStart(e) {
+            if (e.target.classList.contains('group-item')) return;
+            draggedId = this.dataset.id;
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault(); 
+            if (draggedId && draggedId !== this.dataset.id) {
+                this.classList.add('drag-over');
+            }
+        }
+
+        function handleDragLeave(e) {
+            this.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            this.classList.remove('drag-over');
+            
+            if (draggedInnerId) return;
+
+            const targetId = this.dataset.id;
+            if (!draggedId || draggedId === targetId) return;
+
+            const draggedIndex = items.findIndex(i => i.id === draggedId);
+            const targetIndex = items.findIndex(i => i.id === targetId);
+            
+            if (draggedIndex === -1 || targetIndex === -1) return;
+
+            const draggedItem = items[draggedIndex];
+            const targetItem = items[targetIndex];
+
+            items.splice(draggedIndex, 1);
+
+            if (targetItem.type === 'group') {
+                targetItem.children.push(draggedItem);
+                showToast("Adicionado ao grupo!");
+            } else {
+                const newGroup = {
+                    id: 'g_' + Date.now(),
+                    type: 'group',
+                    title: 'Novo Grupo',
+                    children: [targetItem, draggedItem]
+                };
+                
+                const newTargetIndex = items.findIndex(i => i.id === targetId);
+                items[newTargetIndex] = newGroup;
+                showToast("Novo grupo criado!");
+            }
+
+            draggedId = null;
+            saveData();
+            render();
+        }
+
+        // --- Drag and Drop: Reordenação Interna ---
+        let draggedInnerId = null;
+        let draggedInnerParentId = null;
+
+        function handleInnerDragStart(e) {
+            e.stopPropagation(); 
+            draggedInnerId = this.dataset.childId;
+            draggedInnerParentId = this.dataset.parentId;
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleInnerDragOver(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (draggedInnerParentId === this.dataset.parentId && draggedInnerId !== this.dataset.childId) {
+                this.classList.add('drag-over-item');
+            }
+        }
+
+        function handleInnerDragLeave(e) {
+            e.stopPropagation();
+            this.classList.remove('drag-over-item');
+        }
+
+        function handleInnerDrop(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.classList.remove('drag-over-item');
+
+            const targetInnerId = this.dataset.childId;
+            const targetParentId = this.dataset.parentId;
+
+            if (draggedInnerParentId !== targetParentId || draggedInnerId === targetInnerId) {
+                draggedInnerId = null;
+                return;
+            }
+
+            const group = items.find(i => i.id === targetParentId);
+            if (!group) return;
+
+            const draggedIndex = group.children.findIndex(c => c.id === draggedInnerId);
+            const targetIndex = group.children.findIndex(c => c.id === targetInnerId);
+
+            const [movedItem] = group.children.splice(draggedIndex, 1);
+            group.children.splice(targetIndex, 0, movedItem);
+
+            draggedInnerId = null;
+            saveData();
+            render();
+        }
+
+        // Inicializa
+        render();
+    </script>
+</body>
+</html>
