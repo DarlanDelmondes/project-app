@@ -1263,6 +1263,15 @@ body.filtering .box.highlight-focus { animation: none !important; box-shadow: no
     z-index: 20;
 }
 
+
+/* Campo de E-mails (Somente Líderes) */
+.meeting-emails-out-leaders { 
+    width: 100%; border: 1px dashed #b45309; background: #fffbeb; color: #b45309; 
+    font-size: 11px; padding: 8px; border-radius: 4px; cursor: copy; margin-top: 5px; 
+    outline: none; transition: all 0.2s; font-family: monospace; font-weight: bold;
+}
+.meeting-emails-out-leaders:hover { background: #fef3c7; border-color: #d97706; }
+
 /* Área de Scroll Horizontal */
 
 
@@ -6918,6 +6927,7 @@ function closeMeetingModal() {
 // Cria a estrutura HTML da reunião
 // Cria a estrutura HTML da reunião (COM CAMPO DE E-MAIL E DATALIST)
 // Cria a estrutura HTML da reunião (COM GRUPO DO TEAMS)
+// Cria a estrutura HTML da reunião (COM 2 CAMPOS DE E-MAIL)
 function createMeetingElement(title = "", date = "", inviteSent = false, attendees = [], teamsGroup = "") {
     const div = document.createElement('div');
     div.className = 'meeting-item no-pan';
@@ -6927,9 +6937,7 @@ function createMeetingElement(title = "", date = "", inviteSent = false, attende
     div.innerHTML = `
         <div class="meeting-row-1 no-pan">
             <input class="meeting-title no-pan" value="${title}" placeholder="Assunto da Reunião..." oninput="markUnsaved()">
-            
             <input class="meeting-teams-group no-pan" value="${teamsGroup}" placeholder="💬 Grupo Teams..." oninput="markUnsaved()" title="Nome do Grupo/Canal do Teams">
-            
             <input type="date" class="meeting-date no-pan" value="${date}" onchange="markUnsaved()">
             <label class="meeting-invite-lbl no-pan">
                 <input type="checkbox" class="meeting-invite-chk no-pan" ${inviteSent ? 'checked' : ''} onchange="markUnsaved()"> Enviado
@@ -6940,7 +6948,10 @@ function createMeetingElement(title = "", date = "", inviteSent = false, attende
             ${attendeesHtml}
             <input class="attendee-input no-pan" list="attendee-datalist" placeholder="Adicionar convidado (Enter)..." onkeydown="handleAttendeeInput(event, this)" onchange="handleAttendeeSelect(this)">
         </div>
-        <input type="text" class="meeting-emails-out no-pan" readonly placeholder="E-mails para convite (adicione pessoas acima para gerar)" onclick="this.select(); document.execCommand('copy'); showToast('✅ E-mails copiados para a área de transferência!')" title="Clique para Copiar">
+        
+        <input type="text" class="meeting-emails-out no-pan" readonly placeholder="E-mails (Todos os convidados)..." onclick="this.select(); document.execCommand('copy'); showToast('✅ Todos os e-mails copiados!')" title="Clique para Copiar Todos">
+        
+        <input type="text" class="meeting-emails-out-leaders no-pan" readonly placeholder="E-mails (Somente Líderes)..." onclick="this.select(); document.execCommand('copy'); showToast('👑 E-mails dos Líderes copiados!')" title="Clique para Copiar apenas os Líderes">
     `;
     
     setTimeout(() => updateMeetingEmails(div), 0);
@@ -6977,10 +6988,13 @@ function addPillToMeeting(input) {
 }
 
 // O CÉREBRO: Varre as pills, consulta o BD Global de Equipes e gera o texto com ponto e vírgula
+// O CÉREBRO: Varre as pills, consulta o BD Global e separa Todos x Líderes
 function updateMeetingEmails(meetingItem) {
     if (!meetingItem) return;
     const attendees = Array.from(meetingItem.querySelectorAll('.attendee-pill span:first-child')).map(span => span.innerText);
-    const emailSet = new Set();
+    
+    const allEmailSet = new Set();
+    const leaderEmailSet = new Set(); // Lista exclusiva para líderes
     
     attendees.forEach(name => {
         const cleanName = name.trim().toLowerCase();
@@ -6988,21 +7002,39 @@ function updateMeetingEmails(meetingItem) {
         // 1. Verifica se a tag é o nome de uma EQUIPE inteira
         const team = globalTeams.find(t => t.name.toLowerCase() === cleanName);
         if (team) {
-            team.members.forEach(m => { if(m.email) emailSet.add(m.email.trim()); });
+            team.members.forEach(m => { 
+                if(m.email) {
+                    allEmailSet.add(m.email.trim());
+                    // Se a pessoa tiver o cargo de Líder, vai para a segunda lista também
+                    if (m.role === 'Líder') leaderEmailSet.add(m.email.trim());
+                } 
+            });
         } else {
-            // 2. Verifica se a tag é o nome de uma PESSOA
+            // 2. Verifica se a tag é o nome de uma PESSOA específica
             globalTeams.forEach(t => {
                 const person = t.members.find(m => m.name.toLowerCase() === cleanName);
-                if (person && person.email) emailSet.add(person.email.trim());
+                if (person && person.email) {
+                    allEmailSet.add(person.email.trim());
+                    if (person.role === 'Líder') leaderEmailSet.add(person.email.trim());
+                }
             });
         }
     });
     
-    const outInput = meetingItem.querySelector('.meeting-emails-out');
-    if (outInput) {
-        const emailsStr = Array.from(emailSet).join('; ');
-        outInput.value = emailsStr;
-        if (emailsStr === '') outInput.placeholder = "E-mails para convite (adicione pessoas acima para gerar)";
+    // Atualiza o campo azul (TODOS)
+    const outInputAll = meetingItem.querySelector('.meeting-emails-out');
+    if (outInputAll) {
+        const emailsStr = Array.from(allEmailSet).join('; ');
+        outInputAll.value = emailsStr;
+        if (emailsStr === '') outInputAll.placeholder = "E-mails (Todos os convidados)...";
+    }
+
+    // Atualiza o campo amarelo (LÍDERES)
+    const outInputLeaders = meetingItem.querySelector('.meeting-emails-out-leaders');
+    if (outInputLeaders) {
+        const leadersStr = Array.from(leaderEmailSet).join('; ');
+        outInputLeaders.value = leadersStr;
+        if (leadersStr === '') outInputLeaders.placeholder = "E-mails (Somente Líderes)...";
     }
 }
 
