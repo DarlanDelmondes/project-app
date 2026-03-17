@@ -2354,7 +2354,7 @@ body.filtering .conn-group.dimmed {
 
 
 <div id="meeting-modal-overlay" class="modal-overlay">
-    <div class="modal-panel no-pan" style="width: 650px; max-height: 85vh;">
+    <div class="modal-panel no-pan" style="width: 850px; max-height: 90vh;">
         <div class="dash-header">
             <div>
                 <span class="dash-title">📅 Reuniões Pendentes</span>
@@ -7167,21 +7167,32 @@ function closeAgendaModal() {
 }
 
 function renderAgendaDashboard() {
-    // 1. Extrair estritamente 1 item por Reunião (ignora a quantidade de pessoas para não duplicar)
     let allMeetings = [];
+    
+    // 1. Extração Blindada (Sem repetições e com contagem de pessoas)
     document.querySelectorAll('.box').forEach(box => {
         const boxTitle = box.querySelector('input.title').value || 'Caixa sem nome';
         const boxId = box.id;
         
-        // Pega apenas o bloco raiz de cada reunião
+        // O ">" garante que ele não leia elementos filhos perdidos, evitando duplicações
         box.querySelectorAll('.meeting-data-store > .meeting-item').forEach(mItem => {
+            const titleInput = mItem.querySelector('.meeting-title');
+            const dateInput = mItem.querySelector('.meeting-date');
+            const inviteChk = mItem.querySelector('.meeting-invite-chk');
+            const teamsInput = mItem.querySelector('.meeting-teams-group');
+            
+            // Conta e lista os convidados de forma segura
+            const attendees = Array.from(mItem.querySelectorAll('.attendee-pill span:first-child')).map(span => span.innerText);
+
             allMeetings.push({
                 boxId: boxId,
                 boxTitle: boxTitle,
-                title: mItem.querySelector('.meeting-title').value || '(Sem Assunto)',
-                teamsGroup: mItem.querySelector('.meeting-teams-group').value || '', // <--- PEGA PARA O DASHBOARD
-                date: mItem.querySelector('.meeting-date').value,
-                inviteSent: mItem.querySelector('.meeting-invite-chk').checked
+                title: titleInput ? titleInput.value : '(Sem Assunto)',
+                teamsGroup: teamsInput ? teamsInput.value : '',
+                date: dateInput ? dateInput.value : '',
+                inviteSent: inviteChk ? inviteChk.checked : false,
+                attendeesCount: attendees.length,
+                attendeesNames: attendees.join(', ') // Usado para o tooltip de hover
             });
         });
     });
@@ -7191,7 +7202,6 @@ function renderAgendaDashboard() {
     today.setHours(0,0,0,0);
     const todayStr = today.toISOString().split('T')[0];
     
-    // Calcula a Segunda-feira desta semana
     const dayOfWeek = today.getDay(); 
     const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); 
     const monday = new Date(today.setDate(diff));
@@ -7199,7 +7209,6 @@ function renderAgendaDashboard() {
     const weekDays = [];
     const dayNames = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex'];
     
-    // Cria colunas de Segunda a Sexta
     for(let i=0; i<5; i++) {
         const d = new Date(monday);
         d.setDate(monday.getDate() + i);
@@ -7251,36 +7260,21 @@ function renderAgendaDashboard() {
     document.getElementById('agenda-list-sent').innerHTML = sent.map(m => createAgendaCardHTML(m, false)).join('') || '<div style="color:#94a3b8; font-size:12px; text-align:center;">Nenhum convite enviado.</div>';
 }
 
-// Gera o visual do Card clicável "Puro" (Sem contagem de pessoas)
+// Gera o visual do Card clicável (Agora com Pessoas e Sem Undefined!)
 function createAgendaCardHTML(m, isUrgent) {
     const statusClass = m.inviteSent ? 'ok' : (isUrgent ? 'urgent' : '');
     const dateText = m.date ? m.date.split('-').reverse().join('/') : 'Sem data';
-    
-    // Se o grupo do Teams foi preenchido, cria uma tag bonitinha
     const teamsTag = m.teamsGroup ? `<span style="background:#e0e7ff; color:#4338ca; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:9px;">💬 ${m.teamsGroup}</span>` : '';
     
+    // Mostra quem está na reunião quando o usuário parar o mouse em cima do card!
+    const hoverTooltip = m.attendeesNames ? `Convocados: ${m.attendeesNames}` : 'Nenhum convidado adicionado.';
+    
     return `
-        <div class="agenda-card ${statusClass} no-pan" onclick="jumpToMeetingBox('${m.boxId}')" title="Clique para ir até a caixa">
+        <div class="agenda-card ${statusClass} no-pan" onclick="jumpToMeetingBox('${m.boxId}')" title="${hoverTooltip}">
             <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom: 5px;">
                 <div class="agenda-card-box-name">📦 ${m.boxTitle}</div>
                 ${teamsTag}
             </div>
-            <div class="agenda-card-title">${m.title}</div>
-            <div class="agenda-card-meta">
-                <span>📅 ${dateText}</span>
-            </div>
-        </div>
-    `;
-}
-
-// Gera o visual do Card clicável
-function createAgendaCardHTML(m, isUrgent) {
-    const statusClass = m.inviteSent ? 'ok' : (isUrgent ? 'urgent' : '');
-    const dateText = m.date ? m.date.split('-').reverse().join('/') : 'Sem data';
-    
-    return `
-        <div class="agenda-card ${statusClass} no-pan" onclick="jumpToMeetingBox('${m.boxId}')" title="Clique para ir até a caixa">
-            <div class="agenda-card-box-name">📦 ${m.boxTitle}</div>
             <div class="agenda-card-title">${m.title}</div>
             <div class="agenda-card-meta">
                 <span>📅 ${dateText}</span>
