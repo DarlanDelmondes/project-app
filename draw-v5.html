@@ -7490,6 +7490,40 @@ function renderPeopleReport() {
 }
 
 // =========================================================================
+// --- FUNÇÃO PARA APAGAR TODAS AS REUNIÕES DE UMA VEZ ---
+// =========================================================================
+function deleteAllMeetings() {
+    // 1. Conta quantas reuniões existem primeiro para avisar o usuário
+    let totalMeetings = 0;
+    document.querySelectorAll('.box').forEach(box => {
+        const mStore = box.querySelector('.meeting-data-store');
+        if (mStore) totalMeetings += mStore.querySelectorAll('.meeting-item').length;
+    });
+
+    if (totalMeetings === 0) {
+        showToast("⚠️ Não há reuniões pendentes para apagar.");
+        return;
+    }
+
+    // 2. Chama o sistema de confirmação nativo do seu Canvas
+    showConfirmToast(`Tem certeza que deseja APAGAR TODAS as ${totalMeetings} reuniões do mapa? Esta ação não pode ser desfeita.`, () => {
+        
+        // 3. Se o usuário clicar em SIM, varre todas as caixas e destrói os dados
+        document.querySelectorAll('.box').forEach(box => {
+            const mStore = box.querySelector('.meeting-data-store');
+            if (mStore) mStore.innerHTML = ''; // Esvazia a gaveta de reuniões
+            
+            updateMeetingBadge(box.id); // Remove a etiquetinha "📅" da caixa no mapa
+        });
+
+        // 4. Atualiza a tela e avisa o Save
+        renderAgendaDashboard(); 
+        markUnsaved(); 
+        showToast("✅ Todas as reuniões foram apagadas com sucesso!");
+    });
+}
+
+// =========================================================================
 // --- EXPORTAR E IMPORTAR EQUIPES ---
 // =========================================================================
 
@@ -7636,7 +7670,11 @@ function importTeams(event) {
                 <span class="dash-title">🗓️ Centro de Comando de Reuniões</span>
                 <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Visão global de todas as agendas cadastradas nas caixas do mapa.</div>
             </div>
-            <span class="dash-close" onclick="closeAgendaModal()">×</span>
+            
+            <div style="display:flex; align-items:center; gap: 15px;">
+                <button class="btn-outline" style="color: #ef4444; border-color: #fecaca; background: #fef2f2; font-size: 12px; padding: 6px 12px;" onclick="deleteAllMeetings()" title="Apagar definitivamente todas as reuniões do mapa">🗑️ Apagar Todas</button>
+                <span class="dash-close" onclick="closeAgendaModal()">×</span>
+            </div>
         </div>
         
         <div class="dash-content" style="background: #f1f5f9; padding: 20px; flex-grow: 1; overflow: hidden; display: flex; flex-direction: column;">
