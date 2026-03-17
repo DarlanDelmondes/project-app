@@ -1702,7 +1702,28 @@ details[open] > .tree-summary::before {
     box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
 }
 
+/* ========================================================= */
+/* --- ESTILO AUTOMÁTICO: CAIXAS COM AGENDA (AZUL) --- */
+/* ========================================================= */
+.box.has-meetings {
+    border-color: #3b82f6 !important; 
+    background-color: #eff6ff !important; 
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+}
+.box.has-meetings > .box-title-bar {
+    border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+}
+.box.has-meetings > .box-title-bar > input.title { 
+    color: #1e40af !important; 
+}
 
+/* Regras de Prioridade: Se você forçar o status manual para Crítico (Vermelho) 
+   ou Ok (Verde), eles vão vencer o azul automaticamente! */
+.box.has-meetings.red-state { border-color: var(--color-wine) !important; background-color: var(--color-wine) !important; box-shadow: 0 0 0 3px rgba(104, 14, 42, 0.3) !important; }
+.box.has-meetings.red-state > .box-title-bar > input.title { color: white !important; }
+
+.box.has-meetings.green-state { border-color: var(--color-forest) !important; background-color: #dcfce7 !important; box-shadow: 0 0 0 3px rgba(6, 78, 59, 0.3) !important;}
+.box.has-meetings.green-state > .box-title-bar > input.title { color: var(--color-forest) !important; }
 
 /* --- CORREÇÃO DE LAYOUT (SCROLL PERFEITO) --- */
 
@@ -5232,9 +5253,13 @@ function applySemanticZoomToTarget(box, currentZoom) {
 // =========================================================================
 // --- SISTEMA DE FILTROS TRIPLOS (TAREFAS, ANIMAÇÕES E TARGETS) ---
 // =========================================================================
+// =========================================================================
+// --- SISTEMA DE FILTROS (TAREFAS, ANIMAÇÕES, TARGETS E AGENDAS) ---
+// =========================================================================
 let activeFilterLabels = new Set(); 
 let activeFilterAnims = new Set(); 
 let activeFilterTargets = new Set(); 
+let activeFilterAgenda = false; // <--- NOVO: Estado do Filtro de Agendas
 
 function updateFilterBar() {
     const labels = new Set();
@@ -5252,23 +5277,25 @@ function updateFilterBar() {
     if (!container) return;
 
     const pinnedAnims = savedAnimations.filter(a => a.pinned);
+    const hasAgendas = document.querySelector('.box.has-meetings') !== null;
 
     if (labels.size === 0 && targets.size === 0 && activeFilterLabels.size === 0 && 
-        pinnedAnims.length === 0 && activeFilterAnims.size === 0 && activeFilterTargets.size === 0) {
+        pinnedAnims.length === 0 && activeFilterAnims.size === 0 && activeFilterTargets.size === 0 && 
+        !hasAgendas && !activeFilterAgenda) {
         container.innerHTML = '';
         return;
     }
 
     let html = '';
     
-    // 1. Renderiza Labels Normais (Estilo Cinza/Verde)
+    // 1. Renderiza Labels Normais
     Array.from(labels).sort().forEach(label => {
         const isActive = activeFilterLabels.has(label) ? 'active' : '';
         const safeLabel = label.replace(/"/g, '&quot;'); 
         html += `<div class="filter-pill ${isActive}" onclick="applyFilter('${safeLabel}')">🏷️ ${label}</div>`;
     });
 
-    // 2. Renderiza Labels de Target (Estilo Esmeralda)
+    // 2. Renderiza Labels de Target
     Array.from(targets).sort().forEach(target => {
         const isActive = activeFilterTargets.has(target) ? 'active' : '';
         const style = isActive 
@@ -5278,7 +5305,7 @@ function updateFilterBar() {
         html += `<div class="filter-pill" style="${style}" onclick="applyTargetFilter('${safeTarget}')">🎯 ${target}</div>`;
     });
 
-    // 3. Renderiza Animações Pinadas (Estilo Roxo)
+    // 3. Renderiza Animações Pinadas
     pinnedAnims.forEach(anim => {
         const isActive = activeFilterAnims.has(anim.id) ? 'active' : '';
         const style = isActive 
@@ -5287,8 +5314,17 @@ function updateFilterBar() {
         html += `<div class="filter-pill" style="${style}" onclick="applyAnimFilter('${anim.id}')">🎬 ${anim.title}</div>`;
     });
 
+    // 4. NOVO: Renderiza Filtro Especial de Agendas
+    if (hasAgendas || activeFilterAgenda) {
+        const isActive = activeFilterAgenda ? 'active' : '';
+        const style = isActive 
+            ? 'background: #3b82f6; color: white; border-color: #2563eb; box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4); transform: scale(1.05);' 
+            : 'background: rgba(255, 255, 255, 0.95); color: #3b82f6; border-color: #93c5fd;';
+        html += `<div class="filter-pill" style="${style}" onclick="applyAgendaFilter()">🗓️ COM AGENDA</div>`;
+    }
+
     // Botão Limpar Tudo
-    if (activeFilterLabels.size > 0 || activeFilterAnims.size > 0 || activeFilterTargets.size > 0) {
+    if (activeFilterLabels.size > 0 || activeFilterAnims.size > 0 || activeFilterTargets.size > 0 || activeFilterAgenda) {
         html += `<div class="filter-pill" style="background:#fee2e2; color:#ef4444; border-color:#fca5a5;" onclick="applyFilter(null)">✕ LIMPAR TUDO</div>`;
     }
 
@@ -5301,6 +5337,7 @@ function applyFilter(label) {
         activeFilterLabels.clear();
         activeFilterAnims.clear();
         activeFilterTargets.clear();
+        activeFilterAgenda = false; // Limpa a agenda também
     } else {
         if (activeFilterLabels.has(label)) activeFilterLabels.delete(label);
         else activeFilterLabels.add(label); 
@@ -5320,6 +5357,11 @@ function applyTargetFilter(target) {
     executeFilters();
 }
 
+function applyAgendaFilter() {
+    activeFilterAgenda = !activeFilterAgenda;
+    executeFilters();
+}
+
 // O Motor que escurece a tela e acende os matches
 function executeFilters() {
     updateFilterBar(); 
@@ -5328,7 +5370,7 @@ function executeFilters() {
         el.classList.remove('dimmed', 'filter-match');
     });
 
-    if (activeFilterLabels.size === 0 && activeFilterAnims.size === 0 && activeFilterTargets.size === 0) {
+    if (activeFilterLabels.size === 0 && activeFilterAnims.size === 0 && activeFilterTargets.size === 0 && !activeFilterAgenda) {
         document.body.classList.remove('filtering');
         calculateFilterGapStats(); 
         return;
@@ -5338,7 +5380,7 @@ function executeFilters() {
     const matches = new Set();  
     const ancestors = new Set(); 
 
-    // Match 1: Labels de Tarefas
+    // Match 1: Labels
     document.querySelectorAll('.task-label').forEach(input => {
         const val = input.value.trim();
         if (activeFilterLabels.has(val)) {
@@ -5351,7 +5393,7 @@ function executeFilters() {
         }
     });
 
-    // Match 2: Caixas de Apresentações
+    // Match 2: Animações
     activeFilterAnims.forEach(animId => {
         const anim = savedAnimations.find(a => a.id === animId);
         if (anim) {
@@ -5366,7 +5408,7 @@ function executeFilters() {
         }
     });
 
-    // Match 3: Targets / Cenários
+    // Match 3: Targets
     document.querySelectorAll('.box').forEach(box => {
         if (box.dataset.targetName && activeFilterTargets.has(box.dataset.targetName)) {
             matches.add(box.id);
@@ -5374,6 +5416,15 @@ function executeFilters() {
             while(parent) { ancestors.add(parent.id); parent = parent.parentElement.closest('.box'); }
         }
     });
+
+    // Match 4: Agendas (NOVO)
+    if (activeFilterAgenda) {
+        document.querySelectorAll('.box.has-meetings').forEach(box => {
+            matches.add(box.id);
+            let parent = box.parentElement.closest('.box');
+            while(parent) { ancestors.add(parent.id); parent = parent.parentElement.closest('.box'); }
+        });
+    }
 
     // Aplica Estilos Visuais
     document.querySelectorAll('.box').forEach(box => {
@@ -5386,17 +5437,13 @@ function executeFilters() {
 
     document.querySelectorAll('.note').forEach(n => n.classList.add('dimmed'));
 
-    // --- A NOVA LÓGICA DE SETAS (ESTRITA) ---
+    // Lógica Estrita de Setas
     connections.forEach(c => {
         const group = document.getElementById(c.id);
         if (!group) return;
-        
-        // Verifica se a origem e o destino fazem parte do filtro
         const sVisible = matches.has(c.sid) || ancestors.has(c.sid);
         const tVisible = matches.has(c.tid) || ancestors.has(c.tid);
         
-        // A MÁGICA: Substituímos o || (OU) por && (E)
-        // A seta só sobrevive se AMBAS as pontas estiverem no filtro
         if (sVisible && tVisible) {
             group.classList.remove('dimmed');
         } else {
@@ -5407,11 +5454,11 @@ function executeFilters() {
     calculateFilterGapStats();
 }
 
-// O Painel de Analytics (Lê as 3 Dimensões)
+// O Painel de Analytics (Agora com 4 Dimensões)
 function calculateFilterGapStats() {
     const statsPanel = document.getElementById('tobe-stats');
 
-    if (activeFilterLabels.size === 0 && activeFilterAnims.size === 0 && activeFilterTargets.size === 0) {
+    if (activeFilterLabels.size === 0 && activeFilterAnims.size === 0 && activeFilterTargets.size === 0 && !activeFilterAgenda) {
         statsPanel.style.display = 'none';
         return;
     }
@@ -5434,10 +5481,10 @@ function calculateFilterGapStats() {
     if (percentReady < 40) colorTotal = "#ef4444"; 
     else if (percentReady < 80) colorTotal = "#f59e0b"; 
 
-    // Cria o letreiro combinando os três tipos
     let activeNames = [];
     activeFilterLabels.forEach(l => activeNames.push(`🏷️ ${l}`));
     activeFilterTargets.forEach(t => activeNames.push(`🎯 ${t}`));
+    if (activeFilterAgenda) activeNames.push(`🗓️ COM AGENDA`);
     activeFilterAnims.forEach(id => {
         const anim = savedAnimations.find(a => a.id === id);
         if (anim) activeNames.push(`🎬 ${anim.title}`);
@@ -5446,17 +5493,13 @@ function calculateFilterGapStats() {
 
     const individualStats = [];
     
-    // Calcula Progresso das Labels
+    // Filtros de Labels, Targets e Anims omitidos por brevidade visual aqui, mas calculados igual...
     activeFilterLabels.forEach(label => {
-        const boxesWithLabel = new Set();
-        let greenCount = 0;
+        const boxesWithLabel = new Set(); let greenCount = 0;
         document.querySelectorAll('.task-label').forEach(input => {
             if (input.value.trim() === label) {
                 const box = input.closest('.box');
-                if (box && !boxesWithLabel.has(box.id)) {
-                    boxesWithLabel.add(box.id);
-                    if (box.classList.contains('green-state')) greenCount++;
-                }
+                if (box && !boxesWithLabel.has(box.id)) { boxesWithLabel.add(box.id); if (box.classList.contains('green-state')) greenCount++; }
             }
         });
         if (boxesWithLabel.size > 0) {
@@ -5465,15 +5508,10 @@ function calculateFilterGapStats() {
         }
     });
 
-    // Calcula Progresso dos Targets
     activeFilterTargets.forEach(target => {
-        const boxesWithTarget = new Set();
-        let greenCount = 0;
+        const boxesWithTarget = new Set(); let greenCount = 0;
         document.querySelectorAll('.box').forEach(box => {
-            if (box.dataset.targetName === target) {
-                boxesWithTarget.add(box.id);
-                if (box.classList.contains('green-state')) greenCount++;
-            }
+            if (box.dataset.targetName === target) { boxesWithTarget.add(box.id); if (box.classList.contains('green-state')) greenCount++; }
         });
         if (boxesWithTarget.size > 0) {
             const percInd = Math.round((greenCount / boxesWithTarget.size) * 100);
@@ -5481,18 +5519,23 @@ function calculateFilterGapStats() {
         }
     });
 
-    // Calcula Progresso das Apresentações
-    activeFilterAnims.forEach(animId => {
-        const anim = savedAnimations.find(a => a.id === animId);
-        if (!anim) return;
-        let validTotal = 0;
+    // NOVO: Cálculo Individual das Agendas
+    if (activeFilterAgenda) {
+        const boxesWithAgenda = document.querySelectorAll('.box.has-meetings');
         let greenCount = 0;
+        boxesWithAgenda.forEach(b => { if (b.classList.contains('green-state')) greenCount++; });
+        if (boxesWithAgenda.length > 0) {
+            const percInd = Math.round((greenCount / boxesWithAgenda.length) * 100);
+            individualStats.push({ label: `🗓️ COM AGENDA`, total: boxesWithAgenda.length, green: greenCount, perc: percInd, color: percInd < 40 ? "#ef4444" : (percInd < 80 ? "#f59e0b" : "#10b981") });
+        }
+    }
+
+    activeFilterAnims.forEach(animId => {
+        const anim = savedAnimations.find(a => a.id === animId); if (!anim) return;
+        let validTotal = 0; let greenCount = 0;
         anim.sequence.forEach(boxId => {
             const box = document.getElementById(boxId);
-            if (box) {
-                validTotal++;
-                if (box.classList.contains('green-state')) greenCount++;
-            }
+            if (box) { validTotal++; if (box.classList.contains('green-state')) greenCount++; }
         });
         if (validTotal > 0) {
             const percInd = Math.round((greenCount / validTotal) * 100);
