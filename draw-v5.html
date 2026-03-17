@@ -3908,30 +3908,34 @@ function repairBoxStructure() {
             targetParent.appendChild(newEl);
             calcDynamicFont(newEl);
             
-            // 1. Clona as Tarefas (Blindado)
-            const sourceTaskStore = sourceEl.querySelector('.task-data-store');
-            if(sourceTaskStore && sourceTaskStore.children.length > 0) {
-                const destTaskStore = newEl.querySelector('.task-data-store');
-                Array.from(sourceTaskStore.children).forEach(t => {
-                    if (!t.classList.contains('task-item')) return;
-                    renderTask(destTaskStore, 
-                        t.querySelector('.task-input').value, 
-                        t.dataset.status, 
-                        t.querySelector('.task-owner').value, 
-                        t.querySelector('.task-date').value,
-                        t.querySelector('.task-label').value,
-                        parseInt(t.dataset.retries || 0)
-                    );
+            // 1. Clona as Tarefas (Compatível com o Modal Oculto)
+            const sourceTasks = sourceEl.querySelectorAll('.task-item');
+            if(sourceTasks.length > 0) {
+                const tStore = newEl.querySelector('.task-data-store');
+                sourceTasks.forEach(t => {
+                    if (t.closest('.box') === sourceEl) {
+                        renderTask(tStore, 
+                            t.querySelector('.task-input').value, 
+                            t.dataset.status, 
+                            t.querySelector('.task-owner').value, 
+                            t.querySelector('.task-date').value,
+                            t.querySelector('.task-label').value,
+                            parseInt(t.dataset.retries || 0)
+                        );
+                    }
                 });
+                // Renderiza a listinha sutil na caixa clonada
                 updateMinimalTaskView(newEl.id);
             }
 
-            // 2. Clona as Reuniões (Blindado)
-            const sourceMeetingStore = sourceEl.querySelector('.meeting-data-store');
-            if(sourceMeetingStore && sourceMeetingStore.children.length > 0) {
-                const destMeetingStore = newEl.querySelector('.meeting-data-store');
-                Array.from(sourceMeetingStore.children).forEach(mItem => {
-                    if (!mItem.classList.contains('meeting-item')) return;
+            // Clona as Reuniões
+            const sourceMeetings = sourceEl.querySelectorAll('.meeting-data-store .meeting-item');
+            if(sourceMeetings.length > 0) {
+                const mStore = newEl.querySelector('.meeting-data-store');
+                sourceMeetings.forEach(mItem => {
+                    
+                    // --- TRAVA ANTI-DUPLICAÇÃO NA CLONAGEM ---
+                    if (mItem.closest('.box') !== sourceEl) return;
                     
                     const title = mItem.querySelector('.meeting-title').value;
                     const teamsGroup = mItem.querySelector('.meeting-teams-group').value; 
@@ -3939,7 +3943,8 @@ function repairBoxStructure() {
                     const inviteSent = mItem.querySelector('.meeting-invite-chk').checked;
                     const attendees = Array.from(mItem.querySelectorAll('.attendee-pill span:first-child')).map(span => span.innerText);
                     
-                    destMeetingStore.appendChild(createMeetingElement(title, date, inviteSent, attendees, teamsGroup));
+                    // Clona com o teamsGroup
+                    mStore.appendChild(createMeetingElement(title, date, inviteSent, attendees, teamsGroup));
                 });
                 updateMeetingBadge(newEl.id);
             }
@@ -4242,39 +4247,37 @@ function repairBoxStructure() {
     function updateBreadcrumbs() {
         const toolbarHeight = 70; 
         
-        // 1. Extração Suprema (Lê apenas os filhos diretos do Armazém)
         document.querySelectorAll('.box').forEach(box => {
-            const boxTitle = box.querySelector('input.title').value || 'Caixa sem nome';
-            const boxId = box.id;
-            
-            let mStore = box.querySelector('.meeting-data-store');
-            // Pega as reuniões mesmo se a pessoa deixou a janela do modal aberta
-            if (typeof currentMeetingBoxId !== 'undefined' && currentMeetingBoxId === boxId) {
-                mStore = document.getElementById('meeting-modal-body');
+            const pathContainer = box.querySelector('.context-path');
+            if (!pathContainer) return;
+    
+            // Limpa o conteúdo anterior
+            pathContainer.innerHTML = '';
+            let ancestors = [];
+            let currentParent = box.parentElement.closest('.box');
+    
+            // Coleta os nomes dos pais que estão fora da tela
+            while (currentParent) {
+                const parentRect = currentParent.getBoundingClientRect();
+                const parentTitleVal = currentParent.querySelector('.title').value;
+    
+                if (parentRect.top < toolbarHeight && parentTitleVal.trim() !== "") {
+                    ancestors.unshift(parentTitleVal); 
+                }
+                currentParent = currentParent.parentElement.closest('.box');
             }
-
-            if (mStore) {
-                Array.from(mStore.children).forEach(mItem => {
-                    if (!mItem.classList.contains('meeting-item')) return;
-
-                    const titleInput = mItem.querySelector('.meeting-title');
-                    const dateInput = mItem.querySelector('.meeting-date');
-                    const inviteChk = mItem.querySelector('.meeting-invite-chk');
-                    const teamsInput = mItem.querySelector('.meeting-teams-group');
-                    
-                    const attendees = Array.from(mItem.querySelectorAll('.attendee-pill span:first-child')).map(span => span.innerText);
-
-                    allMeetings.push({
-                        boxId: boxId,
-                        boxTitle: boxTitle,
-                        title: titleInput ? titleInput.value : '(Sem Assunto)',
-                        teamsGroup: teamsInput ? teamsInput.value : '',
-                        date: dateInput ? dateInput.value : '',
-                        inviteSent: inviteChk ? inviteChk.checked : false,
-                        attendeesCount: attendees.length,
-                        attendeesNames: attendees.join(', ')
-                    });
+    
+            if (ancestors.length > 0) {
+                // Cria um elemento context-item para cada pai na lista
+                ancestors.forEach(name => {
+                    const item = document.createElement('div');
+                    item.className = 'context-item';
+                    item.innerText = name;
+                    pathContainer.appendChild(item);
                 });
+                pathContainer.classList.add('visible');
+            } else {
+                pathContainer.classList.remove('visible');
             }
         });
     }
@@ -4466,47 +4469,41 @@ function collectAllTasks() {
         document.querySelectorAll('.box').forEach(box => {
             const parent = box.parentElement.closest('.box');
             // Extract Tasks
-            // --- BLINDAGEM TOTAL: TAREFAS ---
             const tasks = [];
-            let tStore = box.querySelector('.task-data-store');
-            // Se o modal desta caixa estiver aberto na hora de salvar, lê direto do modal!
-            if (typeof currentTaskBoxId !== 'undefined' && currentTaskBoxId === box.id) {
-                tStore = document.getElementById('task-modal-body');
-            }
-            if (tStore) {
-                Array.from(tStore.children).forEach(tItem => {
-                    if (!tItem.classList.contains('task-item')) return;
+            box.querySelectorAll('.task-item').forEach(tItem => {
+                // Strict check: only tasks belonging to this box
+                if (tItem.closest('.box') === box) {
+                // ... dentro do loop taskItems.forEach ...
+                    // ... no loop: box.querySelectorAll('.task-item').forEach(tItem => { ...
                     tasks.push({
                         text: tItem.querySelector('.task-input').value,
                         label: tItem.querySelector('.task-label').value, 
                         owner: tItem.querySelector('.task-owner').value,
                         date: tItem.querySelector('.task-date').value,
                         status: tItem.dataset.status || 'todo',
-                        retries: parseInt(tItem.dataset.retries || 0)
+                        retries: parseInt(tItem.dataset.retries || 0) // <--- ADICIONAR ESTA LINHA
                     });
-                });
-            }
+                }
+            });
 
-            // --- BLINDAGEM TOTAL: REUNIÕES ---
+
+            // Extract Meetings
             const meetings = [];
-            let mStore = box.querySelector('.meeting-data-store');
-            // Se o modal desta caixa estiver aberto na hora de salvar, lê direto do modal!
-            if (typeof currentMeetingBoxId !== 'undefined' && currentMeetingBoxId === box.id) {
-                mStore = document.getElementById('meeting-modal-body');
-            }
-            if (mStore) {
-                Array.from(mStore.children).forEach(mItem => {
-                    if (!mItem.classList.contains('meeting-item')) return;
-                    
-                    const title = mItem.querySelector('.meeting-title').value;
-                    const teamsGroup = mItem.querySelector('.meeting-teams-group').value; 
-                    const date = mItem.querySelector('.meeting-date').value;
-                    const inviteSent = mItem.querySelector('.meeting-invite-chk').checked;
-                    const attendees = Array.from(mItem.querySelectorAll('.attendee-pill span:first-child')).map(span => span.innerText);
-                    
-                    meetings.push({ title, date, inviteSent, attendees, teamsGroup }); 
-                });
-            }
+            box.querySelectorAll('.meeting-data-store .meeting-item').forEach(mItem => {
+                
+                // --- TRAVA ANTI-DUPLICAÇÃO NO SAVE ---
+                // Garante que só salva a reunião se ela pertencer estritamente a esta caixa!
+                if (mItem.closest('.box') !== box) return; 
+
+                const title = mItem.querySelector('.meeting-title').value;
+                const teamsGroup = mItem.querySelector('.meeting-teams-group').value; 
+                const date = mItem.querySelector('.meeting-date').value;
+                const inviteSent = mItem.querySelector('.meeting-invite-chk').checked;
+                const attendees = Array.from(mItem.querySelectorAll('.attendee-pill span:first-child')).map(span => span.innerText);
+                
+                // Salva com o teamsGroup
+                meetings.push({ title, date, inviteSent, attendees, teamsGroup }); 
+            });
 
             // Get status safely
             let status = 'neutral';
