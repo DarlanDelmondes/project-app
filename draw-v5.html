@@ -3908,42 +3908,34 @@ function repairBoxStructure() {
             targetParent.appendChild(newEl);
             calcDynamicFont(newEl);
             
-            // 1. Clona as Tarefas (Compatível com o Modal Oculto)
-            const sourceTasks = sourceEl.querySelectorAll('.task-item');
-            if(sourceTasks.length > 0) {
+            // 1. Clona as Tarefas (Simples e Limpo)
+            const sourceTaskStore = sourceEl.querySelector('.task-data-store');
+            if(sourceTaskStore) {
                 const tStore = newEl.querySelector('.task-data-store');
-                sourceTasks.forEach(t => {
-                    if (t.closest('.box') === sourceEl) {
-                        renderTask(tStore, 
-                            t.querySelector('.task-input').value, 
-                            t.dataset.status, 
-                            t.querySelector('.task-owner').value, 
-                            t.querySelector('.task-date').value,
-                            t.querySelector('.task-label').value,
-                            parseInt(t.dataset.retries || 0)
-                        );
-                    }
+                sourceTaskStore.querySelectorAll('.task-item').forEach(t => {
+                    renderTask(tStore, 
+                        t.querySelector('.task-input').value, 
+                        t.dataset.status, 
+                        t.querySelector('.task-owner').value, 
+                        t.querySelector('.task-date').value,
+                        t.querySelector('.task-label').value,
+                        parseInt(t.dataset.retries || 0)
+                    );
                 });
-                // Renderiza a listinha sutil na caixa clonada
                 updateMinimalTaskView(newEl.id);
             }
 
-            // Clona as Reuniões
-            const sourceMeetings = sourceEl.querySelectorAll('.meeting-data-store .meeting-item');
-            if(sourceMeetings.length > 0) {
+            // 2. Clona as Reuniões (Simples e Limpo)
+            const sourceMeetingStore = sourceEl.querySelector('.meeting-data-store');
+            if(sourceMeetingStore) {
                 const mStore = newEl.querySelector('.meeting-data-store');
-                sourceMeetings.forEach(mItem => {
-                    
-                    // --- TRAVA ANTI-DUPLICAÇÃO NA CLONAGEM ---
-                    if (mItem.closest('.box') !== sourceEl) return;
-                    
+                sourceMeetingStore.querySelectorAll('.meeting-item').forEach(mItem => {
                     const title = mItem.querySelector('.meeting-title').value;
                     const teamsGroup = mItem.querySelector('.meeting-teams-group').value; 
                     const date = mItem.querySelector('.meeting-date').value;
                     const inviteSent = mItem.querySelector('.meeting-invite-chk').checked;
                     const attendees = Array.from(mItem.querySelectorAll('.attendee-pill span:first-child')).map(span => span.innerText);
                     
-                    // Clona com o teamsGroup
                     mStore.appendChild(createMeetingElement(title, date, inviteSent, attendees, teamsGroup));
                 });
                 updateMeetingBadge(newEl.id);
@@ -4424,6 +4416,10 @@ function collectAllTasks() {
     function newDrawing() { showConfirmToast("Criar novo desenho?", () => { document.querySelectorAll('.box').forEach(b => b.remove()); updateAllLines(true); connections = []; state = { ...state, scale: 1, panning: false, offset: {x:0, y:0} }; updateTransform(); currentDrawingName = null; addRootBox(); closeDashboard(); showToast("Novo desenho criado."); }); }
     function deleteProject(id) { showConfirmToast("Excluir projeto?", () => { let db = getDB(); db = db.filter(p => p.id !== id); setDB(db); openDashboard(); showToast("Excluído."); }); }
     function saveCurrentDrawing() {
+        // --- PROTEÇÃO SIMPLES: Garante que os dados voltem para as caixas antes de salvar ---
+        if (typeof closeTaskModal === 'function') closeTaskModal();
+        if (typeof closeMeetingModal === 'function') closeMeetingModal();
+        
         let name = currentDrawingName; if (!name) { name = prompt("Nome do projeto:", "Projeto"); if (!name) return; currentDrawingName = name; }
         
         // [FEATURE] Expand All before Saving
@@ -4468,42 +4464,38 @@ function collectAllTasks() {
         // Save Boxes
         document.querySelectorAll('.box').forEach(box => {
             const parent = box.parentElement.closest('.box');
-            // Extract Tasks
+            
+            
+            // Extract Tasks (Simples e Limpo)
             const tasks = [];
-            box.querySelectorAll('.task-item').forEach(tItem => {
-                // Strict check: only tasks belonging to this box
-                if (tItem.closest('.box') === box) {
-                // ... dentro do loop taskItems.forEach ...
-                    // ... no loop: box.querySelectorAll('.task-item').forEach(tItem => { ...
+            const tStore = box.querySelector('.task-data-store');
+            if (tStore) {
+                tStore.querySelectorAll('.task-item').forEach(tItem => {
                     tasks.push({
                         text: tItem.querySelector('.task-input').value,
                         label: tItem.querySelector('.task-label').value, 
                         owner: tItem.querySelector('.task-owner').value,
                         date: tItem.querySelector('.task-date').value,
                         status: tItem.dataset.status || 'todo',
-                        retries: parseInt(tItem.dataset.retries || 0) // <--- ADICIONAR ESTA LINHA
+                        retries: parseInt(tItem.dataset.retries || 0)
                     });
-                }
-            });
+                });
+            }
 
-
-            // Extract Meetings
+            // Extract Meetings (Simples e Limpo)
             const meetings = [];
-            box.querySelectorAll('.meeting-data-store .meeting-item').forEach(mItem => {
-                
-                // --- TRAVA ANTI-DUPLICAÇÃO NO SAVE ---
-                // Garante que só salva a reunião se ela pertencer estritamente a esta caixa!
-                if (mItem.closest('.box') !== box) return; 
-
-                const title = mItem.querySelector('.meeting-title').value;
-                const teamsGroup = mItem.querySelector('.meeting-teams-group').value; 
-                const date = mItem.querySelector('.meeting-date').value;
-                const inviteSent = mItem.querySelector('.meeting-invite-chk').checked;
-                const attendees = Array.from(mItem.querySelectorAll('.attendee-pill span:first-child')).map(span => span.innerText);
-                
-                // Salva com o teamsGroup
-                meetings.push({ title, date, inviteSent, attendees, teamsGroup }); 
-            });
+            const mStore = box.querySelector('.meeting-data-store');
+            if (mStore) {
+                mStore.querySelectorAll('.meeting-item').forEach(mItem => {
+                    const title = mItem.querySelector('.meeting-title').value;
+                    const teamsGroup = mItem.querySelector('.meeting-teams-group').value; 
+                    const date = mItem.querySelector('.meeting-date').value;
+                    const inviteSent = mItem.querySelector('.meeting-invite-chk').checked;
+                    const attendees = Array.from(mItem.querySelectorAll('.attendee-pill span:first-child')).map(span => span.innerText);
+                    
+                    meetings.push({ title, date, inviteSent, attendees, teamsGroup }); 
+                });
+            }
 
             // Get status safely
             let status = 'neutral';
@@ -7212,35 +7204,33 @@ function renderAgendaDashboard() {
     let allMeetings = [];
     
     // 1. Extração Blindada (Sem repetições e agrupando as pessoas)
+    // 1. Extração Limpa (Vai direto na gaveta de reuniões)
     document.querySelectorAll('.box').forEach(box => {
         const boxTitle = box.querySelector('input.title').value || 'Caixa sem nome';
         const boxId = box.id;
         
-        box.querySelectorAll('.meeting-data-store > .meeting-item').forEach(mItem => {
-            
-            // --- A TRAVA ANTI-DUPLICAÇÃO MÁGICA ---
-            // Se esta reunião pertencer a uma caixa filha, ignora-a nesta rodada!
-            if (mItem.closest('.box') !== box) return;
-            
-            const titleInput = mItem.querySelector('.meeting-title');
-            const dateInput = mItem.querySelector('.meeting-date');
-            const inviteChk = mItem.querySelector('.meeting-invite-chk');
-            const teamsInput = mItem.querySelector('.meeting-teams-group');
-            
-            // Conta e lista os convidados de forma segura (Agrupamento)
-            const attendees = Array.from(mItem.querySelectorAll('.attendee-pill span:first-child')).map(span => span.innerText);
+        const mStore = box.querySelector('.meeting-data-store');
+        if (mStore) {
+            mStore.querySelectorAll('.meeting-item').forEach(mItem => {
+                const titleInput = mItem.querySelector('.meeting-title');
+                const dateInput = mItem.querySelector('.meeting-date');
+                const inviteChk = mItem.querySelector('.meeting-invite-chk');
+                const teamsInput = mItem.querySelector('.meeting-teams-group');
+                
+                const attendees = Array.from(mItem.querySelectorAll('.attendee-pill span:first-child')).map(span => span.innerText);
 
-            allMeetings.push({
-                boxId: boxId,
-                boxTitle: boxTitle,
-                title: titleInput ? titleInput.value : '(Sem Assunto)',
-                teamsGroup: teamsInput ? teamsInput.value : '',
-                date: dateInput ? dateInput.value : '',
-                inviteSent: inviteChk ? inviteChk.checked : false,
-                attendeesCount: attendees.length, // Agrupa num número limpo
-                attendeesNames: attendees.join(', ')
+                allMeetings.push({
+                    boxId: boxId,
+                    boxTitle: boxTitle,
+                    title: titleInput ? titleInput.value : '(Sem Assunto)',
+                    teamsGroup: teamsInput ? teamsInput.value : '',
+                    date: dateInput ? dateInput.value : '',
+                    inviteSent: inviteChk ? inviteChk.checked : false,
+                    attendeesCount: attendees.length, 
+                    attendeesNames: attendees.join(', ')
+                });
             });
-        });
+        }
     });
 
     // 2. Prepara a Semana Atual
