@@ -3466,44 +3466,51 @@ function openJournal() {
 
 
 
-    function downloadJournalCSV() {
-        const headers = ["Status", "Atrasado?", "Tarefa", "Responsável", "Data Limite", "Caixa de Origem"];
-        let csvContent = "\uFEFF" + headers.join(",") + "\n"; 
-        const today = new Date().toISOString().split('T')[0];
+function downloadJournalCSV() {
+    // --- ADICIONADA A COLUNA 'LABEL' NO CABEÇALHO ---
+    const headers = ["Status", "Atrasado?", "Tarefa", "Label", "Responsável", "Data Limite", "Caixa de Origem"];
+    let csvContent = "\uFEFF" + headers.join(",") + "\n"; 
+    const today = new Date().toISOString().split('T')[0];
 
-        document.querySelectorAll('.box').forEach(box => {
-            const boxTitle = box.querySelector('input.title').value.replace(/"/g, '""'); 
-            const taskItems = box.querySelectorAll('.task-item');
+    document.querySelectorAll('.box').forEach(box => {
+        const boxTitle = box.querySelector('input.title').value.replace(/"/g, '""'); 
+        const taskItems = box.querySelectorAll('.task-item');
 
-            taskItems.forEach(item => {
-                if (item.closest('.box') !== box) return;
+        taskItems.forEach(item => {
+            if (item.closest('.box') !== box) return;
 
-                const status = item.dataset.status;
-                if(status === 'done') return;
+            const status = item.dataset.status;
+            if(status === 'done') return;
 
-                const text = item.querySelector('.task-input').value.replace(/"/g, '""');
-                const owner = (item.querySelector('.task-owner').value || "").replace(/"/g, '""');
-                const date = item.querySelector('.task-date').value;
-                const isOverdue = date && date < today ? "SIM" : "NÃO";
+            // --- NOVA LÓGICA DE FILTRO: Respeita os botões clicados na barra superior ---
+            const taskLabel = item.querySelector('.task-label').value.trim() || "Raiz";
+            if (activeFilterLabels.size > 0 && !activeFilterLabels.has(taskLabel)) return;
+            // -------------------------------------------------------------------------
 
-                let statusLabel = status === 'doing' ? 'Fazendo' : 'A Fazer';
+            const text = item.querySelector('.task-input').value.replace(/"/g, '""');
+            const owner = (item.querySelector('.task-owner').value || "").replace(/"/g, '""');
+            const date = item.querySelector('.task-date').value;
+            const isOverdue = date && date < today ? "SIM" : "NÃO";
 
-                csvContent += `"${statusLabel}","${isOverdue}","${text}","${owner}","${date}","${boxTitle}"\n`;
-            });
+            let statusLabel = status === 'doing' ? 'Fazendo' : 'A Fazer';
+
+            // --- ADICIONADO O CAMPO TASKLABEL NA LINHA EXPORTADA ---
+            csvContent += `"${statusLabel}","${isOverdue}","${text}","${taskLabel}","${owner}","${date}","${boxTitle}"\n`;
         });
+    });
 
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        if (link.download !== undefined) {
-            const url = URL.createObjectURL(blob);
-            link.setAttribute("href", url);
-            link.setAttribute("download", "jornal_pendencias.csv");
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", "jornal_pendencias.csv");
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
+}
 
     function closeJournal() {
         document.getElementById('journal-overlay').style.display = 'none';
