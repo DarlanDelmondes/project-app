@@ -368,6 +368,30 @@ button.btn-pending:hover {
 
 
 
+        /* Linhas de fundo do gráfico (Mais altas para caber as barras grossas) */
+.gantt-body-row {
+    position: relative;
+    height: 42px; /* Aumentado de 32px para 42px */
+    border-bottom: 1px dashed #e2e8f0;
+    width: 100%;
+}
+
+/* A Barra de Tarefa (Mais grossa e com texto maior) */
+.gantt-bar {
+    position: absolute;
+    height: 30px; /* Grossura aumentada de 20px para 30px */
+    top: 6px;
+    border-radius: 6px;
+    font-size: 13px; /* Texto maior (era 10px) */
+    font-weight: bold; color: white;
+    display: flex; align-items: center; padding: 0 10px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2); cursor: pointer;
+    transition: transform 0.1s;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+}
+.gantt-bar:hover { transform: scale(1.02); z-index: 100; box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
+
 
 
 
@@ -1344,6 +1368,47 @@ body.filtering .box.highlight-focus { animation: none !important; box-shadow: no
 .gantt-bar:hover { transform: scale(1.02); z-index: 100; box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
 
         
+/* Cabeçalho dos Meses */
+.gantt-header-row {
+    display: flex;
+    height: calc(35px * var(--gantt-font, 1)); /* Cresce com a fonte */
+    border-bottom: 1px solid #cbd5e1;
+    background: #f1f5f9;
+    position: sticky; 
+    top: 0; 
+    z-index: 10;
+}
+
+.gantt-month-block {
+    flex-shrink: 0; border-right: 1px solid #cbd5e1; box-sizing: border-box; padding: 8px;
+    font-size: calc(11px * var(--gantt-font, 1)); /* Fonte dinâmica */
+    font-weight: bold; color: #475569; text-transform: uppercase; display: flex; align-items: center; background: #f1f5f9;
+}
+
+/* Linhas de fundo do gráfico */
+.gantt-body-row {
+    position: relative;
+    height: calc(42px * var(--gantt-font, 1)); /* Afasta as linhas se a barra engrossar */
+    border-bottom: 1px dashed #e2e8f0;
+    width: 100%;
+}
+
+/* A Barra de Tarefa */
+.gantt-bar {
+    position: absolute;
+    height: calc(30px * var(--gantt-font, 1)); /* Engrossa a barra */
+    top: calc(6px * var(--gantt-font, 1));
+    border-radius: 6px;
+    font-size: calc(13px * var(--gantt-font, 1)); /* Aumenta a letra da tarefa */
+    font-weight: bold; color: white;
+    display: flex; align-items: center; padding: 0 10px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2); cursor: pointer;
+    transition: transform 0.1s;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+}
+.gantt-bar:hover { transform: scale(1.02); z-index: 100; box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
+
         .note-delete {
             position: absolute; 
             top: -10px; 
@@ -3218,11 +3283,14 @@ function updateGanttScale(val) {
 }
 
 // 2. Renderiza o HTML do Gantt
+// 2. Renderiza o HTML do Gantt
+// 2. Renderiza o HTML do Gantt
 function renderGanttChart(tasks) {
     const validTasks = tasks.filter(t => t.date);
     if (validTasks.length === 0) return '';
 
     const PX_PER_DAY = state.ganttScale || 20; 
+    const fScale = state.ganttFontScale || 1; // LÊ A ESCALA DA FONTE
     
     let minTime = Infinity;
     let maxTime = -Infinity;
@@ -3241,8 +3309,21 @@ function renderGanttChart(tasks) {
     const globalEnd = new Date(maxTime); globalEnd.setMonth(globalEnd.getMonth() + 1); globalEnd.setDate(0); 
     const totalDays = (globalEnd - globalStart) / (1000 * 60 * 60 * 24);
     
-    const OFFSET = 45; 
-    const totalWidth = (totalDays * PX_PER_DAY) + OFFSET + 45; 
+    const OFFSET = 50; 
+    const totalWidth = (totalDays * PX_PER_DAY) + OFFSET + 50; 
+
+    // --- CÁLCULO DA LINHA DE HOJE ---
+    const realToday = new Date(); realToday.setHours(0,0,0,0);
+    const daysToToday = (realToday - globalStart) / (1000 * 60 * 60 * 24);
+    const todayPx = (daysToToday * PX_PER_DAY) + OFFSET;
+    
+    // Desenha a linha vermelha que atravessa o gráfico de cima a baixo
+    const todayLineHtml = `
+        <div style="position:absolute; left:${todayPx}px; top:0; bottom:0; width:2px; background:rgba(239, 68, 68, 0.6); z-index:15; pointer-events:none; border-right:1px dashed #fca5a5;">
+            <div style="background:#ef4444; color:white; font-size:calc(10px * var(--gantt-font, 1)); font-weight:bold; padding:2px 6px; border-radius:4px; position:absolute; top:calc(40px * var(--gantt-font, 1)); transform:translateX(-50%); box-shadow:0 2px 4px rgba(0,0,0,0.2);">HOJE</div>
+        </div>
+    `;
+    // --------------------------------
 
     let headerHtml = `<div style="width: ${OFFSET}px; flex-shrink: 0;"></div>`; 
     let gridHtml = ''; 
@@ -3273,19 +3354,20 @@ function renderGanttChart(tasks) {
 
         barsHtml += `
         <div class="gantt-body-row">
-            <span style="position:absolute; left: ${leftPx - 42}px; width: 38px; text-align:right; top: 8px; font-size: 10px; color: #64748b; font-family: monospace; font-weight:bold; pointer-events:none;">${sDate}</span>
+            <span style="position:absolute; left: ${leftPx - 45}px; width: 40px; text-align:right; top: calc(12px * var(--gantt-font, 1)); font-size: calc(11px * var(--gantt-font, 1)); color: #64748b; font-family: monospace; font-weight:bold; pointer-events:none;">${sDate}</span>
             
             <div class="gantt-bar" style="left: ${leftPx}px; width: ${widthPx}px; background: ${bgGradient};" title="${t.label}: ${sDate} - ${eDate}" onclick="focusOnBox('${t.boxId}')">
-                <span style="font-size:9px; background:rgba(0,0,0,0.2); padding:0 4px; border-radius:3px; margin-right:5px; white-space:nowrap;">${t.label}</span>
+                <span style="font-size:calc(11px * var(--gantt-font, 1)); background:rgba(0,0,0,0.25); padding:2px 6px; border-radius:4px; margin-right:6px; white-space:nowrap;">${t.label}</span>
                 <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.text}</span>
             </div>
             
-            <span style="position:absolute; left: ${leftPx + widthPx + 20}px; top: 8px; font-size: 10px; color: #be123c; font-family: monospace; font-weight:bold; pointer-events:none;">${eDate}</span>
+            <span style="position:absolute; left: ${leftPx + widthPx + 8}px; top: calc(12px * var(--gantt-font, 1)); font-size: calc(11px * var(--gantt-font, 1)); color: #be123c; font-family: monospace; font-weight:bold; pointer-events:none;">${eDate}</span>
         </div>`;
     });
 
+    // Injeta a variável CSS --gantt-font direto na div!
     return `
-        <div class="gantt-wrapper"> 
+        <div class="gantt-wrapper" style="--gantt-font: ${fScale};"> 
             <div class="gantt-title-bar" style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc;">
                 <div style="display:flex; align-items:center; gap:10px;">
                     <button class="btn-gantt-toggle" onclick="toggleGantt(this)" title="Recolher Cronograma">▲</button>
@@ -3294,10 +3376,17 @@ function renderGanttChart(tasks) {
                 </div>
                 
                 <div style="display:flex; align-items:center; gap:10px;">
+                    
+                    <div style="display:flex; align-items:center; gap:2px; margin-right: 10px; border-right: 1px solid #cbd5e1; padding-right: 10px;">
+                        <span style="font-size:10px; color:#64748b; margin-right:4px;">Fonte:</span>
+                        <button class="btn-outline" style="padding:2px 8px; font-size:11px;" onclick="changeGanttFont(-0.1)" title="Diminuir Texto">A-</button>
+                        <button class="btn-outline" style="padding:2px 8px; font-size:11px;" onclick="changeGanttFont(0.1)" title="Aumentar Texto">A+</button>
+                    </div>
+
                     <span style="font-size:10px; color:#64748b;">Zoom:</span>
                     <input type="range" min="2" max="100" value="${PX_PER_DAY}" 
                        oninput="updateGanttScale(this.value)" 
-                       style="width:80px;" title="Zoom">
+                       style="width:80px;" title="Zoom Temporal">
                 </div>
             </div>
             
@@ -3305,6 +3394,7 @@ function renderGanttChart(tasks) {
                 <div class="gantt-inner" style="width: ${totalWidth}px;">
                     <div class="gantt-header-row">${headerHtml}</div>
                     ${gridHtml}
+                    ${todayLineHtml}
                     <div style="padding-top: 10px;">${barsHtml}</div>
                 </div>
             </div>
@@ -6273,20 +6363,54 @@ function removeAnimStep(index) {
     renderAnimEditorList();
     updateAnimBadges(); // Remove a bolinha do mapa
 }
-
-// Aplica as alterações no banco de dados
+// Aplica as alterações no banco de dados e finaliza a edição de forma clara
 function saveAnimEdits() {
     const anim = savedAnimations.find(a => a.id === currentEditAnimId);
     if (anim) {
         anim.title = document.getElementById('anim-edit-title').value.trim() || "Apresentação sem título";
         anim.sequence = [...tempEditSequence];
+        
         markUnsaved();
-        showToast("Apresentação atualizada com sucesso!");
+        
+        // Feedback visual mais forte de conclusão
+        showToast("✅ Apresentação salva! Modo de edição encerrado.");
+        
+        // Executa a limpeza rigorosa do mapa
+        closeAnimEditor();
+        
+        // Reabre o menu dropdown automaticamente para você já poder clicar em "Tocar"
+        updateAnimDropdownUI();
+        document.getElementById('anim-dropdown-container').style.display = 'flex';
     }
+}
+
+// A função de limpeza definitiva (Garante que o mapa volta 100% ao normal)
+function closeAnimEditor() {
+    // 1. Esconde a barra lateral
+    document.getElementById('anim-edit-sidebar').style.display = 'none';
     
-    // Força o desligamento de tudo, quer tenha encontrado a animação ou não
-    closeAnimEditor();
-    if (typeof updateAnimDropdownUI === 'function') updateAnimDropdownUI();
+    // 2. Limpa a memória temporária
+    currentEditAnimId = null;
+    tempEditSequence = [];
+    
+    // 3. A CORREÇÃO DE OURO: Desliga as flags que roubavam o clique do rato
+    isEditingAnim = false; 
+    window.isEditingAnim = false; 
+    if (typeof isRecordingAnim !== 'undefined') isRecordingAnim = false;
+
+    // 4. Limpeza Visual Absoluta do Mapa
+    // Remove o cursor de cruz e o bloqueio de arrastar
+    document.body.classList.remove('recording-anim');
+    
+    // Varre e destrói todas as bolinhas vermelhas numeradas
+    document.querySelectorAll('.anim-step-badge').forEach(e => e.remove());
+    
+    // Desliga qualquer caixa que tenha ficado com a borda azul piscando
+    document.querySelectorAll('.highlight-focus').forEach(el => el.classList.remove('highlight-focus'));
+    
+    // Esconde a barra de gravação (caso estivesse a criar uma nova em vez de editar)
+    const recBar = document.getElementById('recording-bar');
+    if (recBar) recBar.style.display = 'none';
 }
 
 // O botão de "Cancelar" e a finalização do "Salvar" caem aqui
@@ -6359,29 +6483,6 @@ function moveAnimStep(index, direction) {
 function removeAnimStep(index) {
     tempEditSequence.splice(index, 1);
     renderAnimEditorList();
-}
-
-// Aplica as alterações no banco de dados
-function saveAnimEdits() {
-    const anim = savedAnimations.find(a => a.id === currentEditAnimId);
-    if (anim) {
-        anim.title = document.getElementById('anim-edit-title').value.trim() || "Apresentação sem título";
-        anim.sequence = [...tempEditSequence];
-        
-        markUnsaved();
-        showToast("Apresentação atualizada com sucesso!");
-        closeAnimEditor();
-        updateAnimDropdownUI(); // Atualiza a lista do dropdown
-    }
-}
-
-function closeAnimEditor() {
-    document.getElementById('anim-edit-sidebar').style.display = 'none';
-    currentEditAnimId = null;
-    tempEditSequence = [];
-    
-    // Garante que nenhuma caixa fique presa brilhando
-    document.querySelectorAll('.highlight-focus').forEach(el => el.classList.remove('highlight-focus'));
 }
 
 // Alterna o estado de "Pinado" e avisa os filtros para atualizarem
@@ -7662,6 +7763,15 @@ function importTeams(event) {
     event.target.value = ''; 
 }
 
+
+// --- CONTROLE DE TAMANHO DA FONTE DO GANTT ---
+function changeGanttFont(delta) {
+    state.ganttFontScale = (state.ganttFontScale || 1) + delta;
+    // Trava entre 0.6x e 3.0x para não quebrar a tela
+    state.ganttFontScale = Math.max(0.6, Math.min(3, state.ganttFontScale));
+    openJournal(); // Recarrega o gráfico instantaneamente
+    markUnsaved(); // Salva a preferência
+}
 
 </script>
 
