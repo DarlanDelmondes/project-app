@@ -95,7 +95,7 @@
         </header>
 
         <div class="px-6 py-2.5 border-b border-zinc-200 dark:border-zinc-800/60 flex items-center gap-2 overflow-x-auto shrink-0 no-scrollbar bg-zinc-50 dark:bg-zinc-900/20">
-            <div id="filter-bar" class="flex gap-2 items-center"></div>
+            <div id="filter-bar" class="flex gap-2"></div>
             <div class="border-l border-zinc-300 dark:border-zinc-700 pl-2 ml-1 flex items-center shrink-0">
                 <input type="text" id="new-label-input" onkeypress="handleNewLabel(event)" class="bg-transparent border border-dashed border-zinc-300 dark:border-zinc-700 text-xs rounded-full px-3 py-1 w-28 focus:border-indigo-500 focus:outline-none dark:text-white placeholder-zinc-400" placeholder="+ Nova Label">
             </div>
@@ -117,7 +117,7 @@
                     <div class="flex flex-wrap gap-2 mb-2 empty:hidden" id="event-teams-pills"></div>
                     
                     <div class="relative">
-                        <input type="text" id="team-search-input" oninput="handleTeamAutocomplete(this.value)" class="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm rounded-lg px-3 py-2 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 focus:outline-none dark:text-white" placeholder="Buscar equipe (ex: Equipe 1)...">
+                        <input type="text" id="team-search-input" oninput="handleTeamAutocomplete(this.value)" class="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm rounded-lg px-3 py-2 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 focus:outline-none dark:text-white" placeholder="Buscar equipe (ex: Equipe Alpha)...">
                         <div id="team-autocomplete-dropdown" class="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl z-50 hidden max-h-40 overflow-y-auto"></div>
                     </div>
                     
@@ -129,7 +129,6 @@
                             </div>
                             <p id="emails-list-all" class="text-xs font-mono text-zinc-600 dark:text-zinc-400 break-all leading-relaxed"></p>
                         </div>
-
                         <div class="border-t border-zinc-200 dark:border-zinc-700 pt-2">
                             <div class="flex justify-between items-center mb-1">
                                 <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-500 uppercase">Apenas Líderes / Ponto Focal</span>
@@ -174,7 +173,11 @@
             </div>
 
             <div class="flex justify-between items-center mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
-                <button onclick="deleteTask()" class="text-xs font-medium text-red-500 hover:text-red-700 transition-colors">Excluir Agenda</button>
+                <div class="flex gap-2 items-center">
+                    <button onclick="deleteTask()" class="text-xs font-medium text-red-500 hover:text-red-700 transition-colors">Excluir Agenda</button>
+                    <span class="text-zinc-300 dark:text-zinc-700">|</span>
+                    <button onclick="cloneTask()" class="text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 transition-colors" title="Duplicar esta agenda">Clonar</button>
+                </div>
                 <div class="flex gap-3">
                     <button onclick="closeModal()" class="px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors">Cancelar</button>
                     <button onclick="saveModal()" class="px-5 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-500/30">Salvar</button>
@@ -250,8 +253,9 @@
         const saveLabels = () => localStorage.setItem('vault_labels', JSON.stringify(db_labels));
         const saveTeams = () => localStorage.setItem('vault_teams', JSON.stringify(db_teams));
 
-        const types = ['Sem objetivo', 'PoC', 'Deliberação', 'Planejamento', 'Execução', 'Treinamento'];
-        const targets = { 'Sem objetivo': 20, 'PoC': 10, 'Deliberação': 20, 'Planejamento': 20, 'Execução': 20, 'Treinamento': 10 };
+        // Tipo Novo Adicionado: Feriado
+        const types = ['Sem objetivo', 'PoC', 'Deliberação', 'Planejamento', 'Execução', 'Treinamento', 'Feriado'];
+        const targets = { 'Sem objetivo': 20, 'PoC': 10, 'Deliberação': 20, 'Planejamento': 20, 'Execução': 20, 'Treinamento': 10, 'Feriado': 0 };
 
         const today = new Date(); const currentHour = today.getHours(); const todayISO = toISODate(today);
         const diffToMonday = today.getDay() === 0 ? -6 : 1 - today.getDay();
@@ -259,7 +263,7 @@
 
         let weekOffset = 0; let currentFilter = 'all'; let currentSearch = '';
 
-        // --- 2. Import / Export Geral e Específico ---
+        // --- 2. Import / Export ---
         window.exportData = () => {
             const data = { tasks: db_tasks, labels: db_labels, teams: db_teams };
             const blob = new Blob([JSON.stringify(data, null, 2)], {type: "application/json"});
@@ -293,8 +297,7 @@
                         data.forEach(importedTeam => {
                             if(importedTeam.id && importedTeam.name) {
                                 const exists = db_teams.findIndex(t => t.id === importedTeam.id);
-                                if(exists > -1) db_teams[exists] = importedTeam; 
-                                else db_teams.push(importedTeam);
+                                if(exists > -1) db_teams[exists] = importedTeam; else db_teams.push(importedTeam);
                             }
                         });
                         saveTeams(); renderTeamsList();
@@ -332,16 +335,34 @@
                 const isToday = dateISO === todayISO; const isPastDay = dateISO < todayISO;
                 const dayTasks = getTasksForDate(dateISO);
 
-                const colClasses = isToday ? 'col-today rounded-lg border border-indigo-200 dark:border-indigo-800/30' : '';
-                const titleColor = isToday ? 'text-indigo-600 dark:text-indigo-400' : 'text-zinc-800 dark:text-zinc-200';
+                const hasFeriado = dayTasks.some(t => t.type === 'Feriado');
+                
+                // Se tem Feriado, o layout da coluna muda para Bloqueado
+                const colClasses = isToday ? 'col-today rounded-lg border border-indigo-200 dark:border-indigo-800/30' : (hasFeriado ? 'bg-red-50 dark:bg-red-900/10 opacity-90 rounded-lg' : '');
+                const titleColor = isToday ? 'text-indigo-600 dark:text-indigo-400' : (hasFeriado ? 'text-red-600 dark:text-red-400' : 'text-zinc-800 dark:text-zinc-200');
                 
                 html += `
                 <div class="flex-1 flex flex-col min-w-[145px] max-w-full h-full ${colClasses}">
                     <div class="text-center py-2 mb-2 border-b border-zinc-200 dark:border-zinc-800 shrink-0 flex flex-col items-center">
                         <div class="flex items-center"><span class="text-sm font-bold uppercase tracking-wider ${titleColor}">${dayName}</span></div>
-                        <span class="text-[10px] text-zinc-500 font-mono">${dateStr}</span>
-                    </div>
-                    ${['morning', 'afternoon'].map(period => {
+                        <span class="text-[10px] ${hasFeriado ? 'text-red-400 dark:text-red-500' : 'text-zinc-500'} font-mono">${dateStr}</span>
+                    </div>`;
+
+                if (hasFeriado) {
+                    // Renderiza UM bloco unificado para o Dia Inteiro
+                    html += `
+                    <div class="flex-1 flex flex-col min-h-0 mb-3 border border-red-200 dark:border-red-900/50 rounded-lg bg-red-100/50 dark:bg-red-900/20 overflow-hidden mx-1 shadow-sm">
+                        <div class="flex items-center justify-between px-2 py-1.5 bg-red-100 dark:bg-red-900/40 border-b border-red-200 dark:border-red-900/50 shrink-0">
+                            <span class="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase flex items-center gap-1">🏖️ O Dia Todo</span>
+                            <button onclick="addCard('${dateISO}', 'morning')" class="text-red-400 hover:text-red-600">+</button>
+                        </div>
+                        <div class="time-block drop-zone flex-1 p-1.5 space-y-2 overflow-y-auto no-scrollbar" data-date="${dateISO}" data-period="morning">
+                            ${dayTasks.map(t => createCardHtml(t, isPastDay)).join('')}
+                        </div>
+                    </div>`;
+                } else {
+                    // Renderização Normal Manhã/Tarde
+                    html += ['morning', 'afternoon'].map(period => {
                         const icons = { morning: '☀️ Manhã', afternoon: '☕ Tarde' };
                         const colors = { morning: 'text-amber-500', afternoon: 'text-orange-500' };
                         let isPastBlock = isPastDay;
@@ -362,8 +383,9 @@
                                 ${tasksHtml}
                             </div>
                         </div>`;
-                    }).join('')}
-                </div>`;
+                    }).join('');
+                }
+                html += `</div>`;
             }
             container.innerHTML = html; setupInteractions(); applyFilters();
         };
@@ -371,7 +393,7 @@
         const createCardHtml = (t, isPast) => {
             const pastClass = isPast ? 'past-event' : '';
             const recIcon = t.isRecurring ? `<span class="absolute top-1.5 right-2 text-[10px] text-zinc-400" title="Repete">🔁</span>` : '';
-            const typeColors = { 'Sem objetivo': 'bg-zinc-400', 'PoC': 'bg-pink-500', 'Deliberação': 'bg-amber-500', 'Planejamento': 'bg-blue-500', 'Execução': 'bg-emerald-500', 'Treinamento': 'bg-purple-500' };
+            const typeColors = { 'Sem objetivo': 'bg-zinc-400', 'PoC': 'bg-pink-500', 'Deliberação': 'bg-amber-500', 'Planejamento': 'bg-blue-500', 'Execução': 'bg-emerald-500', 'Treinamento': 'bg-purple-500', 'Feriado': 'bg-red-500' };
             const typeClass = typeColors[t.type] || 'bg-zinc-400';
             const teamsVisual = (t.teamIds && t.teamIds.length > 0) ? `<div class="mt-1 flex gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500" title="${t.teamIds.length} Equipe(s)"></span></div>` : '';
 
@@ -494,7 +516,8 @@
             if(!task) return;
 
             const titleInput = document.getElementById('modal-task-title');
-            titleInput.value = task.text;
+            // Zera o título caso seja uma nova agenda padrão
+            titleInput.value = task.text === 'Nova agenda...' ? '' : task.text;
 
             currentEventTeams = task.teamIds ? [...task.teamIds] : [];
             document.getElementById('team-search-input').value = '';
@@ -557,7 +580,17 @@
             }
         };
 
-        // --- 5. Equipes Modal (Tela Cheia e Grid) ---
+        window.cloneTask = () => {
+            const original = db_tasks.find(t => t.id === currentEditingRealId);
+            if(original) {
+                const copy = JSON.parse(JSON.stringify(original));
+                copy.id = 'task_' + Math.random().toString(36).substr(2, 9);
+                db_tasks.push(copy);
+                saveTasks(); renderBoard(); closeModal();
+            }
+        };
+
+        // --- 5. Equipes Modal ---
         const teamsModal = document.getElementById('teams-modal');
         const teamsContent = document.getElementById('teams-modal-content');
 
@@ -641,7 +674,7 @@
         };
         window.removeMember = (tIdx, mIdx) => { if(confirm("Remover este membro?")) { db_teams[tIdx].members.splice(mIdx, 1); saveTeams(); renderTeamsList(); } };
 
-        // --- 6. Demais Funções Globais e Deleção de Label ---
+        // --- 6. Demais Funções (Labels, Reports, etc.) ---
         window.changeWeek = (dir) => { weekOffset += dir; renderDates(); renderBoard(); };
         window.resetWeek = () => { weekOffset = 0; renderDates(); renderBoard(); };
         const renderDates = () => {
@@ -654,16 +687,15 @@
 
         const renderFilters = () => {
             const bar = document.getElementById('filter-bar');
-            bar.innerHTML = `<button class="px-3 py-1 text-xs rounded-full transition-all whitespace-nowrap ${currentFilter === 'all' ? 'bg-zinc-800 text-white dark:bg-zinc-200 dark:text-zinc-900 font-semibold border-transparent' : 'border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'}" onclick="setFilter('all')">Todos</button>`;
+            bar.innerHTML = `<button class="px-3 py-1 text-xs rounded-full transition-all whitespace-nowrap outline-none ${currentFilter === 'all' ? 'bg-zinc-800 text-white dark:bg-zinc-200 dark:text-zinc-900 font-semibold border-transparent' : 'border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'}" onclick="setFilter('all')">Todos</button>`;
             
             db_labels.forEach(l => { 
                 const isActive = currentFilter === l;
                 const wrapperClass = isActive ? 'bg-zinc-800 text-white dark:bg-zinc-200 dark:text-zinc-900 border-transparent' : 'border border-zinc-200 dark:border-zinc-700 bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400';
-                
                 bar.innerHTML += `
-                <div class="flex items-center rounded-full transition-all shrink-0 group ${wrapperClass}">
+                <div class="flex items-center rounded-full transition-all shrink-0 group ${wrapperClass}" title="Duplo-clique no X para excluir">
                     <button class="pl-3 pr-1.5 py-1 text-xs font-medium whitespace-nowrap outline-none" onclick="setFilter('${l}')">${l}</button>
-                    <button onclick="deleteLabel('${l}', event)" class="pr-2 pl-0.5 text-[10px] opacity-0 group-hover:opacity-100 hover:text-red-500 transition-opacity outline-none" title="Excluir Label">✕</button>
+                    <button ondblclick="deleteLabel('${l}', event)" class="pr-2 pl-0.5 text-[10px] opacity-0 group-hover:opacity-100 hover:text-red-500 transition-opacity outline-none">✕</button>
                 </div>`; 
             });
         };
@@ -672,12 +704,9 @@
             event.stopPropagation();
             if(confirm(`Deseja realmente excluir a label "${label}"?\nAs agendas associadas perderão esta etiqueta, mas não serão apagadas.`)) {
                 db_labels = db_labels.filter(l => l !== label);
-                db_tasks.forEach(t => {
-                    if(t.labels) t.labels = t.labels.split(',').filter(l => l !== label).join(',');
-                });
+                db_tasks.forEach(t => { if(t.labels) t.labels = t.labels.split(',').filter(l => l !== label).join(','); });
                 saveLabels(); saveTasks();
-                if(currentFilter === label) setFilter('all');
-                else { renderFilters(); renderBoard(); }
+                if(currentFilter === label) setFilter('all'); else { renderFilters(); renderBoard(); }
             }
         };
 
@@ -698,12 +727,12 @@
         window.openReport = () => { calculateReport(); reportModal.classList.remove('hidden'); reportModal.classList.add('flex'); setTimeout(() => { reportModal.classList.remove('opacity-0'); reportContent.classList.remove('scale-95'); }, 10); };
         window.closeReport = () => { reportModal.classList.add('opacity-0'); reportContent.classList.add('scale-95'); setTimeout(() => { reportModal.classList.add('hidden'); reportModal.classList.remove('flex'); }, 200); };
         function calculateReport() {
-            let totalHours = 0; const hoursByType = { 'Sem objetivo': 0, 'PoC': 0, 'Deliberação': 0, 'Planejamento': 0, 'Execução': 0, 'Treinamento': 0 };
+            let totalHours = 0; const hoursByType = { 'Sem objetivo': 0, 'PoC': 0, 'Deliberação': 0, 'Planejamento': 0, 'Execução': 0, 'Treinamento': 0, 'Feriado': 0 };
             document.querySelectorAll('.agenda-card').forEach(c => {
                 const task = db_tasks.find(t => t.id === c.getAttribute('data-realid'));
-                if(task) { hoursByType[task.type] += task.duration; totalHours += task.duration; }
+                if(task && task.type !== 'Feriado') { hoursByType[task.type] += task.duration; totalHours += task.duration; }
             });
-            const barsHtml = types.map(type => {
+            const barsHtml = types.filter(t => t !== 'Feriado').map(type => {
                 const actPct = totalHours === 0 ? 0 : Math.round((hoursByType[type] / totalHours) * 100);
                 const color = (type === 'Sem objetivo' && actPct > targets[type]) ? 'bg-red-500' : ((type === 'Execução' && actPct < targets[type]) ? 'bg-amber-500' : 'bg-indigo-500');
                 return `<div class="mb-3"><div class="flex justify-between text-xs font-medium mb-1"><span class="text-zinc-700 dark:text-zinc-300">${type} <span class="text-zinc-400 font-normal">(${hoursByType[type]}h)</span></span><span>Real: <span class="font-bold">${actPct}%</span> <span class="text-zinc-400 text-[10px] ml-1">Meta: ${targets[type]}%</span></span></div><div class="w-full bg-zinc-200 dark:bg-zinc-800 rounded-full h-2.5 relative"><div class="${color} h-2.5 rounded-full transition-all duration-1000" style="width: ${actPct}%"></div><div class="absolute top-[-4px] bottom-[-4px] w-1 bg-zinc-900 dark:bg-white z-10 rounded-sm" style="left: ${targets[type]}%;"></div></div></div>`;
