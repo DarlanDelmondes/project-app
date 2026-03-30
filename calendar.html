@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Vault - Planner & ERP Pessoal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; transition: background-color 0.3s ease; }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #52525b; border-radius: 4px; }
+
+        .dragging { opacity: 0.5; transform: scale(0.95); border: 1px dashed #6366f1 !important; z-index: 50; }
+        .time-block { transition: background-color 0.2s ease; }
+        .time-block.drag-over { background-color: rgba(99, 102, 241, 0.1); border-radius: 0.5rem; }
+
+        .glass-modal { background: rgba(24, 24, 27, 0.6); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+
+        .agenda-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .filtered-out { opacity: 0.05 !important; filter: grayscale(100%) !important; pointer-events: none; }
+        .filtered-highlight { box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.6); } 
+        
+        .past-event { opacity: 0.45; filter: grayscale(100%); }
+        .past-event:hover { opacity: 0.8; filter: grayscale(50%); }
+
+        .col-today { 
+            border-color: rgba(99, 102, 241, 0.5) !important; 
+            background: linear-gradient(180deg, rgba(99,102,241,0.05) 0%, rgba(99,102,241,0.01) 100%); 
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100 h-screen flex overflow-hidden">
+
+    <aside class="w-14 md:w-16 border-r border-zinc-200 dark:border-zinc-800/60 flex flex-col items-center py-6 shrink-0 bg-white dark:bg-zinc-900/30 z-20 flex-none overflow-y-auto no-scrollbar">
+        <button id="theme-toggle" class="p-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:scale-105 transition-transform mb-6" title="Alternar Tema">
+            <svg id="icon-sun" class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+            <svg id="icon-moon" class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+        </button>
+
+        <div class="w-full h-px bg-zinc-200 dark:bg-zinc-800 mb-6"></div>
+
+        <button onclick="openReport()" class="p-2 mb-4 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:scale-105 transition-transform" title="Qualidade do Tempo">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+        </button>
+
+        <button onclick="openTeams()" class="p-2 mb-4 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:scale-105 transition-transform" title="Gerenciar Equipes">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+        </button>
+
+        <div class="w-full h-px bg-zinc-200 dark:bg-zinc-800 mb-6"></div>
+
+        <button onclick="exportData()" class="p-2 mb-4 rounded-xl text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors" title="Backup Total (Exportar Tudo)">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+        </button>
+        <button onclick="document.getElementById('import-file').click()" class="p-2 mb-4 rounded-xl text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors" title="Restaurar (Importar Tudo)">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+        </button>
+        <input type="file" id="import-file" class="hidden" accept=".json" onchange="importData(event)">
+    </aside>
+
+    <main class="flex-1 h-full flex flex-col min-w-0">
+        
+        <header class="px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800/60 shrink-0 bg-white dark:bg-zinc-950/80 z-10">
+            <div class="flex items-center gap-4 bg-zinc-100 dark:bg-zinc-900 rounded-lg p-1 border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                <button onclick="changeWeek(-1)" class="p-1.5 rounded hover:bg-white dark:hover:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"></path></svg>
+                </button>
+                <div class="flex flex-col items-center min-w-[150px] cursor-pointer" onclick="resetWeek()">
+                    <span id="week-label" class="text-sm font-semibold text-zinc-800 dark:text-zinc-200">Semana Atual</span>
+                    <span id="week-dates" class="text-[10px] text-zinc-500 uppercase tracking-wider">--</span>
+                </div>
+                <button onclick="changeWeek(1)" class="p-1.5 rounded hover:bg-white dark:hover:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+            </div>
+
+            <div class="relative w-full md:w-72">
+                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-zinc-400">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+                <input type="text" id="search-input" oninput="applyFilters()" class="w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-sm rounded-lg pl-9 pr-3 py-2 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none dark:text-white transition-all" placeholder="Pesquisar agendas ou labels...">
+            </div>
+        </header>
+
+        <div class="px-6 py-2.5 border-b border-zinc-200 dark:border-zinc-800/60 flex items-center gap-2 overflow-x-auto shrink-0 no-scrollbar bg-zinc-50 dark:bg-zinc-900/20">
+            <div id="filter-bar" class="flex gap-2 items-center"></div>
+            <div class="border-l border-zinc-300 dark:border-zinc-700 pl-2 ml-1 flex items-center shrink-0">
+                <input type="text" id="new-label-input" onkeypress="handleNewLabel(event)" class="bg-transparent border border-dashed border-zinc-300 dark:border-zinc-700 text-xs rounded-full px-3 py-1 w-28 focus:border-indigo-500 focus:outline-none dark:text-white placeholder-zinc-400" placeholder="+ Nova Label">
+            </div>
+        </div>
+
+        <div class="flex-1 p-4 flex gap-2 overflow-x-auto overflow-y-hidden lg:overflow-x-hidden" id="board-container"></div>
+    </main>
+
+    <div id="edit-modal" class="fixed inset-0 glass-modal z-50 hidden items-center justify-center opacity-0 transition-opacity duration-200">
+        <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 p-6 rounded-2xl w-full max-w-md shadow-2xl transform scale-95 transition-transform duration-200" id="edit-modal-content">
+            
+            <input type="text" id="modal-task-title" class="text-xl font-bold bg-transparent border-b-2 border-transparent focus:border-indigo-500 outline-none w-full text-zinc-800 dark:text-zinc-100 transition-colors pb-1 mb-5 placeholder-zinc-400" placeholder="Título da Agenda">
+            <input type="hidden" id="modal-card-id">
+            
+            <div class="max-h-[60vh] overflow-y-auto no-scrollbar pb-2">
+                
+                <div class="mb-5 border-b border-zinc-100 dark:border-zinc-800 pb-4 relative">
+                    <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Equipes Envolvidas</label>
+                    <div class="flex flex-wrap gap-2 mb-2 empty:hidden" id="event-teams-pills"></div>
+                    
+                    <div class="relative">
+                        <input type="text" id="team-search-input" oninput="handleTeamAutocomplete(this.value)" class="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm rounded-lg px-3 py-2 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 focus:outline-none dark:text-white" placeholder="Buscar equipe (ex: Equipe 1)...">
+                        <div id="team-autocomplete-dropdown" class="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl z-50 hidden max-h-40 overflow-y-auto"></div>
+                    </div>
+                    
+                    <div id="event-teams-emails" class="mt-3 hidden bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg p-3 relative group transition-all space-y-3">
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-[10px] font-bold text-zinc-500 uppercase">Todos os Membros</span>
+                                <button onclick="copyEventEmails('all')" class="text-[10px] font-semibold bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 px-2 py-0.5 rounded hover:border-emerald-500 hover:text-emerald-500 transition-colors shadow-sm">Copiar Todos</button>
+                            </div>
+                            <p id="emails-list-all" class="text-xs font-mono text-zinc-600 dark:text-zinc-400 break-all leading-relaxed"></p>
+                        </div>
+
+                        <div class="border-t border-zinc-200 dark:border-zinc-700 pt-2">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-500 uppercase">Apenas Líderes / Ponto Focal</span>
+                                <button onclick="copyEventEmails('leader')" class="text-[10px] font-semibold bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 px-2 py-0.5 rounded hover:border-emerald-500 hover:text-emerald-500 transition-colors shadow-sm">Copiar Líderes</button>
+                            </div>
+                            <p id="emails-list-leaders" class="text-xs font-mono text-emerald-700 dark:text-emerald-400 break-all leading-relaxed"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-5 border-b border-zinc-100 dark:border-zinc-800 pb-4">
+                    <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2 flex justify-between">
+                        <span>Contexto (Labels)</span> <span class="text-[10px] text-zinc-400 normal-case font-normal">Multi-select</span>
+                    </label>
+                    <div class="flex flex-wrap gap-2" id="label-selectors"></div>
+                </div>
+
+                <div class="mb-5">
+                    <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Objetivo do Tempo</label>
+                    <div class="flex flex-wrap gap-2" id="type-selectors"></div>
+                </div>
+
+                <div class="mb-5 border-b border-zinc-100 dark:border-zinc-800 pb-4">
+                    <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Duração Estimada</label>
+                    <div class="flex gap-2" id="duration-selectors">
+                        <button type="button" data-val="0.5" class="dur-btn flex-1 py-1.5 text-sm font-medium border border-zinc-300 dark:border-zinc-700 rounded-lg hover:border-indigo-500 transition-colors">30m</button>
+                        <button type="button" data-val="1" class="dur-btn flex-1 py-1.5 text-sm font-medium border border-zinc-300 dark:border-zinc-700 rounded-lg hover:border-indigo-500 transition-colors">1h</button>
+                        <button type="button" data-val="2" class="dur-btn flex-1 py-1.5 text-sm font-medium border border-zinc-300 dark:border-zinc-700 rounded-lg hover:border-indigo-500 transition-colors">2h</button>
+                    </div>
+                </div>
+
+                <div class="mb-2">
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" id="modal-recurring" class="rounded text-indigo-600 focus:ring-indigo-500 bg-zinc-100 border-zinc-300 dark:border-zinc-700 dark:bg-zinc-800 w-4 h-4 cursor-pointer" onchange="toggleRecurrenceDate(this)">
+                        <label for="modal-recurring" class="text-sm font-semibold text-zinc-700 dark:text-zinc-300 cursor-pointer">Repetir semanalmente</label>
+                    </div>
+                    <div class="flex items-center gap-2 mt-2 ml-6 opacity-40 pointer-events-none transition-opacity" id="recurring-date-wrap">
+                        <label class="text-xs text-zinc-500">Até:</label>
+                        <input type="date" id="modal-until" class="bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-xs rounded-md px-2 py-1 focus:outline-none focus:border-indigo-500 dark:text-white">
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                <button onclick="deleteTask()" class="text-xs font-medium text-red-500 hover:text-red-700 transition-colors">Excluir Agenda</button>
+                <div class="flex gap-3">
+                    <button onclick="closeModal()" class="px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors">Cancelar</button>
+                    <button onclick="saveModal()" class="px-5 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-500/30">Salvar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="report-modal" class="fixed inset-0 glass-modal z-50 hidden items-center justify-center opacity-0 transition-opacity duration-200">
+        <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 p-8 rounded-2xl w-full max-w-2xl shadow-2xl transform scale-95 transition-transform duration-200" id="report-modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h3 class="text-xl font-bold text-zinc-800 dark:text-zinc-100">Qualidade do Tempo</h3>
+                    <p class="text-sm text-zinc-500">Distribuição nesta tela vs. Meta</p>
+                </div>
+                <button onclick="closeReport()" class="text-zinc-400 hover:text-zinc-100">✕</button>
+            </div>
+            <div id="report-bars" class="space-y-4"></div>
+        </div>
+    </div>
+
+    <div id="teams-modal" class="fixed inset-0 glass-modal z-50 hidden items-center justify-center opacity-0 transition-opacity duration-200 p-2 md:p-6">
+        <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 p-6 rounded-2xl w-full h-full flex flex-col shadow-2xl transform scale-95 transition-transform duration-200" id="teams-modal-content">
+            
+            <div class="flex justify-between items-center mb-6 shrink-0 border-b border-zinc-100 dark:border-zinc-800 pb-4">
+                <div>
+                    <h3 class="text-2xl font-bold text-zinc-800 dark:text-zinc-100 flex items-center gap-2">
+                        <svg class="w-6 h-6 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"></path></svg>
+                        Organograma Corporativo
+                    </h3>
+                    <p class="text-sm text-zinc-500">Gestão de reportes e importação de JSON.</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button onclick="document.getElementById('import-teams-file').click()" class="text-xs font-medium bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 px-3 py-1.5 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors flex items-center gap-1.5">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                        Importar JSON
+                    </button>
+                    <input type="file" id="import-teams-file" class="hidden" accept=".json" onchange="importTeamsOnly(event)">
+                    <button onclick="closeTeams()" class="text-zinc-400 hover:text-zinc-100 p-2">✕</button>
+                </div>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto pr-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-start content-start no-scrollbar" id="teams-list"></div>
+
+            <div class="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 shrink-0">
+                <div id="create-team-form" class="hidden mb-3 bg-zinc-50 dark:bg-zinc-800 p-3 rounded-lg border border-zinc-200 dark:border-zinc-700 max-w-sm">
+                    <input type="text" id="new-team-name-input" class="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-sm rounded-md px-3 py-2 mb-3 focus:ring-1 focus:ring-emerald-500 focus:outline-none dark:text-white" placeholder="Nome da Equipe (ex: Squad Alpha)">
+                    <div class="flex justify-end gap-2">
+                        <button onclick="toggleCreateTeam(false)" class="px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-md transition-colors">Cancelar</button>
+                        <button onclick="submitCreateTeam()" class="px-3 py-1.5 text-xs font-medium bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors shadow-sm">Salvar Equipe</button>
+                    </div>
+                </div>
+                <button id="create-team-btn" onclick="toggleCreateTeam(true)" class="w-auto px-6 py-2 border border-dashed border-emerald-500 text-emerald-600 dark:text-emerald-400 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-500/10 font-medium transition-colors">+ Nova Equipe</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. Boot, Storage & Dados ---
+        document.getElementById('theme-toggle').addEventListener('click', () => document.documentElement.classList.toggle('dark'));
+        const toISODate = (dateObj) => { const off = dateObj.getTimezoneOffset() * 60000; return new Date(dateObj - off).toISOString().split('T')[0]; };
+
+        const initialTeamsJson = [
+            { "id": "t_1773760573029", "name": "Equipe 1", "members": [ { "name": "Fulano", "email": "sadsa@sadsa.com", "role": "Membro" } ] },
+            { "id": "t_1774887056214", "name": "Equipe 3", "members": [ { "name": "Betrano", "email": "beltrano@gmail.com", "role": "Membro" }, { "name": "Ana", "email": "ana@live.com", "role": "Líder" } ] }
+        ];
+
+        let db_tasks = JSON.parse(localStorage.getItem('vault_tasks')) || [];
+        let db_labels = JSON.parse(localStorage.getItem('vault_labels')) || ['Corporate', 'AWS / Cloud', 'Arquitetura', 'Saúde & Treino', 'Estudos', 'M&A'];
+        let db_teams = JSON.parse(localStorage.getItem('vault_teams')) || initialTeamsJson;
+
+        const saveTasks = () => localStorage.setItem('vault_tasks', JSON.stringify(db_tasks));
+        const saveLabels = () => localStorage.setItem('vault_labels', JSON.stringify(db_labels));
+        const saveTeams = () => localStorage.setItem('vault_teams', JSON.stringify(db_teams));
+
+        const types = ['Sem objetivo', 'PoC', 'Deliberação', 'Planejamento', 'Execução', 'Treinamento'];
+        const targets = { 'Sem objetivo': 20, 'PoC': 10, 'Deliberação': 20, 'Planejamento': 20, 'Execução': 20, 'Treinamento': 10 };
+
+        const today = new Date(); const currentHour = today.getHours(); const todayISO = toISODate(today);
+        const diffToMonday = today.getDay() === 0 ? -6 : 1 - today.getDay();
+        const baseMonday = new Date(today); baseMonday.setDate(today.getDate() + diffToMonday); baseMonday.setHours(0,0,0,0);
+
+        let weekOffset = 0; let currentFilter = 'all'; let currentSearch = '';
+
+        // --- 2. Import / Export Geral e Específico ---
+        window.exportData = () => {
+            const data = { tasks: db_tasks, labels: db_labels, teams: db_teams };
+            const blob = new Blob([JSON.stringify(data, null, 2)], {type: "application/json"});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = `vault_backup_${todayISO}.json`; a.click();
+        };
+
+        window.importData = (event) => {
+            const file = event.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if(data.tasks) db_tasks = data.tasks; if(data.labels) db_labels = data.labels; if(data.teams) db_teams = data.teams;
+                    saveTasks(); saveLabels(); saveTeams();
+                    alert('Dados gerais restaurados com sucesso!'); location.reload();
+                } catch(err) { alert('Erro ao ler o arquivo JSON.'); }
+            };
+            reader.readAsText(file);
+        };
+
+        window.importTeamsOnly = (event) => {
+            const file = event.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if(Array.isArray(data)) {
+                        data.forEach(importedTeam => {
+                            if(importedTeam.id && importedTeam.name) {
+                                const exists = db_teams.findIndex(t => t.id === importedTeam.id);
+                                if(exists > -1) db_teams[exists] = importedTeam; 
+                                else db_teams.push(importedTeam);
+                            }
+                        });
+                        saveTeams(); renderTeamsList();
+                        alert('Equipes importadas com sucesso!');
+                    } else { alert('O JSON não é um Array válido de equipes.'); }
+                } catch(err) { alert('Erro de leitura ou formato JSON inválido.'); }
+                event.target.value = '';
+            };
+            reader.readAsText(file);
+        };
+
+        // --- 3. Renderização Principal (Board) ---
+        const getTasksForDate = (dateISO) => {
+            const targetDayOfWeek = new Date(dateISO).getDay();
+            return db_tasks.filter(t => {
+                if (t.date === dateISO) return true;
+                if (t.isRecurring) {
+                    const startDateObj = new Date(t.date);
+                    if (dateISO > t.date && targetDayOfWeek === startDateObj.getDay() && (!t.untilDate || dateISO <= t.untilDate)) return true;
+                }
+                return false;
+            }).map(t => ({ ...t, renderId: t.date === dateISO ? t.id : `${t.id}_rec_${dateISO}` }));
+        };
+
+        const renderBoard = () => {
+            const container = document.getElementById('board-container');
+            const currentMonday = new Date(baseMonday); currentMonday.setDate(baseMonday.getDate() + (weekOffset * 7));
+
+            let html = '';
+            for (let i = 0; i < 7; i++) {
+                const colDate = new Date(currentMonday); colDate.setDate(currentMonday.getDate() + i);
+                const dateISO = toISODate(colDate);
+                const dateStr = colDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                const dayName = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][colDate.getDay()];
+                const isToday = dateISO === todayISO; const isPastDay = dateISO < todayISO;
+                const dayTasks = getTasksForDate(dateISO);
+
+                const colClasses = isToday ? 'col-today rounded-lg border border-indigo-200 dark:border-indigo-800/30' : '';
+                const titleColor = isToday ? 'text-indigo-600 dark:text-indigo-400' : 'text-zinc-800 dark:text-zinc-200';
+                
+                html += `
+                <div class="flex-1 flex flex-col min-w-[145px] max-w-full h-full ${colClasses}">
+                    <div class="text-center py-2 mb-2 border-b border-zinc-200 dark:border-zinc-800 shrink-0 flex flex-col items-center">
+                        <div class="flex items-center"><span class="text-sm font-bold uppercase tracking-wider ${titleColor}">${dayName}</span></div>
+                        <span class="text-[10px] text-zinc-500 font-mono">${dateStr}</span>
+                    </div>
+                    ${['morning', 'afternoon'].map(period => {
+                        const icons = { morning: '☀️ Manhã', afternoon: '☕ Tarde' };
+                        const colors = { morning: 'text-amber-500', afternoon: 'text-orange-500' };
+                        let isPastBlock = isPastDay;
+                        if (isToday) {
+                            if (period === 'morning' && currentHour >= 12) isPastBlock = true;
+                            if (period === 'afternoon' && currentHour >= 18) isPastBlock = true;
+                        }
+                        const pTasks = dayTasks.filter(t => t.period === period);
+                        const tasksHtml = pTasks.map(t => createCardHtml(t, isPastBlock)).join('');
+
+                        return `
+                        <div class="flex-1 flex flex-col min-h-0 mb-3 border border-zinc-100 dark:border-zinc-800/50 rounded-lg bg-white dark:bg-zinc-900/30 overflow-hidden mx-1">
+                            <div class="flex items-center justify-between px-2 py-1.5 bg-zinc-50 dark:bg-zinc-800/30 border-b border-zinc-100 dark:border-zinc-800/50 shrink-0">
+                                <span class="text-[10px] font-semibold text-zinc-500 uppercase flex items-center gap-1"><span class="${colors[period]}">${icons[period].split(' ')[0]}</span> ${icons[period].split(' ')[1]}</span>
+                                <button onclick="addCard('${dateISO}', '${period}')" class="text-zinc-400 hover:text-indigo-500">+</button>
+                            </div>
+                            <div class="time-block drop-zone flex-1 p-1.5 space-y-2 overflow-y-auto no-scrollbar" data-date="${dateISO}" data-period="${period}">
+                                ${tasksHtml}
+                            </div>
+                        </div>`;
+                    }).join('')}
+                </div>`;
+            }
+            container.innerHTML = html; setupInteractions(); applyFilters();
+        };
+
+        const createCardHtml = (t, isPast) => {
+            const pastClass = isPast ? 'past-event' : '';
+            const recIcon = t.isRecurring ? `<span class="absolute top-1.5 right-2 text-[10px] text-zinc-400" title="Repete">🔁</span>` : '';
+            const typeColors = { 'Sem objetivo': 'bg-zinc-400', 'PoC': 'bg-pink-500', 'Deliberação': 'bg-amber-500', 'Planejamento': 'bg-blue-500', 'Execução': 'bg-emerald-500', 'Treinamento': 'bg-purple-500' };
+            const typeClass = typeColors[t.type] || 'bg-zinc-400';
+            const teamsVisual = (t.teamIds && t.teamIds.length > 0) ? `<div class="mt-1 flex gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500" title="${t.teamIds.length} Equipe(s)"></span></div>` : '';
+
+            return `
+            <div id="${t.renderId}" data-realid="${t.id}" draggable="true" data-labels="${t.labels || ''}"
+                 class="agenda-card ${pastClass} relative bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 hover:border-indigo-500 rounded-lg p-2.5 shadow-sm cursor-grab active:cursor-grabbing group select-none flex flex-col">
+                ${recIcon}
+                <div class="text-[13px] font-medium text-zinc-700 dark:text-zinc-200 leading-snug pr-4 pointer-events-none">${t.text}</div>
+                ${teamsVisual}
+                <div class="absolute bottom-1.5 right-2 opacity-50 group-hover:opacity-100">
+                    <span class="indicator-type block w-1.5 h-1.5 rounded-full ${typeClass}" title="${t.type}"></span>
+                </div>
+            </div>`;
+        };
+
+        window.addCard = (dateISO, period) => {
+            db_tasks.push({ id: 'task_' + Math.random().toString(36).substr(2, 9), date: dateISO, period: period, text: 'Nova agenda...', labels: '', type: 'Sem objetivo', duration: 1, isRecurring: false, untilDate: '', teamIds: [] });
+            saveTasks(); renderBoard();
+        };
+
+        // --- Drag & Drop ---
+        let draggedRealId = null;
+        const setupInteractions = () => {
+            document.querySelectorAll('.agenda-card').forEach(card => {
+                card.removeEventListener('dragstart', handleDragStart); card.addEventListener('dragstart', handleDragStart);
+                card.removeEventListener('dragend', handleDragEnd); card.addEventListener('dragend', handleDragEnd);
+                card.removeEventListener('dblclick', handleDblClick); card.addEventListener('dblclick', handleDblClick);
+            });
+            document.querySelectorAll('.drop-zone').forEach(zone => {
+                zone.removeEventListener('dragover', handleDragOver); zone.addEventListener('dragover', handleDragOver);
+                zone.removeEventListener('dragleave', handleDragLeave); zone.addEventListener('dragleave', handleDragLeave);
+                zone.removeEventListener('drop', handleDrop); zone.addEventListener('drop', handleDrop);
+            });
+        };
+
+        function handleDragStart() { draggedRealId = this.getAttribute('data-realid'); setTimeout(() => this.classList.add('dragging'), 0); }
+        function handleDragEnd() { this.classList.remove('dragging'); document.querySelectorAll('.drop-zone').forEach(z => z.classList.remove('drag-over')); }
+        function handleDragOver(e) { e.preventDefault(); this.classList.add('drag-over'); }
+        function handleDragLeave() { this.classList.remove('drag-over'); }
+        function handleDrop(e) { 
+            e.preventDefault(); this.classList.remove('drag-over'); 
+            const newDate = this.getAttribute('data-date'); const newPeriod = this.getAttribute('data-period');
+            const taskIndex = db_tasks.findIndex(t => t.id === draggedRealId);
+            if(taskIndex > -1) { db_tasks[taskIndex].date = newDate; db_tasks[taskIndex].period = newPeriod; saveTasks(); renderBoard(); }
+        }
+
+        // --- 4. Event Edit Modal & Autocomplete ---
+        const modal = document.getElementById('edit-modal');
+        const modalContent = document.getElementById('edit-modal-content');
+        let currentEditingRealId = null;
+        let currentEventTeams = [];
+
+        window.toggleRecurrenceDate = (checkbox) => {
+            const wrap = document.getElementById('recurring-date-wrap');
+            if (checkbox.checked) wrap.classList.remove('opacity-40', 'pointer-events-none');
+            else wrap.classList.add('opacity-40', 'pointer-events-none');
+        };
+
+        window.handleTeamAutocomplete = (query) => {
+            const dropdown = document.getElementById('team-autocomplete-dropdown');
+            if(!query.trim()) { dropdown.classList.add('hidden'); return; }
+            const matches = db_teams.filter(t => t.name.toLowerCase().includes(query.toLowerCase()) && !currentEventTeams.includes(t.id));
+            if(matches.length === 0) { dropdown.classList.add('hidden'); return; }
+            dropdown.innerHTML = matches.map(t => `<div onclick="addTeamToEvent('${t.id}')" class="px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-700 cursor-pointer text-sm border-b border-zinc-100 dark:border-zinc-700/50 last:border-0">${t.name}</div>`).join('');
+            dropdown.classList.remove('hidden');
+        };
+
+        window.addTeamToEvent = (teamId) => {
+            if(!currentEventTeams.includes(teamId)) currentEventTeams.push(teamId);
+            document.getElementById('team-search-input').value = '';
+            document.getElementById('team-autocomplete-dropdown').classList.add('hidden');
+            renderEventTeams();
+        };
+
+        window.removeTeamFromEvent = (teamId) => {
+            currentEventTeams = currentEventTeams.filter(id => id !== teamId);
+            renderEventTeams();
+        };
+
+        const renderEventTeams = () => {
+            const pillsContainer = document.getElementById('event-teams-pills');
+            const emailBox = document.getElementById('event-teams-emails');
+            
+            pillsContainer.innerHTML = currentEventTeams.map(id => {
+                const t = db_teams.find(team => team.id === id);
+                if(!t) return '';
+                return `<span class="bg-emerald-50 border border-emerald-200 text-emerald-700 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-400 px-2 py-1 text-xs rounded-md flex items-center gap-1.5 shadow-sm">${t.name} <button onclick="removeTeamFromEvent('${id}')" class="hover:text-red-500 font-bold ml-1 transition-colors">✕</button></span>`;
+            }).join('');
+            
+            if(currentEventTeams.length > 0) {
+                const allEmails = [];
+                const leaderEmails = [];
+                currentEventTeams.forEach(id => {
+                    const t = db_teams.find(team => team.id === id);
+                    if(t) t.members.forEach(m => { 
+                        if(m.email) {
+                            allEmails.push(m.email); 
+                            if(m.role === 'Líder' || m.role === 'Ponto Focal') leaderEmails.push(m.email);
+                        }
+                    });
+                });
+                
+                document.getElementById('emails-list-all').innerText = [...new Set(allEmails)].join('; ') || 'Sem e-mails cadastrados.';
+                document.getElementById('emails-list-leaders').innerText = [...new Set(leaderEmails)].join('; ') || 'Nenhum líder cadastrado.';
+                emailBox.classList.remove('hidden');
+            } else {
+                emailBox.classList.add('hidden');
+            }
+        };
+
+        window.copyEventEmails = (type) => {
+            const elId = type === 'leader' ? 'emails-list-leaders' : 'emails-list-all';
+            const text = document.getElementById(elId).innerText;
+            if(text && text !== 'Sem e-mails cadastrados.' && text !== 'Nenhum líder cadastrado.') navigator.clipboard.writeText(text);
+        };
+
+        function handleDblClick(e) {
+            currentEditingRealId = this.getAttribute('data-realid');
+            const task = db_tasks.find(t => t.id === currentEditingRealId);
+            if(!task) return;
+
+            const titleInput = document.getElementById('modal-task-title');
+            titleInput.value = task.text;
+
+            currentEventTeams = task.teamIds ? [...task.teamIds] : [];
+            document.getElementById('team-search-input').value = '';
+            document.getElementById('team-autocomplete-dropdown').classList.add('hidden');
+            renderEventTeams();
+
+            document.getElementById('type-selectors').innerHTML = types.map(t => `<button type="button" data-val="${t}" class="type-btn px-3 py-1.5 text-xs font-medium border ${t === task.type ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-zinc-300 dark:border-zinc-700'} rounded-lg hover:border-indigo-500 transition-colors">${t}</button>`).join('');
+            
+            document.querySelectorAll('.dur-btn').forEach(b => {
+                if (parseFloat(b.dataset.val) === task.duration) b.classList.add('bg-indigo-600', 'text-white', 'border-indigo-600');
+                else b.classList.remove('bg-indigo-600', 'text-white', 'border-indigo-600');
+            });
+
+            const cardLabels = (task.labels || '').split(',');
+            document.getElementById('label-selectors').innerHTML = db_labels.map(l => {
+                const isActive = cardLabels.includes(l);
+                const activeClass = 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 border-indigo-300 dark:border-indigo-500/50';
+                return `<button type="button" data-val="${l}" class="label-btn px-3 py-1 text-xs font-medium border border-zinc-300 dark:border-zinc-700 rounded-full hover:border-indigo-500 transition-colors ${isActive ? activeClass : ''}">${l}</button>`;
+            }).join('');
+
+            const recCheck = document.getElementById('modal-recurring');
+            recCheck.checked = task.isRecurring;
+            document.getElementById('modal-until').value = task.untilDate || '';
+            toggleRecurrenceDate(recCheck);
+
+            // Binds
+            document.querySelectorAll('.type-btn').forEach(btn => btn.onclick = function() { document.querySelectorAll('.type-btn').forEach(b => { b.classList.remove('bg-indigo-600', 'text-white', 'border-indigo-600'); b.classList.add('border-zinc-300', 'dark:border-zinc-700'); }); this.classList.add('bg-indigo-600', 'text-white', 'border-indigo-600'); this.classList.remove('border-zinc-300', 'dark:border-zinc-700'); });
+            document.querySelectorAll('.dur-btn').forEach(btn => btn.onclick = function() { document.querySelectorAll('.dur-btn').forEach(b => b.classList.remove('bg-indigo-600', 'text-white', 'border-indigo-600')); this.classList.add('bg-indigo-600', 'text-white', 'border-indigo-600'); });
+            document.querySelectorAll('.label-btn').forEach(btn => btn.onclick = function() { this.classList.toggle('bg-indigo-100'); this.classList.toggle('text-indigo-700'); this.classList.toggle('dark:bg-indigo-500/20'); this.classList.toggle('dark:text-indigo-300'); this.classList.toggle('border-indigo-300'); this.classList.toggle('dark:border-indigo-500/50'); });
+
+            modal.classList.remove('hidden'); modal.classList.add('flex');
+            setTimeout(() => { modal.classList.remove('opacity-0'); modalContent.classList.remove('scale-95'); titleInput.focus(); }, 50);
+        }
+
+        window.closeModal = () => {
+            modal.classList.add('opacity-0'); modalContent.classList.add('scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); modal.classList.remove('flex'); }, 200);
+        };
+
+        window.saveModal = () => {
+            const taskIndex = db_tasks.findIndex(t => t.id === currentEditingRealId);
+            if(taskIndex > -1) {
+                const newTitle = document.getElementById('modal-task-title').value.trim();
+                db_tasks[taskIndex].text = newTitle || 'Agenda sem título';
+                db_tasks[taskIndex].type = document.querySelector('.type-btn.bg-indigo-600').dataset.val;
+                db_tasks[taskIndex].duration = parseFloat(document.querySelector('.dur-btn.bg-indigo-600').dataset.val);
+                db_tasks[taskIndex].labels = Array.from(document.querySelectorAll('.label-btn.bg-indigo-100, .label-btn.dark\\:bg-indigo-500\\/20')).map(b => b.dataset.val).join(',');
+                db_tasks[taskIndex].isRecurring = document.getElementById('modal-recurring').checked;
+                db_tasks[taskIndex].untilDate = document.getElementById('modal-until').value;
+                db_tasks[taskIndex].teamIds = [...currentEventTeams];
+                saveTasks(); renderBoard();
+            }
+            closeModal();
+        };
+
+        window.deleteTask = () => {
+            if(confirm("Deseja excluir permanentemente esta agenda (e suas recorrências)?")) {
+                db_tasks = db_tasks.filter(t => t.id !== currentEditingRealId);
+                saveTasks(); renderBoard(); closeModal();
+            }
+        };
+
+        // --- 5. Equipes Modal (Tela Cheia e Grid) ---
+        const teamsModal = document.getElementById('teams-modal');
+        const teamsContent = document.getElementById('teams-modal-content');
+
+        window.openTeams = () => { renderTeamsList(); teamsModal.classList.remove('hidden'); teamsModal.classList.add('flex'); setTimeout(() => { teamsModal.classList.remove('opacity-0'); teamsContent.classList.remove('scale-95'); }, 10); };
+        window.closeTeams = () => { teamsModal.classList.add('opacity-0'); teamsContent.classList.add('scale-95'); setTimeout(() => { teamsModal.classList.add('hidden'); teamsModal.classList.remove('flex'); }, 200); };
+
+        const renderTeamsList = () => {
+            const list = document.getElementById('teams-list');
+            if(db_teams.length === 0) { list.innerHTML = `<div class="col-span-full text-sm text-zinc-500 text-center py-10">Nenhuma equipe cadastrada. Utilize o botão "+ Nova Equipe" ou importe seu JSON.</div>`; return; }
+
+            list.innerHTML = db_teams.map((team, tIdx) => `
+                <div class="border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900/30 flex flex-col h-fit">
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 class="font-bold text-zinc-800 dark:text-zinc-100">${team.name}</h4>
+                        <div class="flex gap-2">
+                            <button onclick="toggleAddMember(${tIdx}, true)" class="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase hover:underline">+ Membro</button>
+                            <button onclick="deleteTeam(${tIdx})" class="text-[10px] font-semibold text-red-500 uppercase hover:underline">Excluir</button>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-2 flex-1">
+                        ${team.members.map((m, mIdx) => `
+                            <div class="flex justify-between items-center bg-white dark:bg-zinc-800 p-2.5 rounded-lg border border-zinc-100 dark:border-zinc-700/50">
+                                <div class="w-full">
+                                    <p class="text-[13px] font-medium text-zinc-700 dark:text-zinc-200 leading-tight">${m.name} <span class="text-[9px] font-mono bg-zinc-100 dark:bg-zinc-700 px-1.5 py-0.5 rounded ml-1 text-zinc-500 align-text-bottom">${m.role}</span></p>
+                                    <p class="text-[10px] text-zinc-500 mt-0.5 truncate max-w-[180px]">${m.email}</p>
+                                </div>
+                                <button onclick="removeMember(${tIdx}, ${mIdx})" class="text-zinc-400 hover:text-red-500 text-xs transition-colors p-1" title="Remover">✕</button>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <div id="add-member-form-${tIdx}" class="hidden mt-3 p-3 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg">
+                        <div class="grid grid-cols-1 gap-2 mb-2">
+                            <input type="text" id="member-name-${tIdx}" placeholder="Nome do Membro" class="text-xs border border-zinc-200 dark:border-zinc-700 bg-transparent rounded px-2 py-1.5 focus:border-indigo-500 focus:outline-none dark:text-white">
+                            <input type="email" id="member-email-${tIdx}" placeholder="E-mail" class="text-xs border border-zinc-200 dark:border-zinc-700 bg-transparent rounded px-2 py-1.5 focus:border-indigo-500 focus:outline-none dark:text-white">
+                        </div>
+                        <div class="flex items-center justify-between mt-3 border-t border-zinc-100 dark:border-zinc-700 pt-3">
+                            <div class="flex gap-1" id="role-group-${tIdx}">
+                                <button onclick="setRoleUI(${tIdx}, 'Membro', this)" class="role-btn-${tIdx} px-1.5 py-1 text-[9px] font-semibold rounded bg-zinc-800 text-white dark:bg-zinc-200 dark:text-zinc-900 transition-colors" data-val="Membro">Membro</button>
+                                <button onclick="setRoleUI(${tIdx}, 'Ponto Focal', this)" class="role-btn-${tIdx} px-1.5 py-1 text-[9px] font-semibold rounded border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors" data-val="Ponto Focal">Ponto Focal</button>
+                                <button onclick="setRoleUI(${tIdx}, 'Líder', this)" class="role-btn-${tIdx} px-1.5 py-1 text-[9px] font-semibold rounded border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors" data-val="Líder">Líder</button>
+                                <input type="hidden" id="member-role-${tIdx}" value="Membro">
+                            </div>
+                            <div class="flex gap-1">
+                                <button onclick="toggleAddMember(${tIdx}, false)" class="text-[10px] px-1 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200">Canc.</button>
+                                <button onclick="submitAddMember(${tIdx})" class="text-[10px] bg-indigo-600 text-white px-2 py-1 rounded font-medium hover:bg-indigo-700">Salvar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        };
+
+        window.toggleCreateTeam = (show) => {
+            const form = document.getElementById('create-team-form'); const btn = document.getElementById('create-team-btn');
+            if(show) { form.classList.remove('hidden'); btn.classList.add('hidden'); document.getElementById('new-team-name-input').focus(); }
+            else { form.classList.add('hidden'); btn.classList.remove('hidden'); document.getElementById('new-team-name-input').value = ''; }
+        };
+        window.submitCreateTeam = () => {
+            const input = document.getElementById('new-team-name-input');
+            if(input.value.trim() !== '') { db_teams.push({ id: 't_' + Date.now(), name: input.value.trim(), members: [] }); saveTeams(); renderTeamsList(); toggleCreateTeam(false); }
+        };
+        window.deleteTeam = (idx) => { if(confirm("Tem certeza que deseja excluir esta equipe?")) { db_teams.splice(idx, 1); saveTeams(); renderTeamsList(); } };
+
+        window.toggleAddMember = (tIdx, show) => {
+            const form = document.getElementById(`add-member-form-${tIdx}`);
+            if(show) { form.classList.remove('hidden'); document.getElementById(`member-name-${tIdx}`).focus(); }
+            else form.classList.add('hidden');
+        };
+        window.setRoleUI = (tIdx, role, btnEl) => {
+            document.getElementById(`member-role-${tIdx}`).value = role;
+            document.querySelectorAll(`.role-btn-${tIdx}`).forEach(b => { b.className = `role-btn-${tIdx} px-1.5 py-1 text-[9px] font-semibold rounded border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors`; });
+            btnEl.className = `role-btn-${tIdx} px-1.5 py-1 text-[9px] font-semibold rounded bg-zinc-800 text-white dark:bg-zinc-200 dark:text-zinc-900 transition-colors`;
+        };
+        window.submitAddMember = (tIdx) => {
+            const name = document.getElementById(`member-name-${tIdx}`).value.trim();
+            const email = document.getElementById(`member-email-${tIdx}`).value.trim();
+            const role = document.getElementById(`member-role-${tIdx}`).value;
+            if(name) { db_teams[tIdx].members.push({ name, email, role }); saveTeams(); renderTeamsList(); }
+        };
+        window.removeMember = (tIdx, mIdx) => { if(confirm("Remover este membro?")) { db_teams[tIdx].members.splice(mIdx, 1); saveTeams(); renderTeamsList(); } };
+
+        // --- 6. Demais Funções Globais e Deleção de Label ---
+        window.changeWeek = (dir) => { weekOffset += dir; renderDates(); renderBoard(); };
+        window.resetWeek = () => { weekOffset = 0; renderDates(); renderBoard(); };
+        const renderDates = () => {
+            const monday = new Date(baseMonday); monday.setDate(monday.getDate() + (weekOffset * 7));
+            const sunday = new Date(monday); sunday.setDate(sunday.getDate() + 6);
+            document.getElementById('week-dates').innerText = `${monday.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '')} - ${sunday.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '')}`;
+            document.getElementById('week-label').innerText = weekOffset === 0 ? 'Semana Atual' : (weekOffset === -1 ? 'Semana Passada' : (weekOffset === 1 ? 'Próxima Semana' : `Semana ${weekOffset > 0 ? '+' : ''}${weekOffset}`));
+            document.getElementById('week-label').className = `text-sm font-semibold ${weekOffset === 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-zinc-800 dark:text-zinc-200'}`;
+        };
+
+        const renderFilters = () => {
+            const bar = document.getElementById('filter-bar');
+            bar.innerHTML = `<button class="px-3 py-1 text-xs rounded-full transition-all whitespace-nowrap ${currentFilter === 'all' ? 'bg-zinc-800 text-white dark:bg-zinc-200 dark:text-zinc-900 font-semibold border-transparent' : 'border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'}" onclick="setFilter('all')">Todos</button>`;
+            
+            db_labels.forEach(l => { 
+                const isActive = currentFilter === l;
+                const wrapperClass = isActive ? 'bg-zinc-800 text-white dark:bg-zinc-200 dark:text-zinc-900 border-transparent' : 'border border-zinc-200 dark:border-zinc-700 bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400';
+                
+                bar.innerHTML += `
+                <div class="flex items-center rounded-full transition-all shrink-0 group ${wrapperClass}">
+                    <button class="pl-3 pr-1.5 py-1 text-xs font-medium whitespace-nowrap outline-none" onclick="setFilter('${l}')">${l}</button>
+                    <button onclick="deleteLabel('${l}', event)" class="pr-2 pl-0.5 text-[10px] opacity-0 group-hover:opacity-100 hover:text-red-500 transition-opacity outline-none" title="Excluir Label">✕</button>
+                </div>`; 
+            });
+        };
+
+        window.deleteLabel = (label, event) => {
+            event.stopPropagation();
+            if(confirm(`Deseja realmente excluir a label "${label}"?\nAs agendas associadas perderão esta etiqueta, mas não serão apagadas.`)) {
+                db_labels = db_labels.filter(l => l !== label);
+                db_tasks.forEach(t => {
+                    if(t.labels) t.labels = t.labels.split(',').filter(l => l !== label).join(',');
+                });
+                saveLabels(); saveTasks();
+                if(currentFilter === label) setFilter('all');
+                else { renderFilters(); renderBoard(); }
+            }
+        };
+
+        window.handleNewLabel = (e) => { if (e.key === 'Enter' && e.target.value.trim() !== '') { if(!db_labels.includes(e.target.value.trim())) { db_labels.push(e.target.value.trim()); saveLabels(); renderFilters(); } e.target.value = ''; } };
+        window.setFilter = (l) => { currentFilter = l; renderFilters(); applyFilters(); };
+        window.applyFilters = () => {
+            currentSearch = document.getElementById('search-input').value.toLowerCase();
+            document.querySelectorAll('.agenda-card').forEach(card => {
+                const text = card.innerText.toLowerCase(); const labels = card.getAttribute('data-labels') || '';
+                if ((currentSearch === '' || text.includes(currentSearch)) && (currentFilter === 'all' || labels.includes(currentFilter))) {
+                    card.classList.remove('filtered-out');
+                    if(currentSearch !== '' || currentFilter !== 'all') card.classList.add('filtered-highlight'); else card.classList.remove('filtered-highlight');
+                } else { card.classList.add('filtered-out'); card.classList.remove('filtered-highlight'); }
+            });
+        };
+
+        const reportModal = document.getElementById('report-modal'); const reportContent = document.getElementById('report-modal-content');
+        window.openReport = () => { calculateReport(); reportModal.classList.remove('hidden'); reportModal.classList.add('flex'); setTimeout(() => { reportModal.classList.remove('opacity-0'); reportContent.classList.remove('scale-95'); }, 10); };
+        window.closeReport = () => { reportModal.classList.add('opacity-0'); reportContent.classList.add('scale-95'); setTimeout(() => { reportModal.classList.add('hidden'); reportModal.classList.remove('flex'); }, 200); };
+        function calculateReport() {
+            let totalHours = 0; const hoursByType = { 'Sem objetivo': 0, 'PoC': 0, 'Deliberação': 0, 'Planejamento': 0, 'Execução': 0, 'Treinamento': 0 };
+            document.querySelectorAll('.agenda-card').forEach(c => {
+                const task = db_tasks.find(t => t.id === c.getAttribute('data-realid'));
+                if(task) { hoursByType[task.type] += task.duration; totalHours += task.duration; }
+            });
+            const barsHtml = types.map(type => {
+                const actPct = totalHours === 0 ? 0 : Math.round((hoursByType[type] / totalHours) * 100);
+                const color = (type === 'Sem objetivo' && actPct > targets[type]) ? 'bg-red-500' : ((type === 'Execução' && actPct < targets[type]) ? 'bg-amber-500' : 'bg-indigo-500');
+                return `<div class="mb-3"><div class="flex justify-between text-xs font-medium mb-1"><span class="text-zinc-700 dark:text-zinc-300">${type} <span class="text-zinc-400 font-normal">(${hoursByType[type]}h)</span></span><span>Real: <span class="font-bold">${actPct}%</span> <span class="text-zinc-400 text-[10px] ml-1">Meta: ${targets[type]}%</span></span></div><div class="w-full bg-zinc-200 dark:bg-zinc-800 rounded-full h-2.5 relative"><div class="${color} h-2.5 rounded-full transition-all duration-1000" style="width: ${actPct}%"></div><div class="absolute top-[-4px] bottom-[-4px] w-1 bg-zinc-900 dark:bg-white z-10 rounded-sm" style="left: ${targets[type]}%;"></div></div></div>`;
+            }).join('');
+            document.getElementById('report-bars').innerHTML = `<div class="text-xs text-zinc-500 mb-6 font-mono border-b border-zinc-200 dark:border-zinc-800 pb-2">Mapeado nesta tela: ${totalHours}h</div>${barsHtml}`;
+        }
+
+        renderDates(); renderFilters(); renderBoard();
+    </script>
+</body>
+</html>
