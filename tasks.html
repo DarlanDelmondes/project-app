@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Task Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#0a0e17',
+                        'dark-card': '#111827',
+                        neon: '#06b6d4', // cyan-500
+                        'neon-dim': '#0891b2', // cyan-600
+                    },
+                    boxShadow: {
+                        'neon-sm': '0 0 10px rgba(6, 182, 212, 0.3)',
+                        'neon-md': '0 0 20px rgba(6, 182, 212, 0.5)',
+                        'alert-md': '0 0 20px rgba(239, 68, 68, 0.5)',
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Esconder scrollbar para um visual mais limpo, se necessário */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0a0e17; }
+        ::-webkit-scrollbar-thumb { background: #1f293a; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #06b6d4; }
+        
+        body { background-color: #0a0e17; color: #e2e8f0; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        
+        /* Estilo para o drag placeholder */
+        .sortable-ghost { opacity: 0.3; background: #1f293a !important; border: 2px dashed #06b6d4 !important; }
+    </style>
+</head>
+<body class="min-h-screen py-10 px-4 flex flex-col items-center">
+
+    <div class="w-full max-w-4xl">
+        <header class="mb-12 text-center">
+            <h1 class="text-5xl font-extrabold tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-white to-neon mb-2">
+                QUANTUM TASK<span class="text-xs font-mono text-neon-dim relative -top-4">v2.0</span>
+            </h1>
+            <p class="text-slate-400">Sequencie suas atividades com precisão cirúrgica.</p>
+        </header>
+        
+        <div class="bg-dark-card/50 backdrop-blur-xl p-3 rounded-2xl border border-slate-800 shadow-neon-sm mb-10 flex gap-3 sticky top-4 z-40">
+            <input type="text" id="new-activity-input" 
+                   class="flex-1 p-4 bg-dark rounded-xl border border-slate-700 focus:outline-none focus:ring-2 focus:ring-neon focus:border-neon transition-all placeholder-slate-600 text-lg" 
+                   placeholder="Inicializar nova sequência de atividade..." 
+                   onkeypress="handleNewActivityKeyPress(event)">
+            <button onclick="addActivity()" 
+                    class="bg-neon hover:bg-white text-dark font-bold py-4 px-8 rounded-xl transition-all duration-300 flex items-center gap-2 group transform hover:scale-105">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 group-hover:rotate-90 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                Adicionar
+            </button>
+        </div>
+
+        <ul id="activity-list" class="space-y-6"></ul>
+    </div>
+
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 translate-y-24 opacity-0 bg-dark-card/80 backdrop-blur-lg text-neon px-8 py-4 rounded-full font-bold shadow-neon-md transition-all duration-500 pointer-events-none z-50 border border-neon/30 text-center min-w-[300px]">
+    </div>
+
+    <script>
+        // --- Ícones SVG ---
+        const ICON_DRAG = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>`;
+        const ICON_PLAY = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" /></svg>`;
+        const ICON_PAUSE = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>`;
+        const ICON_CHECK = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>`;
+        const ICON_TRASH = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>`;
+        const ICON_CHEVRON_UP = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd" /></svg>`;
+        const ICON_CHEVRON_DOWN = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>`;
+        const ICON_SUB_DRAG = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4" /></svg>`;
+
+        // --- Geração das 200 Frases ---
+        const prefixes = ["Execução Perfeita!", "Protocolo Finalizado!", "Alvo Atingido!", "Eficiência Quantum!", "Ótimo Trabalho!", "Sincronia Total!", "Foco Absoluto!", "Mais um Degrau!", "Vitória Sistêmica!", "Sucesso Confirmado!", "Mandou Bem no Fluxo!", "Desempenho Notável!", "Conclusão Limpa!", "Padrão Ouro!", "É Assim que Se Faz!", "Progresso Validado!", "Imparável Hoje!", "Brilhante Execução!", "Sensacional!", "Mestria Demonstrada!"];
+        const suffixes = ["Módulo concluído com sucesso.", "Processo arquivado na LocalStorage.", "Rumo à singularidade produtiva.", "A disciplina molda o futuro.", "Aprecie o 'check' gerado.", "Sua persistência é inspiradora.", "Um passo mais próximo do domíno total.", "Acurácia impressionante.", "Dados de progresso atualizados.", "Mantenha a cadência."];
+        const motivationalPhrases = [];
+        prefixes.forEach(p => suffixes.forEach(s => motivationalPhrases.push(`${p} ${s}`)));
+
+        // --- Estado e Persistência ---
+        let activities = JSON.parse(localStorage.getItem('quantumTasksData')) || [];
+        let activitySortable;
+        const subSortables = {};
+
+        function saveData() { localStorage.setItem('quantumTasksData', JSON.stringify(activities)); }
+
+        // --- Temporizador ---
+        setInterval(() => {
+            let needsSave = false;
+            activities.forEach(act => {
+                if (act.isRunning && !act.completed) {
+                    act.timeElapsed++;
+                    needsSave = true;
+                    const timerEl = document.getElementById(`timer-${act.id}`);
+                    if (timerEl) timerEl.innerText = formatTime(act.timeElapsed);
+                }
+            });
+            if (needsSave) saveData();
+        }, 1000);
+
+        function formatTime(seconds) {
+            const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
+            const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
+            const s = String(seconds % 60).padStart(2, '0');
+            return `${h}:${m}:${s}`;
+        }
+
+        // --- Efeitos e Toast ---
+        function triggerCelebration() {
+            const duration = 5 * 1000;
+            const animationEnd = Date.now() + duration;
+            const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 100, colors: ['#06b6d4', '#ffffff', '#0891b2'] };
+            function randomInRange(min, max) { return Math.random() * (max - min) + min; }
+            const interval = setInterval(function() {
+                const timeLeft = animationEnd - Date.now();
+                if (timeLeft <= 0) return clearInterval(interval);
+                const particleCount = 50 * (timeLeft / duration);
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+            }, 250);
+        }
+
+        function showToast() {
+            const toast = document.getElementById('toast');
+            toast.innerText = motivationalPhrases[Math.floor(Math.random() * motivationalPhrases.length)];
+            toast.classList.remove('translate-y-24', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-24', 'opacity-0');
+            }, 5000);
+        }
+
+        // --- Lógica de Atividades ---
+        function handleNewActivityKeyPress(e) { if (e.key === 'Enter') addActivity(); }
+
+        function addActivity() {
+            const input = document.getElementById('new-activity-input');
+            const title = input.value.trim();
+            if (!title) return;
+            const newActivity = { id: Date.now(), title: title, completed: false, expanded: true, timeElapsed: 0, isRunning: false, substeps: [] };
+            activities.push(newActivity);
+            saveData();
+            input.value = '';
+            render();
+            setTimeout(() => { const subInput = document.getElementById(`sub-input-${newActivity.id}`); if (subInput) subInput.focus(); }, 100);
+        }
+
+        function deleteActivity(id) {
+            activities = activities.filter(a => a.id !== id);
+            saveData();
+            render();
+        }
+
+        function toggleExpand(id) {
+            const act = activities.find(a => a.id === id);
+            if (act) { act.expanded = !act.expanded; saveData(); render(); }
+        }
+
+        function toggleTimer(id) {
+            const act = activities.find(a => a.id === id);
+            if (act && !act.completed) { act.isRunning = !act.isRunning; saveData(); render(); }
+        }
+
+        function completeActivity(id) {
+            const act = activities.find(a => a.id === id);
+            // Só permite finalizar se tiver 20 passos
+            if (act && !act.completed && act.substeps.length === 20) {
+                act.completed = true;
+                act.isRunning = false;
+                act.substeps.forEach(sub => sub.completed = true); 
+                saveData();
+                render();
+                triggerCelebration();
+                showToast();
+            } else if (act.substeps.length !== 20) {
+                alert("Protocolo incompleto. Requer exatamente 20 subpassos para finalização.");
+            }
+        }
+
+        // --- Lógica de Subpassos ---
+        function handleSubtaskKeyPress(actId, event) {
+            if (event.key === 'Enter') {
+                const act = activities.find(a => a.id === actId);
+                const title = event.target.value.trim();
+                if (title && act.substeps.length < 20) {
+                    act.substeps.push({ id: Date.now(), title: title, completed: false });
+                    saveData();
+                    render();
+                    setTimeout(() => { const nextInput = document.getElementById(`sub-input-${actId}`); if (nextInput) nextInput.focus(); }, 50);
+                }
+            }
+        }
+
+        function completeSubstep(actId, subId) {
+            const act = activities.find(a => a.id === actId);
+            const sub = act.substeps.find(s => s.id === subId);
+            if (sub && !sub.completed) {
+                sub.completed = true;
+                saveData();
+                render();
+                triggerCelebration();
+                showToast();
+            }
+        }
+
+        // --- Renderização Principal ---
+        function render() {
+            const listEl = document.getElementById('activity-list');
+            listEl.innerHTML = '';
+
+            activities.forEach((act) => {
+                const stepCount = act.substeps.length;
+                const isIncomplete = stepCount < 20;
+                
+                const li = document.createElement('li');
+                // Aplica borda vermelha pulsante se incompleto
+                li.className = `bg-dark-card rounded-2xl overflow-hidden border ${isIncomplete ? 'border-red-600/50 shadow-alert-md animate-pulse-slow' : 'border-slate-800 shadow-lg'} transition-all duration-300`;
+                li.dataset.id = act.id;
+
+                // Header da Atividade
+                const header = document.createElement('div');
+                header.className = 'flex items-center p-5 gap-4 border-b border-slate-800/50 bg-dark-card/30';
+                
+                header.innerHTML = `
+                    <div class="act-drag cursor-grab text-slate-600 hover:text-neon transition-colors p-1">${ICON_DRAG}</div>
+                    <div class="flex-1">
+                        <div class="text-xl font-bold ${act.completed ? 'line-through text-slate-600' : 'text-white'}">${act.title}</div>
+                        <div class="text-sm ${isIncomplete ? 'text-red-400 font-bold' : 'text-neon-dim'} font-mono">
+                            [Status: ${stepCount}/20 passos definidos] ${isIncomplete ? '<- REQUER ATENÇÃO' : ''}
+                        </div>
+                    </div>
+                    <div class="font-mono text-2xl font-black text-neon bg-dark/50 px-4 py-2 rounded-lg border border-slate-700 shadow-inner min-w-[120px] text-center" id="timer-${act.id}">${formatTime(act.timeElapsed)}</div>
+                    <div class="flex gap-2Actions flex items-center gap-2">
+                        <button onclick="toggleTimer(${act.id})" ${act.completed ? 'disabled' : ''} 
+                                class="p-3 rounded-xl transition-all ${act.completed ? 'bg-slate-800 text-slate-600' : (act.isRunning ? 'bg-amber-950 text-amber-400 hover:bg-amber-900 shadow-neon-sm' : 'bg-dark hover:bg-slate-800 text-neon border border-slate-700')}">
+                            ${act.isRunning ? ICON_PAUSE : ICON_PLAY}
+                        </button>
+                        <button onclick="completeActivity(${act.id})" ${(act.completed || isIncomplete) ? 'disabled' : ''}
+                                class="p-3 rounded-xl transition-all ${(act.completed || isIncomplete) ? 'bg-slate-800 text-slate-600 cursor-not-allowed' : 'bg-emerald-950 text-emerald-400 hover:bg-emerald-900 shadow-neon-sm'}">
+                            ${ICON_CHECK}
+                        </button>
+                        <button onclick="deleteActivity(${act.id})" 
+                                class="p-3 rounded-xl bg-red-950/50 text-red-400 hover:bg-red-950 hover:text-red-200 transition-all border border-red-900/50">
+                            ${ICON_TRASH}
+                        </button>
+                        <button onclick="toggleExpand(${act.id})" class="p-3 rounded-xl bg-dark text-slate-400 hover:bg-slate-800 border border-slate-700 transition-all">
+                            ${act.expanded ? ICON_CHEVRON_UP : ICON_CHEVRON_DOWN}
+                        </button>
+                    </div>
+                `;
+
+                // Container de Subpassos
+                const substepsContainer = document.createElement('div');
+                substepsContainer.className = `p-5 bg-dark/30 ${act.expanded ? 'block' : 'hidden'}`;
+                
+                const subUl = document.createElement('ul');
+                subUl.className = 'space-y-2.5 mb-4';
+                subUl.id = `sub-list-${act.id}`;
+
+                act.substeps.forEach((sub) => {
+                    const subLi = document.createElement('li');
+                    subLi.className = 'flex items-center p-3 bg-dark-card border border-slate-800 rounded-xl gap-3 group hover:border-neon/50 transition-colors';
+                    subLi.dataset.id = sub.id;
+
+                    subLi.innerHTML = `
+                        <div class="sub-drag cursor-grab text-slate-700 group-hover:text-neon-dim transition-colors">${ICON_SUB_DRAG}</div>
+                        <div class="flex-1 text-base ${sub.completed ? 'line-through text-slate-600' : 'text-slate-300'}">${sub.title}</div>
+                        <button onclick="completeSubstep(${act.id}, ${sub.id})" ${sub.completed ? 'disabled' : ''}
+                                class="p-2 rounded-lg transition-all ${sub.completed ? 'bg-slate-800 text-slate-600' : 'bg-emerald-950 text-emerald-400 hover:bg-emerald-900'}">
+                            ${ICON_CHECK}
+                        </button>
+                    `;
+                    subUl.appendChild(subLi);
+                });
+
+                substepsContainer.appendChild(subUl);
+
+                // Input para novos subpassos
+                if (act.substeps.length < 20 && !act.completed) {
+                    const inputDiv = document.createElement('div');
+                    inputDiv.className = 'mt-3 pl-9'; 
+                    inputDiv.innerHTML = `
+                        <input type="text" id="sub-input-${act.id}" 
+                               class="w-full p-3 bg-dark/50 border-b-2 border-slate-700 rounded-t-lg focus:outline-none focus:border-neon transition-colors placeholder-slate-600 text-sm"
+                               placeholder="Definir subpasso ${act.substeps.length + 1} de 20... [Aperte Enter]"
+                               onkeypress="handleSubtaskKeyPress(${act.id}, event)">
+                    `;
+                    substepsContainer.appendChild(inputDiv);
+                } else if (act.substeps.length >= 20 && !act.completed) {
+                    const maxDiv = document.createElement('div');
+                    maxDiv.className = 'mt-4 text-center text-sm font-bold text-neon bg-neon/10 py-3 rounded-xl border border-neon/30 animate-pulse';
+                    maxDiv.innerText = '✓ Sequência de 20 passos definida. Protocolo pronto para execução e finalização.';
+                    substepsContainer.appendChild(maxDiv);
+                }
+
+                li.appendChild(header);
+                li.appendChild(substepsContainer);
+                listEl.appendChild(li);
+
+                // --- Inicializar Sortable Subpassos ---
+                if(subSortables[act.id]) subSortables[act.id].destroy();
+                subSortables[act.id] = new Sortable(subUl, {
+                    handle: '.sub-drag',
+                    animation: 150,
+                    ghostClass: 'sortable-ghost',
+                    onEnd: function (evt) {
+                        const movedItem = act.substeps.splice(evt.oldIndex, 1)[0];
+                        act.substeps.splice(evt.newIndex, 0, movedItem);
+                        saveData();
+                    }
+                });
+            });
+
+            // --- Inicializar Sortable Atividades ---
+            if(activitySortable) activitySortable.destroy();
+            activitySortable = new Sortable(listEl, {
+                handle: '.act-drag',
+                animation: 200,
+                ghostClass: 'sortable-ghost',
+                onEnd: function (evt) {
+                    const movedItem = activities.splice(evt.oldIndex, 1)[0];
+                    activities.splice(evt.newIndex, 0, movedItem);
+                    saveData();
+                }
+            });
+        }
+
+        // --- Início ---
+        window.onload = render;
+    </script>
+</body>
+</html>
