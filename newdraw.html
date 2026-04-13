@@ -2388,7 +2388,13 @@ body.filtering .conn-group.dimmed {
 
 
 
-
+/* --- MODO DE EXPORTAÇÃO PNG (RECORTE) --- */
+body.exporting-anim .box:not(.export-target),
+body.exporting-anim .note:not(.export-target),
+body.exporting-anim .conn-group:not(.export-target) {
+    opacity: 0 !important;
+    visibility: hidden !important;
+}
 
 
 
@@ -6816,8 +6822,9 @@ function updateAnimDropdownUI() {
                 <div class="anim-actions">
                     <button class="anim-btn" style="background:${pinBg}; border:1px solid #cbd5e1; color:${pinColor}; font-size:12px; padding:4px 6px;" onclick="togglePinAnimation('${anim.id}')" title="${anim.pinned ? 'Desafixar Filtro' : 'Fixar na Barra'}">📌</button>
                     
-                    <button class="anim-btn" style="background:#fef9c3; color:#ca8a04; border:1px solid #fde047; padding:4px 6px; font-size:12px;" onclick="openAnimEditor('${anim.id}')" title="Editar Ordem e Nome">✏️</button>
-                    
+
+                    <button class="anim-btn" style="background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; padding:4px 6px; font-size:12px;" 
+                        onclick="downloadAnimSVG('${anim.id}')" title="Baixar Vetor SVG (Recorte da Animação)">🖼️ SVG</button>
                     <button class="anim-btn anim-btn-del" onclick="deleteAnimation('${anim.id}')" title="Excluir">🗑️</button>
                     <button class="anim-btn anim-btn-play" onclick="startPlayback('${anim.id}')">▶ Tocar</button>
                 </div>
@@ -6884,6 +6891,147 @@ function renderAnimEditorList() {
         list.appendChild(item);
     });
 }
+
+
+
+
+
+// --- GERADOR DE SVG FOCADO NA ANIMAÇÃO (VETORIAL) ---
+// --- GERADOR DE SVG FOCADO NA ANIMAÇÃO (VETORIAL COM AUTO-ZOOM OUT) ---
+function downloadAnimSVG(animId) {
+    const anim = savedAnimations.find(a => a.id === animId);
+    if (!anim || anim.sequence.length === 0) {
+        showToast("⚠️ Esta apresentação não tem caixas para exportar.");
+        return;
+    }
+
+    showToast("📐 Gerando vetor SVG (Zoom Out Automático)...");
+
+    // 1. Identificar elementos da animação e seus Pais (Contexto)
+    const targetIds = new Set(anim.sequence);
+    const elementsToExport = new Set();
+    
+    anim.sequence.forEach(id => {
+        let el = document.getElementById(id);
+        if (el) {
+            elementsToExport.add(el);
+            let parent = el.parentElement.closest('.box');
+            while (parent) {
+                elementsToExport.add(parent);
+                parent = parent.parentElement.closest('.box');
+            }
+        }
+    });
+
+    // 2. Calcular limites (Bounding Box) reais
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    elementsToExport.forEach(el => {
+        const x = parseFloat(el.style.left);
+        const y = parseFloat(el.style.top);
+        const w = parseFloat(el.style.width);
+        const h = parseFloat(el.style.height);
+        if (x < minX) minX = x; if (y < minY) minY = y;
+        if (x + w > maxX) maxX = x + w; if (y + h > maxY) maxY = y + h;
+    });
+
+    // --- MÁGICA 1: MARGEM GIGANTE PARA RESPIRAR (ZOOM OUT VISUAL) ---
+    const padding = 250;
+    minX -= padding; minY -= padding; maxX += padding; maxY += padding;
+    const width = maxX - minX; const height = maxY - minY;
+
+    // --- MÁGICA 2: TRAVAR O TAMANHO FÍSICO DE ABERTURA ---
+    // Forçamos o tamanho físico de abertura do SVG para caber em uma tela normal.
+    // O viewBox (câmera) continua com o tamanho real, então o vetor não perde qualidade.
+    const MAX_PHYSICAL_WIDTH = 1400; // Tamanho ideal para monitores e slides
+    let physicalWidth = width;
+    let physicalHeight = height;
+    
+    if (width > MAX_PHYSICAL_WIDTH) {
+        const ratio = MAX_PHYSICAL_WIDTH / width;
+        physicalWidth = MAX_PHYSICAL_WIDTH;
+        physicalHeight = height * ratio;
+    }
+
+    // 3. Clonar e Filtrar o Mundo
+    const worldNode = document.getElementById('world');
+    const worldClone = worldNode.cloneNode(true);
+
+    worldClone.querySelectorAll('.box, .note').forEach(node => {
+        if (!targetIds.has(node.id) && !Array.from(elementsToExport).some(e => e.id === node.id)) {
+            node.remove();
+        }
+    });
+
+    worldClone.querySelectorAll('.conn-group').forEach(conn => {
+        const connId = conn.id;
+        const originalConn = connections.find(c => c.id === connId);
+        if (originalConn) {
+            const isMatch = targetIds.has(originalConn.sid) && targetIds.has(originalConn.tid);
+            if (!isMatch) conn.remove();
+        } else {
+            conn.remove();
+        }
+    });
+
+    // Limpeza pesada de interface
+    const uiSelectors = ['.resizer', '.connector', '.actions-balloon', '.task-del-btn', '.add-task-btn', '.btn-toggle', '.grid-background', '.target-badge'];
+    uiSelectors.forEach(sel => worldClone.querySelectorAll(sel).forEach(el => el.remove()));
+
+    // 4. Fixar Valores de Inputs
+    const originalInputs = worldNode.querySelectorAll('input, textarea');
+    const clonedInputs = worldClone.querySelectorAll('input, textarea');
+    originalInputs.forEach((el, i) => {
+        if (clonedInputs[i]) {
+            clonedInputs[i].setAttribute('value', el.value);
+            if (el.tagName === 'TEXTAREA') clonedInputs[i].textContent = el.value;
+        }
+    });
+
+    // 5. Gerar XML do SVG
+    let cssStyles = "";
+    document.querySelectorAll('style').forEach(s => cssStyles += s.innerHTML);
+
+    const serializer = new XMLSerializer();
+    let serializedContent = serializer.serializeToString(worldClone).replace(/&nbsp;/g, '&#160;');
+
+    // --- MÁGICA 3: CSS EXCLUSIVO DA EXPORTAÇÃO ---
+    const svgData = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${physicalWidth}" height="${physicalHeight}" viewBox="${minX} ${minY} ${width} ${height}">
+        <style type="text/css"><![CDATA[
+            ${cssStyles}
+            /* Congela as animações para não borrar a foto */
+            .box, .note, .conn-group, .main-path::after { transition: none !important; animation: none !important; }
+            .box, .note { position: absolute; transform: none !important; }
+            input, textarea { background: transparent; border: none; font-family: sans-serif; font-weight: bold; }
+        ]]></style>
+        <foreignObject x="${minX}" y="${minY}" width="${width}" height="${height}" style="overflow: visible;">
+            <div xmlns="http://www.w3.org/1999/xhtml" style="position: relative; width: 100%; height: 100%;">
+                ${serializedContent}
+            </div>
+        </foreignObject>
+    </svg>`;
+
+    // 6. Download
+    try {
+        const blob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        const cleanName = anim.title.replace(/[^a-zA-Z0-9]/g, '_');
+        link.href = url;
+        link.download = `Recorte_${cleanName}.svg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast("✅ Imagem Exportada! (Com Auto-Zoom Out)");
+    } catch (e) {
+        showToast("❌ Erro ao gerar SVG.");
+    }
+}
+
+
+
+
+
 
 // O Motor das Bolinhas Vermelhas (Sincroniza o Mapa com a Lista)
 function updateAnimBadges() {
