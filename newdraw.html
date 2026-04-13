@@ -2119,6 +2119,18 @@ body.playing-anim .conn-group:not(.anim-participant) {
 
 
 
+
+/* Badge indicador de que a caixa tem um desenho rastreado */
+.confluence-badge {
+    position: absolute; top: -10px; left: 10px;
+    background: #0052cc; color: white; padding: 2px 8px;
+    border-radius: 12px; font-size: 10px; font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 10;
+    pointer-events: none; display: flex; align-items: center; gap: 4px;
+}
+
+
+
 /* ========================================================= */
 /* --- BARRA LATERAL DE EDIÇÃO DE ANIMAÇÕES --- */
 /* ========================================================= */
@@ -2453,6 +2465,7 @@ body.exporting-anim .conn-group:not(.export-target) {
 
 <div id="ui-layer">
     <div id="toolbar" class="no-pan">
+        <button class="btn-outline" style="font-weight:bold; color:#0f766e; border-color:#0f766e;" onclick="openDrawingCenter()">📐 Central de Desenhos</button>
         <button class="btn-outline" style="color:#0ea5e9; border-color:#7dd3fc; background:#f0f9ff;" onclick="addIsland()" title="Criar um portal para outro projeto">🏝️ Nova Ilha</button>
         <button class="btn-primary" onclick="addRootBox()">+ Nova Caixa</button>
         
@@ -3895,6 +3908,7 @@ function createBoxElement(id, titleVal = "Novo Item") {
             <div class="task-summary-badge"></div>
             
             <div class="actions-balloon no-pan">
+                <button class="icon-btn btn-font no-pan" onclick="toggleDrawingTrack('${id}')" title="Rastrear na Central de Desenhos">📐</button>
                 <div class="status-dot-btn dot-neutral no-pan" onclick="setStatus('${id}', 'neutral')" title="Normal"></div>
                 <div class="status-dot-btn dot-green no-pan" onclick="setStatus('${id}', 'green')" title="Ok"></div>
                 <div class="status-dot-btn dot-red no-pan" onclick="setStatus('${id}', 'red')" title="Crítico"></div>
@@ -7710,6 +7724,171 @@ async function smoothPanToBox(box, speed) {
     worldEl.style.transition = 'none'; 
 }
 
+
+// =========================================================================
+// --- MOTOR: CENTRAL DE DESENHOS & INTEGRAÇÃO CONFLUENCE ---
+// =========================================================================
+
+let currentDrawingBoxId = null;
+
+// Abre o modal de pedir a URL ou desliga o rastreio
+function toggleDrawingTrack(boxId) {
+    const box = document.getElementById(boxId);
+    if (!box) return;
+
+    // Se já tiver status, pergunta se quer desligar
+    if (box.dataset.drawingStatus && box.dataset.drawingStatus !== 'none') {
+        if (confirm("🛑 Desligar rastreio? Isto irá remover esta caixa da Central de Desenhos.")) {
+            box.dataset.drawingStatus = 'none';
+            box.dataset.confluenceUrl = '';
+            updateBoxDrawingBadge(box);
+            markUnsaved();
+        }
+    } else {
+        // Ligar: Pede a URL
+        currentDrawingBoxId = boxId;
+        document.getElementById('confluence-url-input').value = '';
+        document.getElementById('confluence-modal-overlay').style.display = 'flex';
+    }
+}
+
+function closeConfluenceModal() {
+    document.getElementById('confluence-modal-overlay').style.display = 'none';
+    currentDrawingBoxId = null;
+}
+
+function saveConfluenceUrl() {
+    const url = document.getElementById('confluence-url-input').value.trim();
+    if (!url) {
+        alert("Por favor, insira uma URL válida.");
+        return;
+    }
+
+    const box = document.getElementById(currentDrawingBoxId);
+    if (box) {
+        box.dataset.drawingStatus = 'todo'; 
+        box.dataset.confluenceUrl = url;
+        updateBoxDrawingBadge(box);
+        markUnsaved();
+        
+        // ABERTURA AUTOMÁTICA: Abre em target blank logo após salvar
+        window.open(url, '_blank');
+        
+        showToast("✅ Rastreio iniciado e link aberto!");
+    }
+    closeConfluenceModal();
+}
+
+// Atualiza a etiqueta azul visual na própria caixa do mapa
+function updateBoxDrawingBadge(box) {
+    let badge = box.querySelector('.confluence-badge');
+    
+    if (box.dataset.drawingStatus && box.dataset.drawingStatus !== 'none') {
+        if (!badge) {
+            badge = document.createElement('div');
+            badge.className = 'confluence-badge no-pan';
+            box.appendChild(badge);
+        }
+        
+        let icon = "🔴";
+        if(box.dataset.drawingStatus === 'doing') icon = "🟡";
+        if(box.dataset.drawingStatus === 'done') icon = "🟢";
+        
+        badge.innerHTML = `${icon} Confluence`;
+        
+        badge.style.pointerEvents = 'auto';
+        badge.style.cursor = 'pointer';
+        
+        // Clique na etiqueta do mapa abre em nova aba
+        badge.onclick = (e) => {
+            e.stopPropagation();
+            if (box.dataset.confluenceUrl) {
+                window.open(box.dataset.confluenceUrl, '_blank');
+            }
+        };
+    } else if (badge) {
+        badge.remove();
+    }
+}
+
+// --- GESTÃO DO TABULEIRO KANBAN ---
+
+function openDrawingCenter() {
+    renderDrawingCenter();
+    document.getElementById('drawing-center-modal-overlay').style.display = 'flex';
+}
+
+function closeDrawingCenter() {
+    document.getElementById('drawing-center-modal-overlay').style.display = 'none';
+}
+
+function renderDrawingCenter() {
+    const cols = { todo: [], doing: [], done: [] };
+    
+    // Varre todas as caixas do mapa procurando as que estão a ser rastreadas
+    document.querySelectorAll('.box').forEach(box => {
+        const status = box.dataset.drawingStatus;
+        if (status && cols[status]) {
+            const titleInput = box.querySelector('.box-title');
+            const title = titleInput ? titleInput.value || 'Sem Título' : 'Bloco ' + box.id;
+            cols[status].push({ id: box.id, title: title, url: box.dataset.confluenceUrl });
+        }
+    });
+
+    // Atualiza contadores
+    document.getElementById('count-todo').innerText = cols.todo.length;
+    document.getElementById('count-doing').innerText = cols.doing.length;
+    document.getElementById('count-done').innerText = cols.done.length;
+
+    // Função interna para gerar cartões
+    const buildCards = (items, currentStatus) => {
+        return items.map(item => `
+            <div style="background: white; border-radius: 6px; padding: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 8px;">
+                <div style="font-weight: bold; font-size: 13px; color: #334155; word-break: break-word;">${item.title}</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f1f5f9; padding-top: 8px; margin-top: auto;">
+                        <a href="${item.url}" target="_blank" rel="noopener noreferrer" style="font-size: 11px; color: #0052cc; text-decoration: none; font-weight: bold;">
+                            ↗ Abrir Doc
+                        </a>                    
+                        <select style="font-size: 11px; padding: 2px; border: 1px solid #cbd5e1; border-radius: 4px; outline: none; cursor: pointer;" onchange="changeBoxDrawingStatus('${item.id}', this.value)">
+                        <option value="todo" ${currentStatus === 'todo' ? 'selected' : ''}>🔴 Para Iniciar</option>
+                        <option value="doing" ${currentStatus === 'doing' ? 'selected' : ''}>🟡 Desenhando</option>
+                        <option value="done" ${currentStatus === 'done' ? 'selected' : ''}>🟢 Publicado</option>
+                    </select>
+                </div>
+            </div>
+        `).join('');
+    };
+
+    document.getElementById('kanban-col-todo').innerHTML = buildCards(cols.todo, 'todo');
+    document.getElementById('kanban-col-doing').innerHTML = buildCards(cols.doing, 'doing');
+    document.getElementById('kanban-col-done').innerHTML = buildCards(cols.done, 'done');
+}
+
+// Muda a caixa de coluna e atualiza o mapa visualmente
+function changeBoxDrawingStatus(boxId, newStatus) {
+    const box = document.getElementById(boxId);
+    if (box) {
+        box.dataset.drawingStatus = newStatus;
+        updateBoxDrawingBadge(box); // Atualiza a cor da bolinha na etiqueta do mapa
+        markUnsaved();
+        renderDrawingCenter(); // Refaz o Kanban
+    }
+}
+
+// Função de segurança para restaurar etiquetas visuais ao carregar um arquivo salvo
+// (Você deve chamar isto no final da sua função loadState() ou logo no início se o mapa já estiver na tela)
+setTimeout(() => {
+    document.querySelectorAll('.box').forEach(box => {
+        if (box.dataset.drawingStatus && box.dataset.drawingStatus !== 'none') {
+            updateBoxDrawingBadge(box);
+        }
+    });
+}, 1000);
+
+
+
+
+
 // --- PREPARAÇÃO INTELIGENTE DO MAPA ---
 // Varre a sequência e garante que nenhum pai/avô esteja colapsado
 // --- PREPARAÇÃO INTELIGENTE DO MAPA ---
@@ -9324,6 +9503,56 @@ function toggleAgendaFullscreen() {
         </div>
         <div class="dash-content" id="activity-modal-body" style="background: #f8fafc; padding: 20px; overflow-y: auto; flex-grow: 1;">
             </div>
+    </div>
+</div>
+
+<div id="confluence-modal-overlay" class="modal-overlay">
+    <div class="modal-panel no-pan" style="width: 400px;">
+        <div class="dash-header">
+            <div>
+                <span class="dash-title">🔗 Ligar ao Confluence</span>
+                <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Adicione a URL do documento para iniciar o rastreio.</div>
+            </div>
+            <span class="dash-close" onclick="closeConfluenceModal()">×</span>
+        </div>
+        <div class="dash-content" style="padding: 20px;">
+            <input type="url" id="confluence-url-input" placeholder="https://sua-empresa.atlassian.net/wiki/spaces/..." style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; margin-bottom: 15px; font-size: 14px;">
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn-outline" onclick="closeConfluenceModal()">Cancelar</button>
+                <button class="btn-primary" onclick="saveConfluenceUrl()">Iniciar Desenho</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="drawing-center-modal-overlay" class="modal-overlay">
+    <div class="modal-panel no-pan" style="width: 900px; max-height: 85vh; display: flex; flex-direction: column;">
+        <div class="dash-header">
+            <div>
+                <span class="dash-title">📐 Central de Desenhos</span>
+                <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Acompanhe o estado das documentações de arquitetura.</div>
+            </div>
+            <span class="dash-close" onclick="closeDrawingCenter()">×</span>
+        </div>
+        
+        <div class="dash-content" style="display: flex; gap: 15px; padding: 20px; background: #f1f5f9; flex-grow: 1; overflow-y: auto;">
+            
+            <div style="flex: 1; background: #e2e8f0; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 10px;">
+                <div style="font-weight: bold; color: #475569; border-bottom: 2px solid #cbd5e1; padding-bottom: 5px;">🔴 Para Iniciar (<span id="count-todo">0</span>)</div>
+                <div id="kanban-col-todo" style="display: flex; flex-direction: column; gap: 8px;"></div>
+            </div>
+
+            <div style="flex: 1; background: #fef3c7; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 10px;">
+                <div style="font-weight: bold; color: #b45309; border-bottom: 2px solid #fde68a; padding-bottom: 5px;">🟡 Desenhando (<span id="count-doing">0</span>)</div>
+                <div id="kanban-col-doing" style="display: flex; flex-direction: column; gap: 8px;"></div>
+            </div>
+
+            <div style="flex: 1; background: #dcfce3; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 10px;">
+                <div style="font-weight: bold; color: #166534; border-bottom: 2px solid #bbf7d0; padding-bottom: 5px;">🟢 Publicado (<span id="count-done">0</span>)</div>
+                <div id="kanban-col-done" style="display: flex; flex-direction: column; gap: 8px;"></div>
+            </div>
+
+        </div>
     </div>
 </div>
 
