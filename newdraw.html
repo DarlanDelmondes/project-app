@@ -3887,7 +3887,7 @@ function createBoxElement(id, titleVal = "Novo Item") {
                 
                 <button class="icon-btn btn-font no-pan" onclick="setBoxTarget('${id}')" title="Atribuir Cenário/Target">🎯</button>
                 
-                <button class="icon-btn btn-font no-pan" onclick="toggleTaskView('${id}')" title="Tarefas">📋</button>
+                <button class="icon-btn btn-font no-pan" onclick="toggleTaskView('${id}')" title="Mostrar Tarefas" style="opacity: 0.5;">📋</button>
                 <button class="icon-btn btn-font no-pan" onclick="openMeetingModal('${id}')" title="Gerenciar Reuniões">📅</button>
                 <button class="icon-btn btn-font no-pan" onclick="addNoteToBox('${id}')" title="Adicionar Nota">📝</button>
                 <div class="separator"></div>
@@ -3904,8 +3904,8 @@ function createBoxElement(id, titleVal = "Novo Item") {
             </div>
         </div>
         <div class="box-body">
-            <div class="task-viewer no-pan"></div>
-            <button class="add-task-btn no-pan" onclick="openTaskModal('${id}', true)">+ Nova Tarefa</button>
+            <div class="task-viewer no-pan collapsed"></div>
+            <button class="add-task-btn no-pan collapsed" onclick="openTaskModal('${id}', true)">+ Nova Tarefa</button>
             
             <div class="task-data-store" style="display:none;"></div>
             <div class="meeting-data-store" style="display:none;"></div>
@@ -6713,7 +6713,7 @@ function saveAnimation() {
 
 
 // --- CONTROLE GLOBAL DE TAREFAS (ON/OFF) ---
-let isAllTasksVisible = true; // Guarda o estado atual
+let isAllTasksVisible = false; // Guarda o estado atual
 
 function toggleAllTasks() {
     if (!state.isEditMode) return;
@@ -7903,7 +7903,12 @@ function updateMeetingEmails(meetingItem) {
 
 function addMeetingToModal() {
     const modalBody = document.getElementById('meeting-modal-body');
-    modalBody.appendChild(createMeetingElement());
+    
+    // --- A MÁGICA: Puxa os nomes das equipes que têm o "Convite Automático" ativado ---
+    const defaultAttendees = globalTeams.filter(t => t.isDefault && t.name).map(t => t.name);
+    
+    // Cria a reunião já injetando a lista de presença padrão!
+    modalBody.appendChild(createMeetingElement("", "", false, defaultAttendees, ""));
     markUnsaved();
     
     // Rola para baixo
@@ -8015,10 +8020,17 @@ function renderTeamManager() {
             `;
         });
 
+        // --- MUDANÇA AQUI: Adicionado o Checkbox de Convite Automático no Cabeçalho ---
         html += `
             <div class="team-card">
-                <div class="team-header">
-                    <input type="text" value="${team.name}" style="border:none; font-weight:bold; font-size:14px; outline:none; color:#0f766e;" onchange="updateTeamName('${team.id}', this.value)" placeholder="Nome da Equipe...">
+                <div class="team-header" style="align-items: flex-start;">
+                    <div style="display:flex; flex-direction:column; gap:4px;">
+                        <input type="text" value="${team.name}" style="border:none; font-weight:bold; font-size:15px; outline:none; color:#0f766e;" onchange="updateTeamName('${team.id}', this.value)" placeholder="Nome da Equipe...">
+                        <label style="font-size:10px; color:#64748b; font-weight:normal; cursor:pointer; display:flex; align-items:center; gap:4px; margin-left:2px;">
+                            <input type="checkbox" ${team.isDefault ? 'checked' : ''} onchange="updateTeamDefault('${team.id}', this.checked)" style="accent-color:#0f766e; cursor:pointer;">
+                            📌 Adicionar esta equipe automaticamente em novas reuniões
+                        </label>
+                    </div>
                     <button class="icon-btn" style="color:#ef4444;" onclick="removeTeam('${team.id}')">Excluir Equipe</button>
                 </div>
                 ${membersHtml}
@@ -8047,6 +8059,12 @@ function updateAttendeeDatalist() {
 }
 
 
+// Salva o status de Convite Automático da equipe
+function updateTeamDefault(id, isChecked) { 
+    const t = globalTeams.find(x => x.id === id); 
+    if(t) t.isDefault = isChecked; 
+    markUnsaved(); 
+}
 
 // =========================================================================
 // --- DASHBOARD DE AGENDA GLOBAL ---
