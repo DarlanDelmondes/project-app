@@ -6546,6 +6546,7 @@ function initDrag(e, id) {
         updateTransform(); 
         
         // --- LÓGICA "BASTA APONTAR PARA ABRIR" ---
+        // --- LÓGICA "BASTA APONTAR PARA ABRIR" ---
         if (isZoomingIn) {
             // Pega o elemento exato sob o mouse
             const hoveredElement = document.elementFromPoint(e.clientX, e.clientY);
@@ -6555,14 +6556,31 @@ function initDrag(e, id) {
                 const targetBox = hoveredElement.closest('.box');
                 
                 if (targetBox) {
-                    // Se achou uma caixa E ela está fechada -> ABRE IMEDIATAMENTE
+                    // Se achou uma caixa E ela está fechada -> ABRE IMEDIATAMENTE (Sem Animação)
                     if (targetBox.classList.contains('collapsed-mode')) {
+                        
+                        // 1. Desliga temporariamente a animação da caixa e de seus pais
+                        let currBox = targetBox;
+                        let boxesToRestore = [];
+                        while (currBox) {
+                            currBox.classList.add('no-transition');
+                            boxesToRestore.push(currBox);
+                            currBox = currBox.parentElement ? currBox.parentElement.closest('.box') : null;
+                        }
+
+                        // 2. Executa a abertura instantânea
                         const btn = targetBox.querySelector('.actions-balloon .btn-toggle');
                         performToggle(targetBox.id, btn);
+
+                        // 3. Devolve a suavidade no próximo frame (para cliques manuais futuros)
+                        setTimeout(() => {
+                            boxesToRestore.forEach(b => b.classList.remove('no-transition'));
+                        }, 50);
                     }
                 }
             }
         }
+        // ------------------------------------------
         // ------------------------------------------
     
     }, { passive: false });
