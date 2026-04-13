@@ -2364,10 +2364,19 @@ body.filtering .conn-group.dimmed {
 .diff-attention-box li { font-weight: bold; color: #c2410c; font-size: 13px; margin-bottom: 4px; }
 
 
-
-
-
-
+/* --- MODO DE EXPORTAÇÃO (LIMPEZA TOTAL) --- */
+body.exporting-anim .box:not(.export-target),
+body.exporting-anim .note:not(.export-target),
+body.exporting-anim .conn-group:not(.export-target),
+body.exporting-anim .actions-balloon, 
+body.exporting-anim .resizer, 
+body.exporting-anim .connector,
+body.exporting-anim .add-task-btn,
+body.exporting-anim .target-badge {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+}
 
 .project-item {
     display: flex;
@@ -6824,8 +6833,7 @@ function updateAnimDropdownUI() {
                     
 
                     <button class="anim-btn" style="background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; padding:4px 6px; font-size:12px;" 
-                        onclick="downloadAnimSVG('${anim.id}')" title="Baixar Vetor SVG (Recorte da Animação)">🖼️ SVG</button>
-                    <button class="anim-btn anim-btn-del" onclick="deleteAnimation('${anim.id}')" title="Excluir">🗑️</button>
+<button class="anim-btn" style="background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; padding:4px 6px; font-size:12px;" onclick="exportDiagram('${anim.id}')" title="Baixar Imagem PNG em Alta Resolução">🖼️ PNG</button>                    <button class="anim-btn anim-btn-del" onclick="deleteAnimation('${anim.id}')" title="Excluir">🗑️</button>
                     <button class="anim-btn anim-btn-play" onclick="startPlayback('${anim.id}')">▶ Tocar</button>
                 </div>
             </div>
@@ -7030,7 +7038,351 @@ function downloadAnimSVG(animId) {
 
 
 
+// --- GERADOR DE PNG FOCADO NA ANIMAÇÃO (ALTA RESOLUÇÃO) ---
+// --- GERADOR DE PNG FOCADO (À PROVA DE FALHAS E MELHOR ENQUADRAMENTO) ---
+// --- COORDENADOR DE EXPORTAÇÃO DUPLA ---
+// =========================================================================
+// --- MOTOR DE EXPORTAÇÃO DUPLA (NUMERAÇÃO E SETAS FOCADAS) ---
+// =========================================================================
 
+// =========================================================================
+// --- MOTOR DE EXPORTAÇÃO DUPLA (COM ENQUADRAMENTO ABSOLUTO) ---
+// =========================================================================
+
+// =========================================================================
+// --- MOTOR DE EXPORTAÇÃO DUPLA (BLINDADO COM INLINE STYLES) ---
+// =========================================================================
+
+// =========================================================================
+// --- MOTOR DE EXPORTAÇÃO PNG (COM DESENHO NATIVO DE SETAS E CURVAS) ---
+// =========================================================================
+
+// =========================================================================
+// --- MOTOR DE EXPORTAÇÃO PNG (CURVAS PURAS E SETAS PROPORCIONAIS) ---
+// =========================================================================
+
+// =========================================================================
+// --- MOTOR DE EXPORTAÇÃO (CONVERSÃO DE VETOR PARA PIXELS NATIVOS) ---
+// =========================================================================
+// =========================================================================
+// --- MOTOR DE EXPORTAÇÃO DEFINITIVO (INJEÇÃO DOM 100% COMPATÍVEL) ---
+// =========================================================================
+// =========================================================================
+// --- MOTOR DE EXPORTAÇÃO (ESTÚDIO ISOLADO / SHADOW DOM) ---
+// =========================================================================
+
+// =========================================================================
+// --- MOTOR COMPILADOR: EXPORTAÇÃO NATIVA PARA DRAW.IO (.drawio) ---
+// =========================================================================
+
+// =========================================================================
+// --- MOTOR DE EXPORTAÇÃO SIMPLIFICADO: SEQUÊNCIA HORIZONTAL PNG ---
+// =========================================================================
+
+async function exportDiagram(animId) {
+    const anim = savedAnimations.find(a => a.id === animId);
+    if (!anim || anim.sequence.length === 0) {
+        showToast("⚠️ Apresentação vazia.");
+        return;
+    }
+
+    const dd = document.getElementById('anim-dropdown-container');
+    if (dd) dd.style.display = 'none';
+    showToast("📸 Construindo sequência horizontal simplificada...");
+
+    // 1. Criar o container do "Estúdio de Exportação" (Horizontal)
+    const studio = document.createElement('div');
+    studio.id = 'export-studio-horizontal';
+    // Estilo básico: fundo branco, flexbox horizontal centralizado
+    studio.style.cssText = `
+        position: absolute; top: 0; left: 0;
+        display: flex; flex-direction: row; align-items: center; gap: 40px;
+        padding: 50px; background: #ffffff; z-index: -100; // Escondido no fundo
+        font-family: 'Segoe UI', sans-serif; overflow: visible;
+        box-sizing: border-box;
+    `;
+    document.body.appendChild(studio);
+
+    // 2. Transcrever as CAIXAS (Simplificadas e Numeradas)
+    anim.sequence.forEach((id, index) => {
+        let el = document.getElementById(id);
+        if (el) {
+            const stepNum = index + 1;
+            
+            // Container do bloco (para alinhar número e caixa)
+            const blockContainer = document.createElement('div');
+            blockContainer.style.cssText = `
+                display: flex; flex-direction: column; align-items: center; gap: 10px;
+                position: relative; // Para posicionar setas se necessário
+            `;
+            studio.appendChild(blockContainer);
+
+            // Número do passo (Bolinha azul)
+            const badge = document.createElement('div');
+            badge.innerText = stepNum;
+            badge.style.cssText = `
+                background: #0ea5e9; color: white; width: 30px; height: 30px;
+                border-radius: 50%; display: flex; align-items: center; justify-content: center;
+                font-weight: bold; font-size: 14px;
+                border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            `;
+            blockContainer.appendChild(badge);
+
+            // Caixa simplificada
+            const boxClone = el.cloneNode(true);
+            // Limpeza pesada: Remove absolutamente tudo que é interface de edição
+            const garbage = boxClone.querySelectorAll('.resizer, .connector, .actions-balloon, .add-task-btn, .task-del-btn, .btn-toggle, .target-badge, .meeting-badge, .context-path, .child-indicator');
+            garbage.forEach(g => g.remove());
+
+            // Estilo simplificado e limpo
+            boxClone.style.cssText = `
+                position: static; transform: none; display: flex;
+                width: ${el.offsetWidth}px; height: ${el.offsetHeight}px;
+                background: #ffffff; border: 2px solid #94a3b8; border-radius: 8px;
+                padding: 10px; box-sizing: border-box; flex-direction: column; gap: 5px;
+                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            `;
+
+            // Trava e simplifica inputs/textareas
+            boxClone.querySelectorAll('input, textarea').forEach((inp, i) => {
+                const origInp = el.querySelectorAll('input, textarea')[i];
+                if (origInp) {
+                    inp.setAttribute('value', origInp.value); // Garante o valor no clone
+                    if (inp.tagName === 'TEXTAREA') inp.textContent = origInp.value;
+                    // Estilo de texto simples
+                    inp.style.cssText = `
+                        pointer-events: none; background: transparent; border: none;
+                        font-family: sans-serif; color: #0f172a; margin: 0; padding: 0;
+                        width: 100%; box-sizing: border-box;
+                    `;
+                    if (inp.classList.contains('box-title')) {
+                        inp.style.fontWeight = 'bold';
+                        inp.style.fontSize = '1.1em';
+                        inp.style.textAlign = 'center';
+                    }
+                }
+            });
+            
+            blockContainer.appendChild(boxClone);
+
+            // Desenha Seta Horizontal simples para o próximo (exceto último)
+            if (index < anim.sequence.length - 1) {
+                const arrow = document.createElement('div');
+                // Seta CSS simples no meio da altura da caixa, abaixo do número
+                arrow.style.cssText = `
+                    position: absolute; top: calc(30px + 10px + 50%); // Meio da caixa
+                    left: 100%; width: 40px; height: 0; // Largura do gap
+                    border-top: 4px solid #0f172a; transform: translateY(-50%);
+                `;
+                // Ponta da seta simples (Triângulo CSS)
+                const arrowhead = document.createElement('div');
+                arrowhead.style.cssText = `
+                    position: absolute; top: -10px; right: -12px; // Posiciona na ponta da linha
+                    width: 0; height: 0;
+                    border-left: 12px solid #0f172a;
+                    border-top: 10px solid transparent;
+                    border-bottom: 10px solid transparent;
+                `;
+                arrow.appendChild(arrowhead);
+                blockContainer.appendChild(arrow);
+            }
+        }
+    });
+
+    // 3. Tira a Foto (html2canvas)
+    // Pequena pausa para garantir que o navegador montou o DOM do estúdio
+    setTimeout(async () => {
+        try {
+            // Usamos html2canvas neste estúdio SUPER SIMPLIFICADO E HORIZONTAL
+            const canvas = await html2canvas(studio, {
+                backgroundColor: "#ffffff",
+                scale: 2, // Resolução Retina (alta qualidade)
+                logging: false,
+                useCORS: true,
+                // Garante que captura toda a largura/altura, lidando com overflow
+                scrollX: 0, scrollY: 0,
+                windowWidth: studio.scrollWidth + 100, // Dá uma margem extra
+                windowHeight: studio.scrollHeight + 100
+            });
+
+            if (canvas.width === 0) throw new Error("Tela vazia.");
+
+            const link = document.createElement('a');
+            link.download = `Sequencia_Horizontal_${anim.title.replace(/\s/g, '_')}.png`;
+            link.href = canvas.toDataURL("image/png");
+            link.click();
+            
+            showToast("✅ PNG de sequência horizontal gerado com sucesso!");
+
+        } catch (err) {
+            console.error(err);
+            showToast("❌ Erro ao gerar a imagem PNG da sequência.");
+        } finally {
+            // Remove o estúdio temporário da tela
+            studio.remove();
+        }
+    }, 250); // Pausa de segurança
+}
+
+// --- AUXILIARES DE DISPARO ---
+async function doSVGExport(anim, worldEl, x, y, w, h) {
+    const worldClone = worldEl.cloneNode(true);
+    // Remove o que não é alvo no clone do SVG
+    worldClone.querySelectorAll('.box, .note, .conn-group').forEach(n => {
+        if (!n.classList.contains('export-target')) n.remove();
+    });
+    
+    // Remove UI residual
+    const ui = ['.resizer', '.connector', '.actions-balloon', '.task-del-btn', '.add-task-btn', '.btn-toggle'];
+    ui.forEach(s => worldClone.querySelectorAll(s).forEach(e => e.remove()));
+
+    const serializer = new XMLSerializer();
+    let content = serializer.serializeToString(worldClone).replace(/&nbsp;/g, '&#160;');
+    let css = ""; document.querySelectorAll('style').forEach(s => css += s.innerHTML);
+
+    const svgData = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="${(h/w)*1200}" viewBox="${x} ${y} ${w} ${h}">
+        <style><![CDATA[ ${css} .box { position: absolute; transform: none !important; } ]]></style>
+        <foreignObject x="${x}" y="${y}" width="${w}" height="${h}">
+            <div xmlns="http://www.w3.org/1999/xhtml" style="position: relative; width: 100%; height: 100%;">${content}</div>
+        </foreignObject></svg>`;
+
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(new Blob([svgData], { type: "image/svg+xml" }));
+    link.download = `Vetor_${anim.title}.svg`;
+    link.click();
+}
+
+async function doPNGExport(anim, worldEl, x, y, w, h) {
+    const canvas = await html2canvas(worldEl, {
+        x: x, y: y, width: w, height: h,
+        backgroundColor: "#f8fafc", scale: 2, useCORS: true, logging: false
+    });
+    const link = document.createElement('a');
+    link.download = `Foto_${anim.title}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+}
+
+
+// --- MOTOR 1: GERAÇÃO SVG (VETORIAL COM AUTO-ZOOM) ---
+function generateSVGExport(anim) {
+    const targetIds = new Set(anim.sequence);
+    const elementsToExport = new Set();
+    
+    anim.sequence.forEach(id => {
+        let el = document.getElementById(id);
+        if (el) {
+            elementsToExport.add(el);
+            let parent = el.parentElement.closest('.box');
+            while (parent) {
+                elementsToExport.add(parent);
+                parent = parent.parentElement.closest('.box');
+            }
+        }
+    });
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    elementsToExport.forEach(el => {
+        const x = parseFloat(el.style.left);
+        const y = parseFloat(el.style.top);
+        const w = parseFloat(el.style.width);
+        const h = parseFloat(el.style.height);
+        if (x < minX) minX = x; if (y < minY) minY = y;
+        if (x + w > maxX) maxX = x + w; if (y + h > maxY) maxY = y + h;
+    });
+
+    const padding = 250;
+    minX -= padding; minY -= padding; maxX += padding; maxY += padding;
+    const width = maxX - minX; const height = maxY - minY;
+    
+    // Trava tamanho físico para visualização amigável (1200px)
+    const MAX_W = 1200;
+    let pW = width, pH = height;
+    if (width > MAX_W) { pH = height * (MAX_W / width); pW = MAX_W; }
+
+    const worldClone = document.getElementById('world').cloneNode(true);
+    worldClone.querySelectorAll('.box, .note').forEach(n => {
+        if (!targetIds.has(n.id) && !Array.from(elementsToExport).some(e => e.id === n.id)) n.remove();
+    });
+    
+    // Limpeza de UI no SVG
+    const ui = ['.resizer', '.connector', '.actions-balloon', '.task-del-btn', '.add-task-btn', '.btn-toggle', '.grid-background'];
+    ui.forEach(s => worldClone.querySelectorAll(s).forEach(e => e.remove()));
+
+    let css = "";
+    document.querySelectorAll('style').forEach(s => css += s.innerHTML);
+    const serializer = new XMLSerializer();
+    let content = serializer.serializeToString(worldClone).replace(/&nbsp;/g, '&#160;');
+
+    const svgData = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${pW}" height="${pH}" viewBox="${minX} ${minY} ${width} ${height}">
+        <style><![CDATA[ ${css} .box, .note { position: absolute; transform: none !important; } ]]></style>
+        <foreignObject x="${minX}" y="${minY}" width="${width}" height="${height}">
+            <div xmlns="http://www.w3.org/1999/xhtml" style="position: relative; width: 100%; height: 100%;">${content}</div>
+        </foreignObject>
+    </svg>`;
+
+    const blob = new Blob([svgData], { type: "image/svg+xml" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `Vetor_${anim.title.replace(/\s/g, '_')}.svg`;
+    link.click();
+}
+
+// --- MOTOR 2: GERAÇÃO PNG (ALTA RESOLUÇÃO COM ENQUADRAMENTO) ---
+function generatePNGExport(anim) {
+    document.querySelectorAll('.box, .note, .conn-group').forEach(el => el.classList.remove('export-target'));
+    const targetElements = new Set();
+    
+    anim.sequence.forEach(id => {
+        let el = document.getElementById(id);
+        if (el) {
+            el.classList.add('export-target');
+            targetElements.add(el);
+            let parent = el.parentElement.closest('.box');
+            while (parent) { parent.classList.add('export-target'); targetElements.add(parent); parent = parent.parentElement.closest('.box'); }
+        }
+    });
+
+    connections.forEach(c => {
+        if (anim.sequence.includes(c.sid) && anim.sequence.includes(c.tid)) {
+            const g = document.getElementById(c.id); if (g) g.classList.add('export-target');
+        }
+    });
+
+    document.body.classList.add('exporting-anim');
+    const worldEl = document.getElementById('world');
+    const prevScale = state.scale; const prevOffset = { ...state.offset };
+    state.scale = 1; state.offset = { x: 0, y: 0 }; 
+    worldEl.style.transform = 'none';
+
+    setTimeout(() => {
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        targetElements.forEach(el => {
+            const x = parseFloat(el.style.left) || 0; const y = parseFloat(el.style.top) || 0;
+            const w = parseFloat(el.style.width) || el.offsetWidth || 0; const h = parseFloat(el.style.height) || el.offsetHeight || 0;
+            if (x < minX) minX = x; if (y < minY) minY = y; if (x + w > maxX) maxX = x + w; if (y + h > maxY) maxY = y + h;
+        });
+
+        const padding = 100;
+        minX -= padding; minY -= padding; maxX += padding; maxY += padding;
+        
+        html2canvas(worldEl, { 
+            x: minX, y: minY, width: maxX - minX, height: maxY - minY,
+            backgroundColor: "#f8fafc", scale: 2, useCORS: true
+        }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = `Foto_${anim.title.replace(/\s/g, '_')}.png`;
+            link.href = canvas.toDataURL("image/png");
+            link.click();
+            
+            // Restaura Mapa
+            state.scale = prevScale; state.offset = prevOffset; updateTransform();
+            document.body.classList.remove('exporting-anim');
+            document.querySelectorAll('.export-target').forEach(el => el.classList.remove('export-target'));
+        });
+    }, 200);
+}
 
 
 // O Motor das Bolinhas Vermelhas (Sincroniza o Mapa com a Lista)
