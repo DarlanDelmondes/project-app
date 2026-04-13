@@ -800,20 +800,6 @@ body.filtering .box.filter-match {
             
             animation: popIn 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-
-        .actions-balloon {
-            position: absolute; 
-            top: -45px; /* Ajustei um pouco para cima pois ele vai crescer */
-            right: 10px; 
-            
-            /* ... mantenha as cores e bordas ... */
-            
-            /* MUDANÇA: Multiplica a escala do sistema por 1.25 */
-            transform-origin: bottom right; 
-            transform: scale(calc(var(--ui-scale) * 1.25));
-            
-            animation: popIn 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
         
         @keyframes popIn { 
             from { transform: scale(0); opacity: 0; } 
@@ -8967,20 +8953,69 @@ function createAgendaCardHTML(m, isUrgent) {
     `;
 }
 
+// =========================================================================
+// --- MOTOR DA CÂMERA: VIAJAR ATÉ AO ITEM ---
+// =========================================================================
+// =========================================================================
+// --- NAVEGAÇÃO PRECISA: EXPANDIR E CENTRALIZAR ---
+// =========================================================================
+
+// =========================================================================
+// --- NAVEGAÇÃO ABSOLUTA À PROVA DE BALAS ---
+// =========================================================================
+
 // O SUPERPODER: Clica no card e o mapa viaja até lá
+// O SUPERPODER: Clica no card e o mapa viaja até lá
+// O SUPERPODER: Abre toda a árvore genealógica e viaja até lá
 function jumpToMeetingBox(boxId) {
-    closeAgendaModal();
-    const box = document.getElementById(boxId);
-    if(box) {
-        // Tenta centralizar a tela usando a API nativa do navegador
-        box.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-        
-        // Faz a caixa piscar para você ver onde ela está
-        box.classList.add('highlight-focus');
-        setTimeout(() => box.classList.remove('highlight-focus'), 2500);
-        
-        // Abre automaticamente o gerenciador de reuniões dela!
-        setTimeout(() => openMeetingModal(boxId), 600);
+    // Tenta fechar o dashboard (dependendo do nome que ficou na sua versão final)
+    if (typeof closeAgendaDashboard === 'function') closeAgendaDashboard();
+    if (typeof closeAgendaModal === 'function') closeAgendaModal();
+
+    const targetBox = document.getElementById(boxId);
+    
+    if(targetBox) {
+        // --- 1. RASTREIO DE ÁRVORE GENEALÓGICA ---
+        let currentBox = targetBox;
+        let boxesToOpen = [];
+
+        // Sobe de filho para pai, avô, etc., recolhendo quem está fechado
+        while (currentBox && currentBox.classList && currentBox.classList.contains('box')) {
+            if (currentBox.classList.contains('collapsed-mode')) {
+                boxesToOpen.push(currentBox);
+            }
+            // Sobe para o pai direto que seja uma .box
+            currentBox = currentBox.parentElement ? currentBox.parentElement.closest('.box') : null;
+        }
+
+        // --- 2. ABRE DE FORA PARA DENTRO ---
+        // Fazemos o .reverse() para abrir primeiro o Avô, depois o Pai, depois o Filho
+        boxesToOpen.reverse().forEach(b => {
+            const btnToggle = b.querySelector('.actions-balloon .btn-toggle');
+            if (btnToggle && typeof performToggle === 'function') {
+                performToggle(b.id, btnToggle);
+            } else {
+                b.classList.remove('collapsed-mode');
+            }
+        });
+
+        // --- 3. VIAJA ATÉ A CAIXA ---
+        // Aumentei o tempo de espera para 350ms. 
+        // Como o Avô e o Pai podem estar a abrir ao mesmo tempo, 
+        // damos tempo ao navegador para redesenhar a tela inteira antes de rolar o ecrã.
+        setTimeout(() => {
+            // Centraliza nativamente
+            targetBox.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+            
+            // Efeito de flash/radar
+            targetBox.classList.add('highlight-focus');
+            setTimeout(() => targetBox.classList.remove('highlight-focus'), 2500);
+            
+            // Abre a agenda local automaticamente
+            if (typeof openMeetingModal === 'function') {
+                setTimeout(() => openMeetingModal(boxId), 1600);
+            }
+        }, 350);
     }
 }
 
@@ -9253,30 +9288,40 @@ function changeGanttFont(delta) {
 // =========================================================================
 // --- MOTOR DO CENTRO DE COMANDO (VARREDURA DE ILHAS E CONCLUSÃO) ---
 // =========================================================================
+// Fecha a Central de Agendas
+function closeAgendaDashboard() {
+    const overlay = document.getElementById('agenda-dashboard-overlay');
+    if (overlay) overlay.style.display = 'none';
+}
 
-// 1. Coleta e unifica as reuniões do Mapa Atual + Ilhas Referenciadas
+// Coleta reuniões vinculando ao ID da Ilha no mapa atual
 function getAllMeetingsUnified() {
     let unified = [];
-    let visitedProjs = new Set(); // Evita loop infinito se uma ilha chamar a outra
+    let visitedProjs = new Set();
 
-    // Varre as caixas da tela atual
     document.querySelectorAll('.box').forEach(box => {
         const boxTitle = box.querySelector('input.title').value || "Sem Título";
         
-        // Se for uma Ilha, abre o banco de dados para puxar o conteúdo
+        // Identifica o Card Pai imediato no canvas atual
+        const parentBox = box.parentElement.closest('.box');
+        const parentBoxId = parentBox ? parentBox.id : null;
+        const parentBoxTitle = parentBox ? (parentBox.querySelector('input.title').value || "Pai sem título") : null;
+
         if (box.classList.contains('island-box')) {
             const refId = box.dataset.refId;
-            if (refId) fetchMeetingsFromDB(refId, boxTitle, visitedProjs, unified);
+            // Passamos box.id como o 'islandBoxId' (o portal/pai físico no mapa atual)
+            if (refId) fetchMeetingsFromDB(refId, boxTitle, visitedProjs, unified, box.id);
         } 
-        // Se for uma caixa normal, puxa da tela
         else {
             const mStore = box.querySelector('.meeting-data-store');
             if (mStore) {
                 mStore.querySelectorAll('.meeting-item').forEach(mItem => {
                     unified.push({
-                        isLocal: true, // Indica que está na tela (pode ser editado no DOM)
+                        isLocal: true,
                         boxId: box.id,
                         boxTitle: boxTitle,
+                        parentBoxId: parentBoxId,
+                        parentBoxTitle: parentBoxTitle,
                         title: mItem.querySelector('.meeting-title').value,
                         date: mItem.querySelector('.meeting-date').value,
                         inviteSent: mItem.querySelector('.meeting-invite-chk').checked,
@@ -9290,8 +9335,8 @@ function getAllMeetingsUnified() {
     return unified;
 }
 
-// 2. Navegador silencioso de Banco de Dados (Entra nas Ilhas sem abrir o mapa)
-function fetchMeetingsFromDB(projectId, breadcrumb, visited, unified) {
+// Busca recursiva em projetos de Ilhas
+function fetchMeetingsFromDB(projectId, breadcrumb, visited, unified, islandBoxId) {
     if (visited.has(projectId)) return;
     visited.add(projectId);
     
@@ -9300,22 +9345,26 @@ function fetchMeetingsFromDB(projectId, breadcrumb, visited, unified) {
     if (!proj || !proj.data || !proj.data.boxes) return;
 
     proj.data.boxes.forEach(b => {
-        // Se dentro da ilha houver OUTRA ilha (Inception), ele desce mais um nível
         if (b.isIsland && b.refId) {
-            fetchMeetingsFromDB(b.refId, breadcrumb + " ➔ " + (b.title || "Sub-Ilha"), visited, unified);
+            fetchMeetingsFromDB(b.refId, breadcrumb + " ➔ " + (b.title || "Sub-Ilha"), visited, unified, islandBoxId);
         } 
-        // Coleta as reuniões do projeto oculto
         else if (b.meetings && b.meetings.length > 0) {
+            // Tenta achar o título do pai dentro do arquivo da ilha
+            const parentData = proj.data.boxes.find(pData => pData.id === b.parentId);
+            const parentTitle = parentData ? parentData.title : null;
+
             b.meetings.forEach(m => {
                 unified.push({
-                    isLocal: false, // Indica que está no banco de dados
+                    isLocal: false,
                     projectId: projectId,
+                    islandBoxId: islandBoxId, // O "Pai" visível no mapa atual
                     boxId: b.id,
                     boxTitle: breadcrumb + " ➔ " + (b.title || "Caixa"),
+                    parentBoxTitle: parentTitle,
                     title: m.title,
                     date: m.date,
                     inviteSent: m.inviteSent,
-                    isDone: m.isDone, // NOVO: Estado de conclusão
+                    isDone: m.isDone,
                     attendees: m.attendees || []
                 });
             });
@@ -9323,70 +9372,86 @@ function fetchMeetingsFromDB(projectId, breadcrumb, visited, unified) {
     });
 }
 
-// 3. Renderiza o Modal
 function openAgendaDashboard() {
-    const allMeetings = getAllMeetingsUnified();
-    
-    const pendingList = document.getElementById('agenda-list-pending');
-    const sentList = document.getElementById('agenda-list-sent');
-    const doneList = document.getElementById('agenda-list-done');
-    
-    pendingList.innerHTML = ''; sentList.innerHTML = ''; doneList.innerHTML = '';
-    let pCount = 0, sCount = 0, dCount = 0;
+    const unifiedMeetings = getAllMeetingsUnified();
 
-    // Ordena pela data mais próxima
-    allMeetings.sort((a,b) => new Date(a.date || '2099') - new Date(b.date || '2099'));
-
-    allMeetings.forEach(m => {
-        const dateStr = m.date ? new Date(m.date + 'T12:00:00').toLocaleDateString() : 'Sem data definida';
-        
-        // Etiqueta visual para saber se a reunião é daqui ou de outra ilha
-        const sourceBadge = m.isLocal 
-            ? `<span style="background:#e0f2fe; color:#0369a1; padding:2px 6px; border-radius:4px; font-size:9px;">📍 Este Mapa</span>` 
-            : `<span style="background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:4px; font-size:9px;">🏝️ Ilha: ${m.boxTitle.split(' ➔ ')[0]}</span>`;
-        
-        const attendeesHtml = m.attendees.map(a => `<span style="background:#e2e8f0; font-size:10px; padding:2px 6px; border-radius:10px; margin-right:4px; display:inline-block;">👤 ${a}</span>`).join('');
-
-        // Botão de Ação: "Concluir Reunião"
-        let actionBtn = '';
-        if (!m.isDone) {
-            // Se for local, passa o ID da caixa. Se for remota, passa o ID do projeto junto.
-            const idParam = m.isLocal 
-                ? `'local', null, '${m.boxId}', '${m.title.replace(/'/g,"\\'")}'` 
-                : `'db', '${m.projectId}', '${m.boxId}', '${m.title.replace(/'/g,"\\'")}'`;
-            
-            actionBtn = `<button onclick="markMeetingDone(${idParam})" style="background:#10b981; color:white; border:none; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold; transition:transform 0.1s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">✔ Concluir</button>`;
-        }
-
-        const card = `
-            <div style="background:white; border:1px solid #e2e8f0; padding:12px; border-radius:8px; margin-bottom:12px; box-shadow:0 2px 4px rgba(0,0,0,0.02); opacity: ${m.isDone ? '0.6' : '1'};">
-                <div style="display:flex; justify-content:space-between; align-items:start;">
-                    <strong style="font-size:13px; color:#0f172a; text-decoration:${m.isDone ? 'line-through' : 'none'};">${m.title || 'Reunião sem título'}</strong>
-                    ${actionBtn}
+    let overlay = document.getElementById('agenda-dashboard-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'agenda-dashboard-overlay';
+        overlay.className = 'modal-overlay';
+        overlay.innerHTML = `
+            <div class="modal-panel no-pan" style="width: 550px; max-height: 85vh; display: flex; flex-direction: column;">
+                <div class="dash-header">
+                    <div>
+                        <span class="dash-title">📅 Central de Agendas</span>
+                        <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Navegação direta para itens locais e ilhas.</div>
+                    </div>
+                    <span class="dash-close" onclick="closeAgendaDashboard()">×</span>
                 </div>
-                <div style="font-size:11px; color:#64748b; margin: 6px 0; display:flex; align-items:center; gap:6px;">
-                    ${sourceBadge} <b style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${m.boxTitle}</b>
-                </div>
-                <div style="font-size:12px; color:#0ea5e9; font-weight:bold; margin-bottom:8px;">
-                    📅 ${dateStr}
-                </div>
-                <div style="display:flex; flex-wrap:wrap; gap:4px;">
-                    ${attendeesHtml}
+                <div id="agenda-content" class="dash-content" style="padding: 20px; flex-grow: 1; overflow-y: auto; background: #f8fafc;">
                 </div>
             </div>
         `;
+        document.body.appendChild(overlay);
+    }
 
-        // Distribui para a coluna correta
-        if (m.isDone) { doneList.innerHTML += card; dCount++; } 
-        else if (m.inviteSent) { sentList.innerHTML += card; sCount++; } 
-        else { pendingList.innerHTML += card; pCount++; }
-    });
+    const content = document.getElementById('agenda-content');
+    content.innerHTML = '';
 
-    document.getElementById('agenda-count-pending').innerText = pCount;
-    document.getElementById('agenda-count-sent').innerText = sCount;
-    document.getElementById('agenda-count-done').innerText = dCount;
+    if (unifiedMeetings.length === 0) {
+        content.innerHTML = '<div style="text-align:center; padding:40px; color:#94a3b8; font-size:14px;">Nenhuma agenda mapeada.</div>';
+    } else {
+        unifiedMeetings.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-    document.getElementById('agenda-modal-overlay').style.display = 'flex';
+        unifiedMeetings.forEach(m => {
+            const dateStr = m.date ? new Date(m.date).toLocaleString('pt-BR') : 'Sem data';
+            const isIsland = !m.isLocal;
+            
+            const card = document.createElement('div');
+            card.style.cssText = `
+                background:white; border:1px solid #e2e8f0; padding:16px; border-radius:12px; 
+                margin-bottom:12px; cursor:pointer; transition: 0.2s; box-shadow:0 1px 3px rgba(0,0,0,0.05);
+                position: relative;
+                opacity: ${m.isDone ? '0.6' : '1'};
+            `;
+
+            // Clique: Vai para a caixa local ou para o card da Ilha (o pai na tela)
+            card.onclick = () => {
+                const targetId = isIsland ? m.islandBoxId : m.boxId;
+                if (targetId) {
+                    closeAgendaDashboard();
+                    jumpToMeetingBox(targetId);
+                }
+            };
+
+            card.onmouseover = () => { card.style.borderColor = '#0ea5e9'; card.style.backgroundColor = '#f0f9ff'; };
+            card.onmouseout = () => { card.style.borderColor = '#e2e8f0'; card.style.backgroundColor = 'white'; };
+
+            const badge = isIsland 
+                ? `<span style="background:#fff7ed; color:#c2410c; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:10px;">🏝️ ILHA</span>` 
+                : `<span style="background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:10px;">LOCAL</span>`;
+
+            const attendeesHtml = (m.attendees || []).map(a => `<span style="background:#e0f2fe; color:#0369a1; padding:2px 6px; border-radius:10px; font-size:10px; font-weight:600;">${a}</span>`).join('');
+
+            card.innerHTML = `
+                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                    ${badge}
+                    <span style="font-size:11px; color:#94a3b8; font-weight:bold;">${dateStr}</span>
+                </div>
+                <div style="font-weight:700; font-size:14px; color:#1e293b; margin-bottom:6px;">${m.title || 'Sem título'}</div>
+                <div style="font-size:11px; color:#64748b; font-style:italic;">📍 ${m.boxTitle}</div>
+                ${attendeesHtml ? `<div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:10px;">${attendeesHtml}</div>` : ''}
+            `;
+            content.appendChild(card);
+        });
+    }
+    overlay.style.display = 'flex';
+}
+
+function closeAgendaDashboard() {
+    const overlay = document.getElementById('agenda-dashboard-overlay');
+    if (overlay) overlay.style.display = 'none';
 }
 
 // 4. Marca como concluída (Auditoria)
