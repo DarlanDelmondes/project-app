@@ -2440,7 +2440,10 @@ body.filtering .conn-group.dimmed {
     <div id="toolbar" class="no-pan">
         <button class="btn-outline" style="color:#0ea5e9; border-color:#7dd3fc; background:#f0f9ff;" onclick="addIsland()" title="Criar um portal para outro projeto">🏝️ Nova Ilha</button>
         <button class="btn-primary" onclick="addRootBox()">+ Nova Caixa</button>
+        
         <button class="btn-outline" style="padding: 8px;" onclick="collapseAllBoxes()" title="Fechar/Recolher todas as caixas">🔽</button>
+
+        <button class="btn-outline" onclick="toggleAllTasks()" title="Mostrar/Ocultar todas as tarefas do mapa">👁️ Tarefas</button>
 
         <div style="width: 1px; height: 30px; background: #ddd; margin: 0 5px;"></div>
 
@@ -6702,6 +6705,73 @@ function saveAnimation() {
     
     showToast(`"${newAnim.title}" salva! Clique em 'Salvas' para tocar.`);
 }
+
+
+
+
+
+
+
+// --- CONTROLE GLOBAL DE TAREFAS (ON/OFF) ---
+let isAllTasksVisible = true; // Guarda o estado atual
+
+function toggleAllTasks() {
+    if (!state.isEditMode) return;
+    
+    isAllTasksVisible = !isAllTasksVisible; // Inverte o estado
+    let changedSomething = false;
+
+    // Varre todas as caixas do mapa
+    document.querySelectorAll('.box').forEach(box => {
+        const viewer = box.querySelector('.task-viewer');
+        const addBtn = box.querySelector('.add-task-btn');
+        const toggleBtn = box.querySelector('.btn-font[onclick*="toggleTaskView"]'); // Botãozinho individual da caixa
+
+        if (viewer && addBtn) {
+            if (isAllTasksVisible) {
+                // MOSTRAR
+                viewer.classList.remove('collapsed');
+                addBtn.classList.remove('collapsed');
+                if(toggleBtn) { 
+                    toggleBtn.style.opacity = '1'; 
+                    toggleBtn.title = 'Esconder Tarefas'; 
+                }
+            } else {
+                // ESCONDER
+                viewer.classList.add('collapsed');
+                addBtn.classList.add('collapsed');
+                if(toggleBtn) { 
+                    toggleBtn.style.opacity = '0.5'; 
+                    toggleBtn.title = 'Mostrar Tarefas'; 
+                }
+            }
+            changedSomething = true;
+        }
+    });
+
+    if (changedSomething) {
+        // Recalcula o tamanho de todas as caixas (de baixo para cima) para que elas encolham/cresçam
+        document.querySelectorAll('.children-area').forEach(area => updateElasticParent(area));
+        
+        // Redesenha as conexões
+        updateAllLines();
+        
+        // Dá o feedback visual
+        showToast(isAllTasksVisible ? "👁️ Visão de Tarefas: LIGADA" : "👁️ Visão de Tarefas: DESLIGADA");
+        markUnsaved(); // Avisa o sistema de salvamento
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
 
 // --- CONTROLE DO DROPDOWN ---
 
