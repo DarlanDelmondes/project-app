@@ -3946,6 +3946,9 @@ function createBoxElement(id, titleVal = "Novo Item") {
                 <button class="icon-btn btn-clone no-pan" onclick="duplicateBox('${id}')" title="Duplicar">❐</button>
                 <button class="icon-btn btn-toggle no-pan" onclick="handleSmartToggle('${id}', this)" title="Colapsar">▼</button>
                 <button class="icon-btn btn-delete no-pan" onclick="deleteBox('${id}')" title="Excluir">×</button>
+                <button class="icon-btn" onclick="activateSizeBrush('${id}')" title="Copiar Tamanho (Pincel)" style="cursor: pointer;">
+                    🖌️
+                </button>
             </div>
         </div>
         <div class="box-body">
@@ -8000,7 +8003,7 @@ function changeBoxDrawingStatus(boxId, newStatus) {
 
 
 window.autoOrganizeSquare = function(startBoxId = null) {
-    console.log("📐 Iniciando Auto-Layout Uniforme (Com Limpeza de Animação)...");
+    console.log("📐 Iniciando Auto-Layout Uniforme (V5 - Correção de Interatividade)...");
 
     let roots = [];
     if (startBoxId) {
@@ -8018,11 +8021,11 @@ window.autoOrganizeSquare = function(startBoxId = null) {
     }
 
     const GAP = 40;
-    const PADDING_TOP = 90; // Aumentado para garantir que não cobre o cabeçalho/botões do pai
+    const PADDING_TOP = 90; 
     const PADDING_BOTTOM = 40;
     const PADDING_SIDES = 40;
 
-    let allAnimatedBoxes = []; // Guarda todas as caixas tocadas para limpar a animação depois
+    let allAnimatedBoxes = []; 
 
     function doLayout(box) {
         const children = Array.from(box.querySelectorAll('.box')).filter(b => b.parentElement.closest('.box') === box);
@@ -8043,6 +8046,8 @@ window.autoOrganizeSquare = function(startBoxId = null) {
         let maxChildSize = 0;
         children.forEach(child => {
             child.classList.remove('collapsed-mode');
+            
+            // Ativa a animação temporária e guarda a caixa na lista
             child.style.transition = 'all 0.5s cubic-bezier(0.22, 1, 0.36, 1)';
             allAnimatedBoxes.push(child);
             
@@ -8070,7 +8075,6 @@ window.autoOrganizeSquare = function(startBoxId = null) {
             child.style.position = 'absolute';
             child.style.left = targetX + 'px';
             child.style.top = targetY + 'px';
-            child.style.zIndex = '10'; // Garante que as filhas fiquem acima do fundo do pai
         });
 
         const totalW = (PADDING_SIDES * 2) + (cols * tileSize) + ((cols - 1) * GAP);
@@ -8123,15 +8127,16 @@ window.autoOrganizeSquare = function(startBoxId = null) {
         if (animCount > 30) clearInterval(lineUpdater);
     }, 20);
 
-    // --- A CORREÇÃO MÁGICA: Limpeza das Transições ---
-    // Após 600 milissegundos (quando a animação de deslize termina),
-    // nós removemos a regra de transição de todas as caixas.
+    // --- A CORREÇÃO MÁGICA ---
     setTimeout(() => {
         allAnimatedBoxes.forEach(box => {
-            box.style.transition = 'none'; // Desliga a animação
+            // Remove completamente as injeções inline do JavaScript!
+            // O navegador volta a respeitar o seu CSS original instantaneamente.
+            box.style.transition = ''; 
+            box.style.zIndex = '';
         });
         if (typeof markUnsaved === 'function') markUnsaved();
-        console.log("✅ Animações desligadas! As caixas voltaram a ser instantâneas para clique e arrasto.");
+        console.log("✅ Lavagem completa concluída! Pode arrastar e entrar nas caixas normalmente.");
     }, 600);
 };
 
@@ -8652,6 +8657,84 @@ function createMeetingElement(title = "", date = "", inviteSent = false, attende
     setTimeout(() => updateMeetingEmails(div), 0);
     return div;
 }
+
+
+
+
+// =========================================================================
+// --- PINCEL DE FORMATAÇÃO (COPIAR/COLAR TAMANHOS) ---
+// =========================================================================
+
+// Memória temporária (Clipboard) para o tamanho
+let clipboardBoxDimensions = null;
+
+function activateSizeBrush(boxId) {
+    const box = document.getElementById(boxId);
+    if (!box) return;
+
+    // 1. Guarda as dimensões na memória
+    clipboardBoxDimensions = {
+        w: box.offsetWidth + 'px',
+        h: box.offsetHeight + 'px'
+    };
+
+    // 2. Feedback Visual: Muda o cursor da página inteira para indicar que o "Pincel" está ativo
+    document.body.style.cursor = 'crosshair'; 
+    
+    // Mostra um aviso (se tiver o showToast, senão vai para o console)
+    if (typeof showToast === 'function') {
+        showToast("🖌️ Pincel ativo! Clique em outra caixa para colar o tamanho.");
+    }
+
+    // 3. Impede que este clique ative outras funções sem querer
+    event.stopPropagation();
+}
+
+// 4. O Escutador Global (O "Ato de Colar")
+// Usamos o 'true' no final (Capture Phase) para interceptar o clique ANTES 
+// que a caixa perceba que foi clicada. Assim não a abrimos/fechamos sem querer.
+document.addEventListener('click', (e) => {
+    // Se o pincel NÃO está ativo, o sistema segue a vida normal
+    if (!clipboardBoxDimensions) return;
+
+    // Se o pincel ESTÁ ativo, procuramos se ele clicou numa caixa
+    const targetBox = e.target.closest('.box');
+
+    if (targetBox) {
+        // --- APLICA A FORMATAÇÃO ---
+        targetBox.style.transition = 'width 0.3s ease, height 0.3s ease'; 
+        
+        // Aplica o tamanho físico
+        targetBox.style.width = clipboardBoxDimensions.w;
+        targetBox.style.height = clipboardBoxDimensions.h;
+        
+        // Atualiza a memória profunda da caixa para que o tamanho resista a um "colapsar/expandir"
+        targetBox.dataset.mw = clipboardBoxDimensions.w;
+        targetBox.dataset.mh = clipboardBoxDimensions.h;
+
+        // Limpa a transição depois de animar para não encravar o arrasto
+        setTimeout(() => { targetBox.style.transition = ''; }, 350);
+
+        if (typeof showToast === 'function') showToast("✅ Tamanho colado com sucesso!");
+        if (typeof updateConnections === 'function') updateConnections(); // Recalcula setas
+        if (typeof markUnsaved === 'function') markUnsaved(); // Avisa que há mudanças para salvar
+    }
+
+    // --- LIMPEZA ---
+    // Quer ele tenha clicado noutra caixa (sucesso) ou no fundo cinza (cancelar), 
+    // nós esvaziamos o pincel e devolvemos o rato ao normal.
+    clipboardBoxDimensions = null;
+    document.body.style.cursor = ''; 
+    
+}, true); // <-- Capture phase
+
+
+
+
+
+
+
+
 
 
 
