@@ -2247,11 +2247,11 @@ body.playing-anim .conn-group:not(.anim-participant) {
 /* ========================================================= */
 
 /* 1. Definição da Linha (Grossa e Visível) */
+/* 1. Definição da Linha (Controlada pelo Modo Zen) */
 .conn-group {
-    opacity: 1 !important; /* Sempre Visíveis */
-    transition: none; /* Sem transição de opacidade */
+    opacity: 0; /* Nasce invisível por padrão */
+    transition: opacity 0.3s ease-in-out; 
 }
-
 /* 2. O visual do "Caminho" da Seta */
 .conn-group .main-path {
     stroke-width: 4px; /* <--- GROSSURA AUMENTADA */
@@ -2436,6 +2436,34 @@ body.exporting-anim .conn-group:not(.export-target) {
 .agenda-card-box-name { font-size: 10px; background: #e2e8f0; color: #475569; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 5px; font-weight: bold; }
 .agenda-card-title { font-size: 13px; font-weight: bold; color: #0f172a; margin-bottom: 4px; }
 .agenda-card-meta { font-size: 11px; color: #64748b; display: flex; justify-content: space-between; }
+
+
+/* =========================================================================
+   --- AJUSTE DE ESPESSURA DAS CONEXÕES ---
+   ========================================================================= */
+
+/* 1. Engrossa a linha principal e o rastro de brilho */
+#connections-svg path {
+    /* Engrossamos para 6px (sólido e pontilhado) */
+    stroke-width: 6px !important; 
+}
+
+/* 2. Ajuste proporcional do espaçamento do pontilhado herdado (Raio-X) */
+#connections-svg path[stroke-dasharray] {
+    /* Pontilhado mais robusto: 12px traço, 8px espaço */
+    stroke-dasharray: 12, 8 !important; 
+}
+
+/* 3. Otimização de Performance Global */
+/* Impede que o SVG das linhas intercepte cliques, permitindo clicar nas caixas por trás */
+#connections-svg {
+    pointer-events: none !important;
+}
+
+/* 4. Transição de opacidade suave controlada pelo JS V5 */
+.conn-group {
+    transition: opacity 0.3s ease-in-out !important;
+}
 
 
     </style>
@@ -2773,6 +2801,8 @@ function renderGraph() {
         group.querySelector('.conn-hitbox').setAttribute("d", pathData);
         visualLine.setAttribute("d", pathData);
     });
+
+    if (typeof applyArrowsFocusMode === 'function') applyArrowsFocusMode();
 }
 
 // 4. CRIADOR DE CONEXÕES (Compatível com V2)
@@ -5175,7 +5205,8 @@ function closeActivityModal() {
             let status = 'neutral';
             if(box.classList.contains('red-state')) status = 'red';
             else if(box.classList.contains('green-state')) status = 'green';
-    
+                
+            // ... (dentro de serializeCanvas, no push da caixa)
             items.push({
                 type: 'box',
                 id: box.id, x: box.style.left, y: box.style.top, w: box.style.width, h: box.style.height,
@@ -5188,7 +5219,10 @@ function closeActivityModal() {
                 strictSize: box.dataset.strictSize, 
                 tasks: tasks,
                 meetings: meetings,
-                // LOGICA DE ILHAS
+                // --- ADICIONE ESTAS DUAS LINHAS AQUI ---
+                drawingStatus: box.dataset.drawingStatus || 'none',
+                confluenceUrl: box.dataset.confluenceUrl || '',
+                // ----------------------------------------
                 isIsland: box.classList.contains('island-box'),
                 refId: box.dataset.refId || null
             });
@@ -5247,6 +5281,12 @@ function closeActivityModal() {
                     el.querySelector('.target-badge').innerText = `🎯 ${d.targetName}`;
                 }
     
+                if (d.drawingStatus && d.drawingStatus !== 'none') {
+                    el.dataset.drawingStatus = d.drawingStatus;
+                    el.dataset.confluenceUrl = d.confluenceUrl || '';
+                    setTimeout(() => updateBoxDrawingBadge(el), 50); // Garante que a etiqueta azul apareça
+                }
+
                 // Restaurar modo colapsado por padrão (Performance)
                 el.classList.add('collapsed-mode');
                 el.querySelector('.actions-balloon .btn-toggle').innerText = '▶';
@@ -5342,6 +5382,66 @@ function closeActivityModal() {
         calcDynamicFont(box);
         markUnsaved(); 
     }
+
+    // =========================================================================
+// --- MOTOR DE UNIFICAÇÃO DA CENTRAL DE DESENHOS (ILHAS E LOCAL) ---
+// =========================================================================
+
+function getAllDrawingsUnified() {
+    let unified = [];
+    let visitedProjs = new Set();
+
+    document.querySelectorAll('.box').forEach(box => {
+        const boxTitle = box.querySelector('input.title').value || "Sem Título";
+
+        if (box.classList.contains('island-box')) {
+            const refId = box.dataset.refId;
+            // Mergulha no banco de dados da Ilha
+            if (refId) fetchDrawingsFromDB(refId, boxTitle, visitedProjs, unified, box.id);
+        } else {
+            const status = box.dataset.drawingStatus;
+            if (status && status !== 'none') {
+                unified.push({
+                    isLocal: true,
+                    boxId: box.id,
+                    boxTitle: boxTitle,
+                    title: boxTitle,
+                    status: status,
+                    url: box.dataset.confluenceUrl
+                });
+            }
+        }
+    });
+    return unified;
+}
+
+function fetchDrawingsFromDB(projectId, breadcrumb, visited, unified, islandBoxId) {
+    if (visited.has(projectId)) return;
+    visited.add(projectId);
+
+    const db = getDB();
+    const proj = db.find(p => p.id === projectId);
+    if (!proj || !proj.data || !proj.data.boxes) return;
+
+    proj.data.boxes.forEach(b => {
+        if (b.isIsland && b.refId) {
+            fetchDrawingsFromDB(b.refId, breadcrumb + " ➔ " + (b.title || "Sub-Ilha"), visited, unified, islandBoxId);
+        } else {
+            if (b.drawingStatus && b.drawingStatus !== 'none') {
+                unified.push({
+                    isLocal: false,
+                    projectId: projectId,
+                    islandBoxId: islandBoxId, // Portal no mapa atual
+                    boxId: b.id,
+                    boxTitle: breadcrumb + " ➔ " + (b.title || "Caixa"),
+                    title: b.title || "Caixa sem título",
+                    status: b.drawingStatus,
+                    url: b.confluenceUrl
+                });
+            }
+        }
+    });
+}
     
     function addChild(id) {
         if(!state.isEditMode) return;
@@ -7829,27 +7929,13 @@ function closeDrawingCenter() {
 }
 
 function renderDrawingCenter() {
+    // Usa o novo motor unificado que pega de todas as Ilhas
+    const unifiedDrawings = getAllDrawingsUnified();
     const cols = { todo: [], doing: [], done: [] };
     
-    // Varre todas as caixas do mapa
-    document.querySelectorAll('.box').forEach(box => {
-        const status = box.dataset.drawingStatus;
-        if (status && cols[status]) {
-            
-            // --- AJUSTE: Captura o título real do input da caixa ---
-            // --- AJUSTE: Captura o título real do input da caixa ---
-            const titleInput = box.querySelector('.title');
-            const realTitle = titleInput ? titleInput.value.trim() : "";
-            
-            // Se o input estiver vazio, usamos um fallback amigável
-            const finalTitle = realTitle || `Bloco sem Título (${box.id})`;
-            
-            cols[status].push({ 
-                id: box.id, 
-                title: finalTitle, 
-                url: box.dataset.confluenceUrl 
-            });
-        }
+    // Distribui nas colunas
+    unifiedDrawings.forEach(item => {
+        if (cols[item.status]) cols[item.status].push(item);
     });
 
     document.getElementById('count-todo').innerText = cols.todo.length;
@@ -7857,23 +7943,43 @@ function renderDrawingCenter() {
     document.getElementById('count-done').innerText = cols.done.length;
 
     const buildCards = (items, currentStatus) => {
-        return items.map(item => `
+        return items.map(item => {
+            const isIsland = !item.isLocal;
+            const sourceBadge = isIsland
+                ? `<span style="background:#fff7ed; color:#c2410c; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:9px;">🏝️ ILHA</span>`
+                : `<span style="background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:9px;">LOCAL</span>`;
+
+            const typeParam = item.isLocal ? 'local' : 'db';
+            const projIdParam = item.projectId ? `'${item.projectId}'` : 'null';
+
+            return `
             <div style="background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); display: flex; flex-direction: column; gap: 12px; border-left: 4px solid ${currentStatus === 'done' ? '#22c55e' : (currentStatus === 'doing' ? '#f59e0b' : '#ef4444')};">
-                <div style="font-weight: 700; font-size: 15px; color: #1e293b; line-height: 1.4;">
-                    ${item.title}
+                
+                <div style="display:flex; justify-content:space-between; align-items:start;">
+                    <div style="font-weight: 700; font-size: 15px; color: #1e293b; line-height: 1.4; cursor:pointer;" 
+                         onclick="closeDrawingCenter(); jumpToMeetingBox('${item.isLocal ? item.boxId : item.islandBoxId}')"
+                         title="Viajar até o mapa">
+                        ${item.title}
+                    </div>
+                    ${sourceBadge}
                 </div>
+                
+                <div style="font-size:10px; color:#64748b; font-style:italic;">📍 ${item.boxTitle}</div>
+                
                 <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f1f5f9; padding-top: 12px; margin-top: 4px;">
                     <button class="btn-outline" style="font-size: 11px; padding: 4px 8px; border-color: #0052cc; color: #0052cc;" onclick="window.open('${item.url}', '_blank')">
                         ↗ Confluence
                     </button>
-                    <select style="font-size: 11px; padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff; cursor: pointer;" onchange="changeBoxDrawingStatus('${item.id}', this.value)">
+                    <select style="font-size: 11px; padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff; cursor: pointer;" 
+                            onchange="changeDrawingStatusGlobal('${typeParam}', ${projIdParam}, '${item.boxId}', this.value)">
                         <option value="todo" ${currentStatus === 'todo' ? 'selected' : ''}>🔴 Para Iniciar</option>
                         <option value="doing" ${currentStatus === 'doing' ? 'selected' : ''}>🟡 Desenhando</option>
                         <option value="done" ${currentStatus === 'done' ? 'selected' : ''}>🟢 Publicado</option>
                     </select>
                 </div>
             </div>
-        `).join('');
+            `;
+        }).join('');
     };
 
     document.getElementById('kanban-col-todo').innerHTML = buildCards(cols.todo, 'todo');
@@ -7890,6 +7996,171 @@ function changeBoxDrawingStatus(boxId, newStatus) {
         markUnsaved();
         renderDrawingCenter(); // Refaz o Kanban
     }
+}
+
+
+window.autoOrganizeSquare = function(startBoxId = null) {
+    console.log("📐 Iniciando Auto-Layout Uniforme (Com Limpeza de Animação)...");
+
+    let roots = [];
+    if (startBoxId) {
+        const b = document.getElementById(startBoxId);
+        if (b) roots.push(b);
+    } else {
+        document.querySelectorAll('.box').forEach(b => {
+            if (!b.parentElement.closest('.box')) roots.push(b);
+        });
+    }
+
+    if (roots.length === 0) {
+        console.warn("Nenhuma caixa encontrada para organizar.");
+        return;
+    }
+
+    const GAP = 40;
+    const PADDING_TOP = 90; // Aumentado para garantir que não cobre o cabeçalho/botões do pai
+    const PADDING_BOTTOM = 40;
+    const PADDING_SIDES = 40;
+
+    let allAnimatedBoxes = []; // Guarda todas as caixas tocadas para limpar a animação depois
+
+    function doLayout(box) {
+        const children = Array.from(box.querySelectorAll('.box')).filter(b => b.parentElement.closest('.box') === box);
+
+        if (children.length === 0) {
+            const squareSize = Math.max(box.offsetWidth, box.offsetHeight, 200);
+            box.style.width = squareSize + 'px';
+            box.style.height = squareSize + 'px';
+            
+            box.dataset.mw = squareSize + 'px';
+            box.dataset.mh = squareSize + 'px';
+            
+            return { size: squareSize };
+        }
+
+        box.classList.remove('collapsed-mode');
+        
+        let maxChildSize = 0;
+        children.forEach(child => {
+            child.classList.remove('collapsed-mode');
+            child.style.transition = 'all 0.5s cubic-bezier(0.22, 1, 0.36, 1)';
+            allAnimatedBoxes.push(child);
+            
+            const childMetrics = doLayout(child);
+            maxChildSize = Math.max(maxChildSize, childMetrics.size);
+        });
+
+        const tileSize = maxChildSize;
+        const N = children.length;
+        const cols = Math.ceil(Math.sqrt(N));
+        const rows = Math.ceil(N / cols);
+
+        children.forEach((child, i) => {
+            const c = i % cols;
+            const r = Math.floor(i / cols);
+
+            child.style.width = tileSize + 'px';
+            child.style.height = tileSize + 'px';
+            child.dataset.mw = tileSize + 'px';
+            child.dataset.mh = tileSize + 'px';
+
+            const targetX = PADDING_SIDES + c * (tileSize + GAP);
+            const targetY = PADDING_TOP + r * (tileSize + GAP);
+
+            child.style.position = 'absolute';
+            child.style.left = targetX + 'px';
+            child.style.top = targetY + 'px';
+            child.style.zIndex = '10'; // Garante que as filhas fiquem acima do fundo do pai
+        });
+
+        const totalW = (PADDING_SIDES * 2) + (cols * tileSize) + ((cols - 1) * GAP);
+        const totalH = PADDING_TOP + PADDING_BOTTOM + (rows * tileSize) + ((rows - 1) * GAP);
+
+        box.style.width = totalW + 'px';
+        box.style.height = totalH + 'px';
+        box.dataset.mw = totalW + 'px';
+        box.dataset.mh = totalH + 'px';
+
+        return { size: Math.max(totalW, totalH) }; 
+    }
+
+    let startX = 100;
+    let startY = 100;
+    let maxRootHeight = 0;
+    const rootCols = Math.ceil(Math.sqrt(roots.length));
+
+    roots.forEach((root, i) => {
+        root.style.transition = 'all 0.5s cubic-bezier(0.22, 1, 0.36, 1)';
+        allAnimatedBoxes.push(root);
+        const metrics = doLayout(root);
+
+        if (!startBoxId) {
+            const c = i % rootCols;
+            if (c === 0 && i !== 0) {
+                startX = 100;
+                startY += maxRootHeight + GAP;
+                maxRootHeight = 0;
+            }
+            
+            root.style.width = metrics.size + 'px';
+            root.style.height = metrics.size + 'px';
+            root.dataset.mw = metrics.size + 'px';
+            root.dataset.mh = metrics.size + 'px';
+            
+            root.style.left = startX + 'px';
+            root.style.top = startY + 'px';
+            
+            startX += metrics.size + GAP;
+            maxRootHeight = Math.max(maxRootHeight, metrics.size);
+        }
+    });
+
+    let animCount = 0;
+    const lineUpdater = setInterval(() => {
+        if (typeof updateConnections === 'function') updateConnections();
+        if (typeof renderConnections === 'function') renderConnections();
+        animCount++;
+        if (animCount > 30) clearInterval(lineUpdater);
+    }, 20);
+
+    // --- A CORREÇÃO MÁGICA: Limpeza das Transições ---
+    // Após 600 milissegundos (quando a animação de deslize termina),
+    // nós removemos a regra de transição de todas as caixas.
+    setTimeout(() => {
+        allAnimatedBoxes.forEach(box => {
+            box.style.transition = 'none'; // Desliga a animação
+        });
+        if (typeof markUnsaved === 'function') markUnsaved();
+        console.log("✅ Animações desligadas! As caixas voltaram a ser instantâneas para clique e arrasto.");
+    }, 600);
+};
+
+// Muda o status do desenho (Atua localmente ou injeta direto no Banco de Dados da Ilha)
+function changeDrawingStatusGlobal(type, projectId, boxId, newStatus) {
+    if (type === 'local') {
+        const box = document.getElementById(boxId);
+        if (box) {
+            box.dataset.drawingStatus = newStatus;
+            updateBoxDrawingBadge(box);
+            markUnsaved();
+        }
+    } else if (type === 'db') {
+        const db = getDB();
+        const proj = db.find(p => p.id === projectId);
+        if (proj) {
+            const box = proj.data.boxes.find(b => b.id === boxId);
+            if (box) {
+                box.drawingStatus = newStatus;
+                if (!proj.lastChanges) proj.lastChanges = [];
+                proj.lastChanges.push(`📐 Status do Desenho atualizado: <b>${box.title}</b> para o estado [${newStatus}]`);
+                proj.updatedAt = Date.now();
+            }
+            setDB(db); // Salva no banco de dados automaticamente
+        }
+    }
+    
+    // Refaz o Kanban para mover o cartão de coluna visualmente
+    renderDrawingCenter(); 
 }
 
 // Função de segurança para restaurar etiquetas visuais ao carregar um arquivo salvo
@@ -9013,7 +9284,7 @@ function jumpToMeetingBox(boxId) {
             
             // Abre a agenda local automaticamente
             if (typeof openMeetingModal === 'function') {
-                setTimeout(() => openMeetingModal(boxId), 1600);
+                //setTimeout(() => openMeetingModal(boxId), 1600);
             }
         }, 350);
     }
@@ -9372,80 +9643,159 @@ function fetchMeetingsFromDB(projectId, breadcrumb, visited, unified, islandBoxI
     });
 }
 
+// =========================================================================
+// --- CENTRAL DE AGENDAS (KABAN TELA CHEIA) ---
+// =========================================================================
+
 function openAgendaDashboard() {
+    // Busca todas as reuniões (Locais e Ilhas) usando o nosso motor unificado
     const unifiedMeetings = getAllMeetingsUnified();
 
     let overlay = document.getElementById('agenda-dashboard-overlay');
+    
+    // Se o modal ainda não existe, criamos a estrutura Base Kanban Tela Cheia
     if (!overlay) {
         overlay = document.createElement('div');
         overlay.id = 'agenda-dashboard-overlay';
         overlay.className = 'modal-overlay';
         overlay.innerHTML = `
-            <div class="modal-panel no-pan" style="width: 550px; max-height: 85vh; display: flex; flex-direction: column;">
-                <div class="dash-header">
+            <div class="modal-panel no-pan" style="width: 100vw; height: 100vh; max-width: 100vw; max-height: 100vh; border-radius: 0; display: flex; flex-direction: column;">
+                <div class="dash-header" style="padding: 20px 30px; border-bottom: 1px solid #e2e8f0;">
                     <div>
-                        <span class="dash-title">📅 Central de Agendas</span>
-                        <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Navegação direta para itens locais e ilhas.</div>
+                        <span class="dash-title" style="font-size: 24px;">🗓️ Central de Agendas</span>
+                        <div style="font-size: 14px; color: #64748b; margin-top: 4px;">Gestão Kanban de compromissos locais e remotos (Ilhas).</div>
                     </div>
-                    <span class="dash-close" onclick="closeAgendaDashboard()">×</span>
+                    <span class="dash-close" style="font-size: 32px;" onclick="closeAgendaDashboard()">×</span>
                 </div>
-                <div id="agenda-content" class="dash-content" style="padding: 20px; flex-grow: 1; overflow-y: auto; background: #f8fafc;">
+                
+                <div class="dash-content" style="display: flex; gap: 20px; padding: 30px; background: #f8fafc; flex-grow: 1; overflow-y: auto;">
+                    
+                    <div style="flex: 1; background: #fef3c7; border-radius: 8px; padding: 15px; display: flex; flex-direction: column; gap: 12px; border-top: 4px solid #f59e0b; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+                        <div style="font-weight: bold; color: #b45309; border-bottom: 1px solid #fde68a; padding-bottom: 10px; display:flex; justify-content:space-between; align-items:center;">
+                            <span>⏳ Não Enviado</span>
+                            <span id="col-todo-count" style="background:#fde68a; color:#92400e; padding:2px 10px; border-radius:12px; font-size:12px;">0</span>
+                        </div>
+                        <div id="agenda-col-todo" style="display: flex; flex-direction: column; gap: 10px; overflow-y: auto; flex-grow: 1; padding-right:5px;"></div>
+                    </div>
+
+                    <div style="flex: 1; background: #e0f2fe; border-radius: 8px; padding: 15px; display: flex; flex-direction: column; gap: 12px; border-top: 4px solid #3b82f6; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+                        <div style="font-weight: bold; color: #0369a1; border-bottom: 1px solid #bae6fd; padding-bottom: 10px; display:flex; justify-content:space-between; align-items:center;">
+                            <span>📨 Convites Enviados</span>
+                            <span id="col-sent-count" style="background:#bae6fd; color:#075985; padding:2px 10px; border-radius:12px; font-size:12px;">0</span>
+                        </div>
+                        <div id="agenda-col-sent" style="display: flex; flex-direction: column; gap: 10px; overflow-y: auto; flex-grow: 1; padding-right:5px;"></div>
+                    </div>
+
+                    <div style="flex: 1; background: #dcfce3; border-radius: 8px; padding: 15px; display: flex; flex-direction: column; gap: 12px; border-top: 4px solid #22c55e; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+                        <div style="font-weight: bold; color: #166534; border-bottom: 1px solid #bbf7d0; padding-bottom: 10px; display:flex; justify-content:space-between; align-items:center;">
+                            <span>✅ Concluídas</span>
+                            <span id="col-done-count" style="background:#bbf7d0; color:#14532d; padding:2px 10px; border-radius:12px; font-size:12px;">0</span>
+                        </div>
+                        <div id="agenda-col-done" style="display: flex; flex-direction: column; gap: 10px; overflow-y: auto; flex-grow: 1; padding-right:5px;"></div>
+                    </div>
+
                 </div>
             </div>
         `;
         document.body.appendChild(overlay);
     }
 
-    const content = document.getElementById('agenda-content');
-    content.innerHTML = '';
+    // Pega as colunas para injetar os cartões
+    const colTodo = document.getElementById('agenda-col-todo');
+    const colSent = document.getElementById('agenda-col-sent');
+    const colDone = document.getElementById('agenda-col-done');
+    
+    // Limpa colunas antes de recarregar
+    colTodo.innerHTML = ''; colSent.innerHTML = ''; colDone.innerHTML = '';
+    let countTodo = 0, countSent = 0, countDone = 0;
 
-    if (unifiedMeetings.length === 0) {
-        content.innerHTML = '<div style="text-align:center; padding:40px; color:#94a3b8; font-size:14px;">Nenhuma agenda mapeada.</div>';
-    } else {
-        unifiedMeetings.sort((a, b) => new Date(a.date) - new Date(b.date));
+    // Ordena cronologicamente
+    unifiedMeetings.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-        unifiedMeetings.forEach(m => {
-            const dateStr = m.date ? new Date(m.date).toLocaleString('pt-BR') : 'Sem data';
-            const isIsland = !m.isLocal;
+    // Monta cada cartão e atira para a coluna certa
+    unifiedMeetings.forEach(m => {
+        // Formatação de data (sem horas se não houver)
+        const dateStr = m.date ? m.date.split('-').reverse().join('/') : 'Sem data';
+        const isIsland = !m.isLocal;
+        
+        const badge = isIsland 
+            ? `<span style="background:#fff7ed; color:#c2410c; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:10px;">🏝️ ILHA</span>` 
+            : `<span style="background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:10px;">LOCAL</span>`;
+
+        const teamsTag = m.teamsGroup ? `<span style="background:#e0e7ff; color:#4338ca; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:9px;">💬 ${m.teamsGroup}</span>` : '';
+        const attendeesHtml = (m.attendees || []).map(a => `<span style="background:#e0f2fe; color:#0369a1; padding:2px 6px; border-radius:10px; font-size:10px; font-weight:600;">${a}</span>`).join('');
+
+        // Botão para marcar como Concluída (só aparece se não estiver pronta)
+        let actionHtml = '';
+        if (!m.isDone) {
+            const typeParam = m.isLocal ? 'local' : 'db';
+            const projIdParam = m.projectId ? `'${m.projectId}'` : 'null';
+            actionHtml = `
+                <button onclick="event.stopPropagation(); markMeetingDone('${typeParam}', ${projIdParam}, '${m.boxId}', '${m.title}')" 
+                        style="background:#22c55e; color:white; border:none; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer; transition:0.2s;"
+                        onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                    ✓ Concluir
+                </button>
+            `;
+        }
+
+        // Constrói o elemento DOM do cartão
+        const card = document.createElement('div');
+        card.style.cssText = `
+            background:white; border:1px solid #e2e8f0; padding:15px; border-radius:8px; 
+            cursor:pointer; transition: 0.2s; box-shadow:0 1px 3px rgba(0,0,0,0.05);
+            display: flex; flex-direction: column; gap: 8px;
+            opacity: ${m.isDone ? '0.6' : '1'};
+        `;
+
+        // Lógica do Clique (Motor Câmera)
+        card.onclick = () => {
+            const targetId = isIsland ? m.islandBoxId : m.boxId;
+            if (targetId) {
+                closeAgendaDashboard();
+                jumpToMeetingBox(targetId);
+            }
+        };
+
+        // Efeitos de Hover
+        card.onmouseover = () => { card.style.borderColor = '#0ea5e9'; card.style.transform = 'translateY(-2px)'; };
+        card.onmouseout = () => { card.style.borderColor = '#e2e8f0'; card.style.transform = 'translateY(0)'; };
+
+        card.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <div style="display:flex; gap:6px;">${badge} ${teamsTag}</div>
+                <span style="font-size:11px; color:#94a3b8; font-weight:bold;">📅 ${dateStr}</span>
+            </div>
             
-            const card = document.createElement('div');
-            card.style.cssText = `
-                background:white; border:1px solid #e2e8f0; padding:16px; border-radius:12px; 
-                margin-bottom:12px; cursor:pointer; transition: 0.2s; box-shadow:0 1px 3px rgba(0,0,0,0.05);
-                position: relative;
-                opacity: ${m.isDone ? '0.6' : '1'};
-            `;
+            <div style="font-weight:700; font-size:14px; color:#1e293b; line-height:1.2;">
+                <span style="${m.isDone ? 'text-decoration: line-through;' : ''}">${m.title || 'Reunião sem título'}</span>
+            </div>
+            
+            <div style="font-size:11px; color:#64748b; font-style:italic;">📍 Caixa: ${m.boxTitle}</div>
+            
+            ${attendeesHtml ? `<div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;">${attendeesHtml}</div>` : ''}
+            
+            ${actionHtml ? `<div style="display:flex; justify-content:flex-end; margin-top:6px; border-top:1px solid #f1f5f9; padding-top:10px;">${actionHtml}</div>` : ''}
+        `;
 
-            // Clique: Vai para a caixa local ou para o card da Ilha (o pai na tela)
-            card.onclick = () => {
-                const targetId = isIsland ? m.islandBoxId : m.boxId;
-                if (targetId) {
-                    closeAgendaDashboard();
-                    jumpToMeetingBox(targetId);
-                }
-            };
+        // Distribui para a coluna correta
+        if (m.isDone) {
+            colDone.appendChild(card);
+            countDone++;
+        } else if (m.inviteSent) {
+            colSent.appendChild(card);
+            countSent++;
+        } else {
+            colTodo.appendChild(card);
+            countTodo++;
+        }
+    });
 
-            card.onmouseover = () => { card.style.borderColor = '#0ea5e9'; card.style.backgroundColor = '#f0f9ff'; };
-            card.onmouseout = () => { card.style.borderColor = '#e2e8f0'; card.style.backgroundColor = 'white'; };
+    // Atualiza as tags numéricas em cada coluna
+    document.getElementById('col-todo-count').innerText = countTodo;
+    document.getElementById('col-sent-count').innerText = countSent;
+    document.getElementById('col-done-count').innerText = countDone;
 
-            const badge = isIsland 
-                ? `<span style="background:#fff7ed; color:#c2410c; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:10px;">🏝️ ILHA</span>` 
-                : `<span style="background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:10px;">LOCAL</span>`;
-
-            const attendeesHtml = (m.attendees || []).map(a => `<span style="background:#e0f2fe; color:#0369a1; padding:2px 6px; border-radius:10px; font-size:10px; font-weight:600;">${a}</span>`).join('');
-
-            card.innerHTML = `
-                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                    ${badge}
-                    <span style="font-size:11px; color:#94a3b8; font-weight:bold;">${dateStr}</span>
-                </div>
-                <div style="font-weight:700; font-size:14px; color:#1e293b; margin-bottom:6px;">${m.title || 'Sem título'}</div>
-                <div style="font-size:11px; color:#64748b; font-style:italic;">📍 ${m.boxTitle}</div>
-                ${attendeesHtml ? `<div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:10px;">${attendeesHtml}</div>` : ''}
-            `;
-            content.appendChild(card);
-        });
-    }
     overlay.style.display = 'flex';
 }
 
@@ -9513,6 +9863,141 @@ function toggleAgendaFullscreen() {
     btn.title = isFull ? "Restaurar Tamanho" : "Tela Cheia";
 }
 
+
+// =========================================================================
+// --- MOTOR DE FOCO V5 (RAIO-X, GORDO, PONTILHADO E MEMÓRIA DE 2s) ---
+// =========================================================================
+
+let currentHoveredBoxId = null;
+let currentHoveredBoxEl = null;
+let hideConnectionsTimeout = null; // Variável global para gerenciar o timer
+
+// Função principal que aplica a lógica visual baseada no estado atual
+function applyArrowsFocusMode() {
+    if (typeof connections === 'undefined' || !connections) return;
+    
+    // Pausa o Modo Zen se o filtro de analytics estiver ligado
+    if (document.body.classList.contains('filtering')) return;
+
+    connections.forEach(conn => {
+        const groupEl = document.getElementById(conn.id);
+        if (!groupEl) return;
+
+        // SE NÃO HÁ CAIXA FOCO (Timeout acabou ou clicou no fundo) -> ESCONDE TUDO
+        if (!currentHoveredBoxEl) {
+            groupEl.style.opacity = '0';
+            return;
+        }
+
+        const sBox = document.getElementById(conn.sid); // Origem
+        const tBox = document.getElementById(conn.tid); // Destino
+        
+        // 1. CONEXÃO DIRETA
+        const isDirect = (conn.sid === currentHoveredBoxId || conn.tid === currentHoveredBoxId);
+        
+        // 2. CONEXÃO HERDADA (Raio-X)
+        let isDescendant = false;
+        if (!isDirect) {
+            const sInside = sBox && currentHoveredBoxEl.contains(sBox);
+            const tInside = tBox && currentHoveredBoxEl.contains(tBox);
+            isDescendant = sInside || tInside;
+        }
+
+        // A linha aparece se for direta OU se for do filho
+        const isRelated = isDirect || isDescendant;
+
+        // --- CONTROLO DE VISIBILIDADE ---
+        groupEl.style.opacity = isRelated ? '1' : '0';
+
+        // --- ESTILO VISUAL (SÓLIDO vs PONTILHADO GORDO) ---
+        // Se a linha deve aparecer, ajustamos o tracejado
+        if (isRelated) {
+            const paths = groupEl.querySelectorAll('path');
+            paths.forEach(p => {
+                const strokeColor = p.getAttribute('stroke');
+                // Ignora hitboxes transparentes se houver
+                if (strokeColor && strokeColor !== 'transparent' && strokeColor !== 'none') {
+                    if (isDescendant) {
+                        // Linha herdada: Tracejado robusto (já engrossado via CSS)
+                        p.setAttribute('stroke-dasharray', '12, 8'); 
+                    } else {
+                        // Linha direta: Sólida
+                        p.removeAttribute('stroke-dasharray');
+                    }
+                }
+            });
+        }
+    });
+}
+
+// =========================================================================
+// --- GESTÃO DE INTERAÇÕES E TIMERS ---
+// =========================================================================
+
+// Entrada/Mudança de Caixa (Imediato, cancela ocultação pendente)
+document.addEventListener('mousemove', (e) => {
+    const box = e.target.closest('.box');
+    const newHoverId = box ? box.id : null;
+    
+    // Se entramos numa caixa nova (ou mudamos de uma para outra)
+    if (newHoverId !== currentHoveredBoxId) {
+        // Cancela o timer de ocultação IMEDIATAMENTE (O rato voltou ao jogo)
+        clearTimeout(hideConnectionsTimeout);
+        
+        currentHoveredBoxId = newHoverId;
+        currentHoveredBoxEl = box;
+        
+        // Aplica o foco imediatamente se estivermos sobre uma caixa
+        if (box) {
+            applyArrowsFocusMode();
+        }
+    }
+});
+
+// Saída de Caixa (Inicia timer de 2 segundos)
+document.addEventListener('mouseleave', () => {
+    // Limpa timers anteriores para evitar conflitos
+    clearTimeout(hideConnectionsTimeout);
+    
+    // Define o timer para limpar o estado e ocultar após 2 segundos
+    hideConnectionsTimeout = setTimeout(() => {
+        // Limpa as variáveis de estado
+        currentHoveredBoxId = null;
+        currentHoveredBoxEl = null;
+        
+        // Aplica a ocultação global
+        applyArrowsFocusMode();
+    }, 2000); // 2 segundos de persistência
+});
+
+// Clique no fundo (Ocultação Imediata, limpa delay)
+document.addEventListener('mousedown', (e) => {
+     // Se clicou no fundo vazio (não em caixa, não em botões)
+     if (!e.target.closest('.box') && !e.target.closest('.no-pan') && !e.target.closest('.modal-overlay')) {
+         clearTimeout(hideConnectionsTimeout); // Cancela o delay de 2s
+         
+         currentHoveredBoxId = null;
+         currentHoveredBoxEl = null;
+         applyArrowsFocusMode(); // Oculta tudo instantaneamente
+     }
+});
+
+// =========================================================================
+// --- PATCHES DE RENDERIZAÇÃO NATIVA ---
+// =========================================================================
+if (typeof updateConnections === 'function' && !window.updateConnections.isPatched) {
+    const originalUpdate = updateConnections;
+    window.updateConnections = function() { originalUpdate(); applyArrowsFocusMode(); };
+    window.updateConnections.isPatched = true;
+}
+if (typeof renderConnections === 'function' && !window.renderConnections.isPatched) {
+    const originalRender = renderConnections;
+    window.renderConnections = function() { originalRender(); applyArrowsFocusMode(); };
+    window.renderConnections.isPatched = true;
+}
+
+// Inicia o mapa limpo
+setTimeout(applyArrowsFocusMode, 100);
 
 </script>
 
