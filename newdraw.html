@@ -901,17 +901,80 @@ body.filtering .box.filter-match {
 
 
 
-/* --- BARRA DE FILTROS --- */
+/* =========================================================================
+   --- BARRA DE FILTROS E STATS (ANCORADOS NA BASE DA TELA) ---
+   ========================================================================= */
+
+/* 1. O Container da Barra de Filtros (Fixo no rodapé) */
 #filter-bar {
-    position: absolute; top: 80px; left: 20px; display: flex; gap: 8px; flex-wrap: wrap; max-width: 90vw; z-index: 9998; pointer-events: auto;
+    position: fixed !important;
+    top: auto !important;
+    bottom: 30px !important;  /* Distância do fundo da tela */
+    left: 20px !important;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    max-width: 90vw;
+    z-index: 9998;
+    pointer-events: auto;
 }
+
+/* 2. O Painel de Analytics GAP (Aparece ACIMA dos filtros agora) */
+#tobe-stats {
+    position: fixed !important; 
+    top: auto !important; 
+    bottom: 80px !important; /* Fica 50px exatamente acima da barra de filtros */
+    left: 20px !important; 
+    background: #0f172a; 
+    color: white; 
+    padding: 12px 24px; 
+    border-radius: 8px;
+    z-index: 9997; 
+    display: none; 
+    align-items: center; 
+    gap: 15px;
+    box-shadow: 0 -10px 25px rgba(0,0,0,0.3); /* Sombra virada para cima para dar profundidade */
+    font-size: 13px;
+    border: 1px solid #334155;
+    pointer-events: auto;
+    animation: slideUpStat 0.3s ease-out;
+}
+@keyframes slideUpStat { from { bottom: 60px; opacity: 0; } to { bottom: 80px; opacity: 1; } }
+
+/* 3. A Pílula do Filtro (Limpa, flutuante e de vidro fosco) */
 .filter-pill {
-    background: rgba(255, 255, 255, 0.95); border: 1px solid #cbd5e1; color: #64748b; padding: 5px 14px; border-radius: 20px;
-    font-size: 11px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.5px; user-select: none;
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    background: rgba(255, 255, 255, 0.90) !important;
+    backdrop-filter: blur(6px) !important;
+    border: 1px solid #cbd5e1 !important; 
+    color: #475569 !important; 
+    padding: 8px 18px !important; 
+    border-radius: 30px !important;
+    font-size: 11px; 
+    font-weight: 800; 
+    cursor: pointer; 
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important; 
+    transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1) !important; 
+    text-transform: uppercase; 
+    letter-spacing: 0.5px; 
+    user-select: none;
 }
-.filter-pill:hover { background: white; transform: translateY(-1px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); color: #334155; }
+
+.filter-pill:hover { 
+    background: white !important; 
+    transform: translateY(-4px) !important; /* Levanta ao passar o rato */
+    box-shadow: 0 8px 15px rgba(0,0,0,0.15) !important; 
+    color: #0f172a !important; 
+}
+
 .filter-pill.active {
-    background: #059669; color: white; border-color: #047857; box-shadow: 0 2px 8px rgba(5, 150, 105, 0.4); transform: scale(1.05);
+    background: #10b981 !important; 
+    color: white !important; 
+    border-color: #059669 !important; 
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4) !important; 
+    transform: scale(1.05) translateY(-2px) !important;
 }
 
 /* --- EFEITOS VISUAIS DO FILTRO --- */
@@ -2406,6 +2469,46 @@ body.exporting-anim .conn-group:not(.export-target) {
 
 
 
+/* =========================================================================
+   --- SISTEMA DE BARRAS ALTERNADAS (CRIAÇÃO VS GESTÃO) ---
+   ========================================================================= */
+
+/* 1. Barra Primária (Nova Caixa / Nova Ilha) */
+#primary-toolbar {
+    position: fixed;
+    top: 20px; /* Alinhada perfeitamente no topo */
+    left: 20px;
+    display: flex;
+    gap: 10px;
+    z-index: 10000;
+
+    /* Começa escondida, esperando a Toolbar principal fechar */
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-30px); /* Escondida um pouco para a esquerda */
+    transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Classe que será ativada pelo JavaScript para mostrá-la */
+#primary-toolbar.visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(0);
+}
+
+/* 2. Toolbar Principal de Gestão */
+#toolbar {
+    /* Como a primária está escondida por padrão, voltamos a Toolbar para o topo! */
+    top: 20px !important; 
+    transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1) !important;
+    position: relative;
+    z-index: 10001; /* Fica um nível acima para sobrepor com elegância */
+}
+
+
+
+
+
 /* ========================================================= */
 /* --- DASHBOARD DE AGENDA (CALENDÁRIO E CONVITES) --- */
 /* ========================================================= */
@@ -2466,6 +2569,67 @@ body.exporting-anim .conn-group:not(.export-target) {
 }
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* =========================================================================
+   --- TOOLBAR RETRÁTIL (SLIDE PANEL) ---
+   ========================================================================= */
+   #toolbar {
+    /* Força o painel a entender as animações de deslize */
+    transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1) !important;
+    position: relative; /* Necessário para a aba pendurada */
+}
+
+/* Classe que joga a barra para fora do ecrã */
+#toolbar.collapsed {
+    /* O -20px compensa o 'left: 20px' original, encostando a barra perfeitamente na borda esquerda */
+    transform: translateX(calc(-100% - 20px));
+}
+
+/* A Abinha (Toggle Button) pendurada do lado direito */
+#toolbar-toggle-btn {
+    position: absolute;
+    top: 12px;
+    right: -32px; /* Pendurado para fora da barra */
+    width: 32px;
+    height: 38px;
+    background: white;
+    border: 1px solid #cbd5e1;
+    border-left: none; /* Faz parecer uma extensão contínua da toolbar */
+    border-radius: 0 10px 10px 0; /* Arredondado só na direita */
+    box-shadow: 4px 2px 8px rgba(0,0,0,0.1);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: #475569;
+    transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Efeito de puxar ao passar o rato */
+#toolbar-toggle-btn:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+    width: 38px;
+    right: -38px;
+}
+
+
     </style>
 </head>
 <body>
@@ -2478,7 +2642,17 @@ body.exporting-anim .conn-group:not(.export-target) {
 
 
 <div id="ui-layer">
+
+    <div id="primary-toolbar" class="no-pan">
+        <button class="btn-outline" style="color:#0ea5e9; border-color:#7dd3fc; background:#f0f9ff;" onclick="addIsland()" title="Criar um portal para outro projeto">🏝️ Nova Ilha</button>
+        <button class="btn-primary" onclick="addRootBox()">+ Nova Caixa</button>
+    </div>
+
+
     <div id="toolbar" class="no-pan">
+
+        <button id="toolbar-toggle-btn" class="no-pan" onclick="toggleToolbar()" title="Recolher Painel">◀</button>
+
         <button class="btn-outline" style="font-weight:bold; color:#0f766e; border-color:#0f766e;" onclick="openDrawingCenter()">📐 Desenhos</button>
         <button class="btn-outline" style="color:#0ea5e9; border-color:#7dd3fc; background:#f0f9ff;" onclick="addIsland()" title="Criar um portal para outro projeto">🏝️ Nova Ilha</button>
         <button class="btn-primary" onclick="addRootBox()">+ Nova Caixa</button>
@@ -10081,6 +10255,41 @@ if (typeof renderConnections === 'function' && !window.renderConnections.isPatch
 
 // Inicia o mapa limpo
 setTimeout(applyArrowsFocusMode, 100);
+
+
+
+
+
+// =========================================================================
+// --- MOTOR DA TOOLBAR RETRÁTIL (TROCA DE MODOS) ---
+// =========================================================================
+function toggleToolbar() {
+    const toolbar = document.getElementById('toolbar');
+    const primaryToolbar = document.getElementById('primary-toolbar');
+    const btn = document.getElementById('toolbar-toggle-btn');
+    
+    // Alterna o estado da Toolbar Principal
+    const isCollapsed = toolbar.classList.toggle('collapsed');
+    
+    // Lógica Inversa
+    if (isCollapsed) {
+        // Modo Criação/Zen (Principal escondida)
+        btn.innerText = '▶';
+        btn.title = 'Modo Gestão (Expandir)';
+        
+        // MOSTRA a barra Primária
+        if (primaryToolbar) primaryToolbar.classList.add('visible');
+    } else {
+        // Modo Gestão (Principal visível)
+        btn.innerText = '◀';
+        btn.title = 'Modo Criação (Recolher)';
+        
+        // ESCONDE a barra Primária
+        if (primaryToolbar) primaryToolbar.classList.remove('visible');
+    }
+}
+
+
 
 </script>
 
