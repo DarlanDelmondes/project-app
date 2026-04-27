@@ -2579,7 +2579,62 @@ body.exporting-anim .conn-group:not(.export-target) {
 
 
 
+/* --- SISTEMA DE DATA DA CAIXA (V3 - GIGANTE E INTELIGENTE) --- */
+.box-date-badge {
+    position: absolute; 
+    top: -25px; /* Ajustado para o tamanho dobrado */
+    right: 15px; 
+    color: white; /* Texto sempre branco agora */
+    font-size: 32px; /* ⬅️ DOBRO DO TAMANHO (Era 16px) */
+    font-weight: 900; 
+    padding: 6px 20px; 
+    border-radius: 40px; /* ⬅️ BEM ARREDONDADO (Estilo Cápsula) */
+    display: none; 
+    z-index: 10000; 
+    box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+    pointer-events: none; 
+    align-items: center; 
+    gap: 12px;
+    border: 3px solid white; /* Borda branca para destacar do fundo */
+}
 
+/* CORES DINÂMICAS */
+.box-date-badge.date-future { background: #0056b3; } /* AZUL FORTE (Não passou) */
+.box-date-badge.date-past { background: #16a34a; }   /* VERDE (Já passou) */
+
+.box.has-date .box-date-badge { display: flex; }
+
+.date-main { display: flex; align-items: center; }
+
+.date-year {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    font-size: 14px; /* Proporcional ao novo tamanho */
+    color: rgba(255,255,255,0.85);
+    font-weight: 800;
+    border-left: 2px dashed rgba(255,255,255,0.4);
+    padding-left: 8px;
+    letter-spacing: 1px;
+}
+
+/* Agora usamos flex no lugar de block para o layout funcionar */
+.box.has-date .box-date-badge { display: flex; }
+
+.date-main {
+    display: flex;
+    align-items: center;
+}
+
+.date-year {
+    writing-mode: vertical-rl; /* ⬅️ COLOCA O ANO NA VERTICAL */
+    transform: rotate(180deg); /* Vira o texto para ler de baixo para cima */
+    font-size: 10px;
+    color: #64748b;
+    font-weight: 800;
+    border-left: 1px dashed #94a3b8; /* Linha pontilhada elegante separando */
+    padding-left: 6px;
+    letter-spacing: 1px;
+}
 
 
 
@@ -4107,7 +4162,7 @@ function createBoxElement(id, titleVal = "Novo Item") {
                 <div class="separator"></div>
                 
                 <button class="icon-btn btn-font no-pan" onclick="setBoxTarget('${id}')" title="Atribuir Cenário/Target">🎯</button>
-                
+                <button class="icon-btn btn-font no-pan" onclick="setBoxDatePrompt('${id}')" title="Definir Data">📅</button> 
                 <button class="icon-btn btn-font no-pan" onclick="toggleTaskView('${id}')" title="Mostrar Tarefas" style="opacity: 0.5;">📋</button>
                 <button class="icon-btn btn-font no-pan" onclick="openMeetingModal('${id}')" title="Gerenciar Reuniões">📅</button>
                 <button class="icon-btn btn-font no-pan" onclick="addNoteToBox('${id}')" title="Adicionar Nota">📝</button>
@@ -5398,6 +5453,7 @@ function closeActivityModal() {
                 strictSize: box.dataset.strictSize, 
                 tasks: tasks,
                 meetings: meetings,
+                boxDate: box.dataset.boxDate || "", /* ⬅️ ADICIONADO AQUI */
                 // --- ADICIONE ESTAS DUAS LINHAS AQUI ---
                 drawingStatus: box.dataset.drawingStatus || 'none',
                 confluenceUrl: box.dataset.confluenceUrl || '',
@@ -5459,7 +5515,24 @@ function closeActivityModal() {
                     el.classList.add('has-target');
                     el.querySelector('.target-badge').innerText = `🎯 ${d.targetName}`;
                 }
-    
+                    
+                // --- RESTAURAÇÃO DA DATA (COM BLINDAGEM ANTI-CRASH) ---
+                if (d.boxDate) {
+                    el.dataset.boxDate = d.boxDate;
+                    el.classList.add('has-date');
+                    updateBoxDateBadge(el, d.boxDate); // ⬅️ GARANTE A COR CORRETA AO CARREGAR
+                    
+                    // Verifica se a div da data existe. Se não existir, cria na hora!
+                    let badge = el.querySelector('.box-date-badge');
+                    if (!badge) {
+                        badge = document.createElement('div');
+                        badge.className = 'box-date-badge no-pan';
+                        el.insertBefore(badge, el.firstChild); // Coloca no topo
+                    }
+                    
+                    badge.innerHTML = formatBoxDateHtml(d.boxDate);
+                }
+                // ------------------------------------------------------
                 if (d.drawingStatus && d.drawingStatus !== 'none') {
                     el.dataset.drawingStatus = d.drawingStatus;
                     el.dataset.confluenceUrl = d.confluenceUrl || '';
@@ -5592,6 +5665,89 @@ function getAllDrawingsUnified() {
         }
     });
     return unified;
+}
+
+
+function updateBoxDateBadge(el, dateStr) {
+    const badge = el.querySelector('.box-date-badge') || document.createElement('div');
+    if (!el.querySelector('.box-date-badge')) {
+        badge.className = 'box-date-badge no-pan';
+        el.insertBefore(badge, el.firstChild);
+    }
+
+    // Calcula se a data já passou
+    let isPast = false;
+    let d, m, y;
+    
+    // Parser simples para os formatos suportados
+    if (dateStr.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
+        [d, m, y] = dateStr.split('/');
+    } else if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        [y, m, d] = dateStr.split('-');
+    }
+
+    if (y && m && d) {
+        const inputDate = new Date(y, m - 1, d, 23, 59, 59); // Final do dia escolhido
+        const today = new Date();
+        isPast = inputDate < today;
+    }
+
+    // Aplica a cor correta
+    badge.classList.remove('date-future', 'date-past');
+    badge.classList.add(isPast ? 'date-past' : 'date-future');
+
+    // Insere o HTML (reutilizando sua lógica de nomes de meses)
+    badge.innerHTML = formatBoxDateHtml(dateStr);
+}
+
+function setBoxDatePrompt(id) {
+    if(!state.isEditMode) return;
+    const box = document.getElementById(id);
+    const currentStr = box.dataset.boxDate || "";
+    const newVal = prompt("Definir Data (DD/MM/AAAA):", currentStr);
+
+    if (newVal === null) return;
+    const cleanVal = newVal.trim();
+
+    if (cleanVal === "") {
+        delete box.dataset.boxDate;
+        box.classList.remove('has-date');
+    } else {
+        box.dataset.boxDate = cleanVal;
+        box.classList.add('has-date');
+        updateBoxDateBadge(box, cleanVal); // ⬅️ CHAMA A NOVA LÓGICA
+    }
+    markUnsaved();
+}
+
+
+function formatBoxDateHtml(dateStr) {
+    let d, m, y;
+    
+    if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        [y, m, d] = dateStr.split('-');
+    } else if (dateStr.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
+        [d, m, y] = dateStr.split('/');
+    } else if (dateStr.match(/^\d{1,2}\/\d{1,2}$/)) {
+        [d, m] = dateStr.split('/');
+        y = new Date().getFullYear();
+    } else {
+        return `<span class="date-main">🗓️ ${dateStr}</span>`;
+    }
+
+    const months = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+    const monthIndex = parseInt(m, 10) - 1;
+    
+    if (monthIndex >= 0 && monthIndex < 12) {
+        const padD = d.padStart(2, '0');
+        // ⬅️ SEPARA O DIA/MÊS DO ANO COM AS CLASSES NOVAS
+        return `
+            <span class="date-main">🗓️ ${padD}/${months[monthIndex]}</span>
+            <span class="date-year">${y}</span>
+        `;
+    }
+    
+    return `<span class="date-main">🗓️ ${dateStr}</span>`;
 }
 
 function fetchDrawingsFromDB(projectId, breadcrumb, visited, unified, islandBoxId) {
