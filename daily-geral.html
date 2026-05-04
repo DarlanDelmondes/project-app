@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus Systems | Perf Flow</title>
+    <style>
+        :root {
+            --bg: #F4F4F2;
+            --surface: #FFFFFF;
+            --surface-alt: #FAFAFA;
+            --text-main: #111111;
+            --text-muted: #888888;
+            --accent: #000000;
+            --border: #EAEAEA;
+            --flow-inactive: #D0D0D0;
+            --pulse-glow: rgba(0, 122, 255, 0.6); /* Azul cintilante Apple/iOS */
+            --font-stack: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: var(--font-stack); background-color: var(--bg); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* Top Highlights & Header Controls */
+        #highlights-bar { background: var(--accent); color: white; padding: 16px 40px; font-size: 0.85rem; transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1); max-height: 52px; overflow: hidden; z-index: 10; display: flex; flex-direction: column; }
+        #highlights-bar.expanded { max-height: 300px; }
+        .hl-header { display: flex; justify-content: space-between; align-items: center; width: 100%; cursor: pointer;}
+        .hl-header-left { display: flex; align-items: center; gap: 20px; font-weight: 600; letter-spacing: 1px; }
+        .hl-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-top: 30px; opacity: 0; transition: opacity 0.3s 0.1s; }
+        #highlights-bar.expanded .hl-grid { opacity: 1; }
+        .hl-col h4 { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 15px; color: #999; }
+        .hl-item { margin-bottom: 8px; border-left: 2px solid #555; padding-left: 12px; font-size: 0.9rem; }
+
+        .header-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end;}
+        .btn-header { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 4px 12px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; transition: 0.2s; }
+        .btn-header:hover { background: white; color: black; }
+
+        /* Navigation & Universes */
+        #universes-container { display: flex; flex: 1; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: auto; }
+        .universe { min-width: 100vw; scroll-snap-align: start; padding: 60px 5vw; overflow-y: auto; }
+        .universe-content { max-width: 1200px; margin: 0 auto; }
+        .universe-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 60px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+        .universe-title { font-size: 3.5rem; font-weight: 300; letter-spacing: -1.5px; }
+        
+        /* Groups & Checklists */
+        .group-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 40px; box-shadow: 0 8px 30px rgba(0,0,0,0.02); transition: 0.3s ease; }
+        .group-header { padding: 30px 40px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-bottom: 1px solid transparent; }
+        .group-card.expanded .group-header { border-bottom: 1px solid var(--border); }
+        .group-title-area { display: flex; align-items: center; gap: 15px; font-size: 1.25rem; font-weight: 500; }
+        .group-body { padding: 0 40px 40px 40px; display: none; }
+        .group-card.expanded .group-body { display: block; margin-top: 30px;}
+
+        .checklist-container { background: var(--surface-alt); border: 1px solid var(--border); border-radius: 8px; padding: 40px; margin-bottom: 40px; }
+        .checklist-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .checklist-title { font-size: 1.6rem; font-weight: 600; }
+
+        /* Flow Stepper */
+        .flow-stepper { display: flex; gap: 12px; margin-bottom: 45px; align-items: center; flex-wrap: wrap; }
+        .flow-step { font-size: 0.8rem; text-transform: uppercase; padding: 12px 24px; border: 1px solid var(--flow-inactive); color: var(--text-muted); border-radius: 30px; cursor: pointer; transition: all 0.3s ease; background: var(--surface); position: relative; }
+        .flow-step.completed { background: var(--accent); color: white; border-color: var(--accent); font-weight: 600; }
+        .flow-step.current { background: var(--surface); color: var(--accent); border: 2px solid var(--accent); font-weight: 700; animation: pulse-ring 1.8s infinite cubic-bezier(0.215, 0.61, 0.355, 1); }
+        
+        @keyframes pulse-ring {
+            0% { box-shadow: 0 0 0 0 var(--pulse-glow); }
+            70% { box-shadow: 0 0 0 15px rgba(0, 122, 255, 0); } /* Azul dissipando */
+            100% { box-shadow: 0 0 0 0 rgba(0, 122, 255, 0); }
+        }
+        .flow-connector { width: 15px; height: 1px; background: var(--flow-inactive); }
+
+        /* Checklist Items */
+        .item-row { padding: 20px 0; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; }
+        .item-row:last-child { border-bottom: none; padding-bottom: 0; }
+        .item-top { display: flex; align-items: center; justify-content: space-between; }
+        .item-info { display: flex; align-items: center; gap: 20px; font-size: 1.1rem; }
+        
+        .item-meta-container { margin-top: 8px; margin-left: 42px; display: flex; flex-direction: column; gap: 6px; }
+        .last-comment-preview { font-size: 0.85rem; color: var(--text-muted); cursor: pointer; font-style: italic; transition: 0.2s; }
+        .last-comment-preview:hover { color: var(--text-main); }
+        
+        .assignee-badge { display: inline-flex; align-items: center; gap: 4px; background: #E8E8E8; padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; color: var(--text-main); font-weight: 500; }
+        .assignees-container { display: flex; gap: 8px; flex-wrap: wrap; }
+
+        /* Controls & CRUD */
+        input[type="checkbox"] { width: 22px; height: 22px; accent-color: black; cursor: pointer; }
+        .badge { font-size: 0.65rem; padding: 4px 8px; border-radius: 4px; background: #EBEBEB; margin-left: 10px; font-weight: 500; letter-spacing: 0.5px;}
+        .critical { color: #D32F2F; background: #FFEBEE; }
+        
+        .action-btns { display: flex; gap: 10px; opacity: 0.3; transition: 0.2s; align-items: center; }
+        .group-header:hover .action-btns, .checklist-header:hover .action-btns, .item-row:hover .action-btns, .universe-header:hover .action-btns { opacity: 1; }
+        .btn-icon { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.8rem; text-transform: uppercase; font-weight: 600; padding: 4px; }
+        .btn-icon:hover { color: var(--accent); }
+        .btn-icon.danger:hover { color: #D32F2F; }
+        
+        .btn-add { background: transparent; border: 1px dashed var(--border); color: var(--text-muted); padding: 15px; width: 100%; text-align: center; border-radius: 8px; cursor: pointer; font-size: 0.9rem; margin-top: 15px; transition: 0.2s; }
+        .btn-add:hover { border-color: var(--text-main); color: var(--text-main); }
+        .btn-add-universe { background: var(--surface); border: 1px solid var(--border); padding: 40px; border-radius: 12px; display: flex; justify-content: center; align-items: center; height: 200px; font-size: 1.2rem; color: var(--text-muted); cursor: pointer; }
+
+        /* Universal Modal */
+        #input-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); backdrop-filter: blur(5px); justify-content: center; align-items: center; z-index: 100; }
+        .modal-box { background: white; width: 500px; padding: 40px; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.1); }
+        .modal-title { font-size: 1.5rem; font-weight: 300; margin-bottom: 25px; }
+        .input-group { margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .input-group label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; }
+        
+        .input-group input:not([type="checkbox"]), .input-group select { width: 100%; padding: 12px 15px; border: 1px solid var(--border); border-radius: 6px; font-size: 1rem; font-family: var(--font-stack); }
+        input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: 0.6; transition: 0.2s; }
+        input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
+
+        .tags-input-wrapper { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); align-items: center; cursor: text; min-height: 46px; position: relative; }
+        .tags-input-wrapper:focus-within { border-color: #CCC; }
+        .tag-chip { background: #E8E8E8; color: var(--text-main); padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; display: flex; align-items: center; gap: 8px; font-weight: 500; }
+        .tag-chip-remove { cursor: pointer; opacity: 0.5; font-weight: bold; }
+        .tag-chip-remove:hover { opacity: 1; }
+        .tags-input-wrapper input { border: none !important; outline: none !important; flex: 1; min-width: 150px; padding: 0 !important; font-size: 0.95rem; font-family: var(--font-stack); background: transparent; }
+
+        .autocomplete-items { position: absolute; border: 1px solid var(--border); border-top: none; z-index: 99; top: 100%; left: 0; right: 0; background-color: var(--surface); max-height: 180px; overflow-y: auto; border-radius: 0 0 6px 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: none; }
+        .autocomplete-item { padding: 12px 15px; cursor: pointer; font-size: 0.95rem; border-bottom: 1px solid var(--border); color: var(--text-main); }
+        .autocomplete-item:last-child { border-bottom: none; }
+        .autocomplete-item:hover { background-color: #F8F8F8; }
+
+        .modal-actions { display: flex; justify-content: flex-end; gap: 15px; margin-top: 30px; }
+        .btn { padding: 10px 20px; border-radius: 6px; font-size: 0.9rem; font-weight: 500; cursor: pointer; border: none; }
+        .btn-cancel { background: #EEE; color: var(--text-main); }
+        .btn-confirm { background: var(--accent); color: white; }
+
+        .comment-list { max-height: 250px; overflow-y: auto; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 20px; display: none; }
+        .comment-entry { padding: 12px 0; border-bottom: 1px solid #F9F9F9; font-size: 0.95rem; }
+        .comment-date { font-size: 0.7rem; color: #AAA; display: block; margin-bottom: 4px; }
+    </style>
+</head>
+<body>
+
+    <div id="highlights-bar">
+        <div class="hl-header" onclick="this.parentElement.classList.toggle('expanded')">
+            <div class="hl-header-left">
+                <span>▼ SYSTEM HIGHLIGHTS</span>
+                <span id="global-stats" style="font-weight: 400;">0% COMPLETION</span>
+            </div>
+            <div class="header-actions" onclick="event.stopPropagation()">
+                <button class="btn-header" onclick="exportBackup(event)">💾 Exportar Backup</button>
+                <label class="btn-header" style="margin: 0; cursor: pointer;">
+                    📥 Importar Backup
+                    <input type="file" accept=".json" style="display: none;" onchange="importBackup(event)">
+                </label>
+                <button class="btn-header" onclick="generateJournal(event)">Gerar Jornal (Teams)</button>
+                <label class="btn-header" style="margin: 0; cursor: pointer;">
+                    Importar Equipes
+                    <input type="file" id="team-upload" accept=".json" style="display: none;" onchange="handleTeamUpload(event)">
+                </label>
+            </div>
+        </div>
+        <div class="hl-grid">
+            <div class="hl-col"><h4>Caminho Crítico</h4><div id="hl-critical"></div></div>
+            <div class="hl-col"><h4>Próximos Itens</h4><div id="hl-next"></div></div>
+            <div class="hl-col"><h4>Stale</h4><div id="hl-stale"></div></div>
+        </div>
+    </div>
+
+    <div id="universes-container"></div>
+
+    <div id="input-modal">
+        <div class="modal-box" id="modal-box-inner">
+            <h3 class="modal-title" id="modal-title">Ação</h3>
+            <div id="modal-comments-area" class="comment-list"></div>
+            <div id="modal-fields"></div>
+            <div class="modal-actions">
+                <button class="btn btn-cancel" id="modal-cancel-btn" onclick="closeModal()">Cancelar</button>
+                <button class="btn btn-confirm" id="modal-confirm-btn">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const FLOWS = {
+            DEV: ["Desenho", "Chassi (Virtual)", "Infra", "Deploy", "Valid. Unitária", "Valid. Geral"],
+            CAT: ["Infraestrutura", "Deployment", "Valid. Unitária", "Valid. Geral"],
+            PRD: ["Infraestrutura", "Deployment", "Valid. Unitária", "Valid. Geral"]
+        };
+
+        const generateId = () => Math.random().toString(36).substr(2, 9);
+
+        // Data Models
+        let state = JSON.parse(localStorage.getItem('nexus_v10_state')) || [];
+        let teams = JSON.parse(localStorage.getItem('nexus_v4_teams')) || [];
+
+        function save() {
+            localStorage.setItem('nexus_v10_state', JSON.stringify(state));
+            render();
+        }
+
+        // --- BACKUP & RESTORE ENGINE ---
+        function exportBackup(e) {
+            e.stopPropagation();
+            const backupData = {};
+            // Varre o localStorage por chaves relacionadas ao Nexus
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('nexus_')) {
+                    backupData[key] = localStorage.getItem(key);
+                }
+            }
+            
+            // Cria um blob e forca o download
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            const dateStr = new Date().toISOString().split('T')[0];
+            downloadAnchorNode.setAttribute("download", `nexus_backup_${dateStr}.json`);
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        }
+
+        function importBackup(e) {
+            e.stopPropagation();
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                try {
+                    const parsed = JSON.parse(evt.target.result);
+                    if (confirm("Isso irá sobrescrever todos os dados atuais com os do backup. Deseja continuar?")) {
+                        for (const key in parsed) {
+                            if(parsed.hasOwnProperty(key)) {
+                                localStorage.setItem(key, parsed[key]);
+                            }
+                        }
+                        alert("Backup restaurado com sucesso! O sistema será recarregado.");
+                        location.reload(); // Recarrega a pagina para puxar os novos states
+                    }
+                } catch(err) {
+                    alert('Arquivo de backup inválido ou corrompido.');
+                }
+            };
+            reader.readAsText(file);
+            e.target.value = ""; // Reset do input
+        }
+
+        // --- TEAM IMPORT ---
+        function handleTeamUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                try {
+                    const parsed = JSON.parse(evt.target.result);
+                    if (Array.isArray(parsed)) {
+                        teams = parsed;
+                        localStorage.setItem('nexus_v4_teams', JSON.stringify(teams));
+                        alert('Equipes importadas com sucesso.');
+                    } else { alert('Formato JSON inválido.'); }
+                } catch(err) { alert('Erro ao processar o arquivo JSON.'); }
+            };
+            reader.readAsText(file);
+            e.target.value = ""; 
+        }
+
+        function getMemberOptions() {
+            let opts = [];
+            teams.forEach(t => t.members.forEach(m => opts.push(`${m.name} (${t.name})`)));
+            return opts;
+        }
+
+        // --- RENDER ENGINE ---
+        function render() {
+            const container = document.getElementById('universes-container');
+            const scrollX = container.scrollLeft;
+            const scrollYs = Array.from(document.querySelectorAll('.universe')).map(u => u.scrollTop);
+
+            container.innerHTML = '';
+
+            state.forEach((univ, uIdx) => {
+                const uDiv = document.createElement('div');
+                uDiv.className = 'universe';
+                
+                let html = `<div class="universe-content">
+                    <div class="universe-header">
+                        <h1 class="universe-title">${univ.title}</h1>
+                        <div class="action-btns" style="opacity: 1;">
+                            <button class="btn-icon" onclick="editUniverse(${uIdx})">Editar</button>
+                            <button class="btn-icon danger" onclick="deleteUniverse(${uIdx})">Excluir</button>
+                        </div>
+                    </div>`;
+
+                univ.groups.forEach((group, gIdx) => {
+                    const groupPct = calculateGroupProgress(group);
+                    html += `
+                        <div class="group-card ${group.expanded ? 'expanded' : ''}">
+                            <div class="group-header" onclick="toggleGroup(${uIdx}, ${gIdx})">
+                                <div class="group-title-area">
+                                    <span>${group.expanded ? '▼' : '▶'}</span>
+                                    <span>${group.title} <span style="color:var(--text-muted); font-size: 0.85rem; margin-left:10px;">${groupPct}%</span></span>
+                                </div>
+                                <div class="action-btns" onclick="event.stopPropagation()">
+                                    <button class="btn-icon" onclick="editGroup(${uIdx}, ${gIdx})">Editar</button>
+                                    <button class="btn-icon danger" onclick="deleteGroup(${uIdx}, ${gIdx})">Excluir</button>
+                                </div>
+                            </div>
+                            <div class="group-body">`;
+
+                    group.checklists.forEach((chk, cIdx) => {
+                        html += `
+                            <div class="checklist-container">
+                                <div class="checklist-header">
+                                    <div style="display: flex; align-items: center;">
+                                        <h3 class="checklist-title">${chk.title}</h3>
+                                        <span class="badge">${chk.envType}</span>
+                                    </div>
+                                    <div class="action-btns">
+                                        <button class="btn-icon" onclick="editChecklist(${uIdx}, ${gIdx}, ${cIdx})">Editar</button>
+                                        <button class="btn-icon danger" onclick="deleteChecklist(${uIdx}, ${gIdx}, ${cIdx})">Excluir</button>
+                                    </div>
+                                </div>
+                                <div class="flow-stepper">`;
+                        
+                        FLOWS[chk.envType].forEach((step, sIdx) => {
+                            let stepClass = '';
+                            if (sIdx < chk.currentStep) {
+                                stepClass = 'completed'; 
+                            } else if (sIdx === chk.currentStep) {
+                                stepClass = 'current'; 
+                            }
+                            html += `<div class="flow-step ${stepClass}" onclick="event.stopPropagation(); setFlowStep(${uIdx}, ${gIdx}, ${cIdx}, ${sIdx})">${step}</div>`;
+                            if(sIdx < FLOWS[chk.envType].length - 1) html += `<div class="flow-connector"></div>`;
+                        });
+                        
+                        html += `</div><div class="items-list">`;
+
+                        chk.items.forEach((item, iIdx) => {
+                            const lastComment = item.comments && item.comments.length > 0 ? item.comments[item.comments.length-1] : null;
+                            const isCritical = checkIsCritical(item.id);
+                            
+                            let assigneesArray = item.assignees || [];
+                            if(assigneesArray.length === 0 && item.assignee && item.assignee !== 'Não Atribuído') { assigneesArray = [item.assignee]; }
+
+                            let assigneesHtml = '';
+                            if (assigneesArray.length > 0) {
+                                assigneesHtml = `<div class="assignees-container">` + 
+                                    assigneesArray.map(a => `<span class="assignee-badge">👤 ${a.split(' ')[0]}</span>`).join('') + 
+                                `</div>`;
+                            }
+                            
+                            html += `
+                                <div class="item-row ${item.done ? 'done' : ''}">
+                                    <div class="item-top">
+                                        <div class="item-info">
+                                            <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleItem(${uIdx},${gIdx},${cIdx},${iIdx})">
+                                            <span style="${item.done ? 'text-decoration:line-through; color:#AAA' : ''}">${item.title}</span>
+                                            ${isCritical && !item.done ? '<span class="badge critical">CRÍTICO</span>' : ''}
+                                        </div>
+                                        <div style="display:flex; align-items:center; gap:20px;">
+                                            <div class="action-btns">
+                                                <button class="btn-icon" onclick="editItem(${uIdx}, ${gIdx}, ${cIdx}, ${iIdx})">Editar</button>
+                                                <button class="btn-icon danger" onclick="deleteItem(${uIdx}, ${gIdx}, ${cIdx}, ${iIdx})">Excluir</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="item-meta-container">
+                                        <div style="display:flex; align-items:center; gap: 10px; font-size: 0.8rem; color: #AAA; margin-bottom: 6px;">
+                                            ${assigneesHtml}
+                                            ${item.date ? `<span>📅 ${new Date(item.date).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</span>` : ''}
+                                        </div>
+                                        <div class="last-comment-preview" onclick="openComments('${item.id}')">
+                                            ${lastComment ? `↳ ${lastComment.text}` : '↳ Adicionar comentário...'}
+                                        </div>
+                                    </div>
+                                </div>`;
+                        });
+
+                        html += `<button class="btn-add" onclick="addItem(${uIdx}, ${gIdx}, ${cIdx})">+ Adicionar Tarefa</button></div></div>`;
+                    });
+
+                    html += `<button class="btn-add" onclick="addChecklist(${uIdx}, ${gIdx})">+ Adicionar Checklist</button></div></div>`;
+                });
+
+                html += `<button class="btn-add" onclick="addGroup(${uIdx})">+ Adicionar Grupo</button></div></div>`;
+                uDiv.innerHTML = html;
+                container.appendChild(uDiv);
+            });
+
+            const addUDiv = document.createElement('div');
+            addUDiv.className = 'universe';
+            addUDiv.innerHTML = `<div class="universe-content"><div class="btn-add-universe" onclick="addUniverse()">+ Criar Novo Universo</div></div>`;
+            container.appendChild(addUDiv);
+
+            container.scrollLeft = scrollX;
+            document.querySelectorAll('.universe').forEach((u, i) => { if(scrollYs[i]) u.scrollTop = scrollYs[i]; });
+            updateHighlights();
+        }
+
+        // --- CRUD LOGIC ---
+        function toggleGroup(u, g) { state[u].groups[g].expanded = !state[u].groups[g].expanded; save(); }
+        function toggleItem(u, g, c, i) { state[u].groups[g].checklists[c].items[i].done = !state[u].groups[g].checklists[c].items[i].done; save(); }
+        function setFlowStep(u, g, c, step) { state[u].groups[g].checklists[c].currentStep = step; save(); }
+
+        function addUniverse() { openModal("Novo Universo", [{id: "title", label: "Nome do Universo"}], (data) => { state.push({ id: generateId(), title: data.title, groups: [] }); save(); }); }
+        function addGroup(uIdx) { openModal("Novo Grupo", [{id: "title", label: "Nome do Grupo"}], (data) => { state[uIdx].groups.push({ id: generateId(), title: data.title, expanded: true, checklists: [] }); save(); }); }
+        function addChecklist(uIdx, gIdx) { openModal("Novo Checklist", [{id: "title", label: "Título"}, {id: "env", label: "Ambiente", type: "select", options: ["DEV", "CAT", "PRD"]}], (data) => { state[uIdx].groups[gIdx].checklists.push({ id: generateId(), title: data.title, envType: data.env, currentStep: 0, items: [] }); save(); }); }
+        function addItem(uIdx, gIdx, cIdx) {
+            openModal("Nova Tarefa", [
+                {id: "title", label: "Descrição da Tarefa"},
+                {id: "assignees", label: "Responsáveis", type: "autocomplete-tags", options: getMemberOptions(), required: false},
+                {id: "date", label: "Data Limite", type: "date", required: false}
+            ], (data) => { state[uIdx].groups[gIdx].checklists[cIdx].items.push({ id: generateId(), title: data.title, assignees: data.assignees || [], done: false, date: data.date, deps: [], comments: [] }); save(); });
+        }
+
+        function editUniverse(uIdx) { openModal("Editar Universo", [{id: "title", label: "Nome", value: state[uIdx].title}], (data) => { state[uIdx].title = data.title; save(); }); }
+        function editGroup(uIdx, gIdx) { openModal("Editar Grupo", [{id: "title", label: "Nome", value: state[uIdx].groups[gIdx].title}], (data) => { state[uIdx].groups[gIdx].title = data.title; save(); }); }
+        function editChecklist(uIdx, gIdx, cIdx) { openModal("Editar Checklist", [{id: "title", label: "Nome", value: state[uIdx].groups[gIdx].checklists[cIdx].title}], (data) => { state[uIdx].groups[gIdx].checklists[cIdx].title = data.title; save(); }); }
+        function editItem(uIdx, gIdx, cIdx, iIdx) {
+            const item = state[uIdx].groups[gIdx].checklists[cIdx].items[iIdx];
+            let currentAssignees = item.assignees || [];
+            if(currentAssignees.length === 0 && item.assignee && item.assignee !== 'Não Atribuído') { currentAssignees = [item.assignee]; }
+
+            openModal("Editar Item", [
+                {id: "title", label: "Descrição", value: item.title},
+                {id: "assignees", label: "Responsáveis", type: "autocomplete-tags", options: getMemberOptions(), value: currentAssignees, required: false},
+                {id: "date", label: "Data", type: "date", value: item.date || '', required: false}
+            ], (data) => { item.title = data.title; item.assignees = data.assignees || []; item.date = data.date; save(); });
+        }
+
+        function deleteUniverse(uIdx) { if(confirm("Excluir este universo e todo seu conteúdo?")) { state.splice(uIdx, 1); save(); } }
+        function deleteGroup(uIdx, gIdx) { if(confirm("Excluir grupo?")) { state[uIdx].groups.splice(gIdx, 1); save(); } }
+        function deleteChecklist(uIdx, gIdx, cIdx) { if(confirm("Excluir checklist?")) { state[uIdx].groups[gIdx].checklists.splice(cIdx, 1); save(); } }
+        function deleteItem(uIdx, gIdx, cIdx, iIdx) { if(confirm("Excluir item?")) { state[uIdx].groups[gIdx].checklists[cIdx].items.splice(iIdx, 1); save(); } }
+
+        // --- HELPERS ---
+        function calculateGroupProgress(group) {
+            let total = 0, done = 0;
+            group.checklists.forEach(c => c.items.forEach(i => { total++; if(i.done) done++; }));
+            return total === 0 ? 0 : Math.round((done/total) * 100);
+        }
+        function checkIsCritical(itemId) { return state.some(u => u.groups.some(g => g.checklists.some(c => c.items.some(i => i.deps && i.deps.includes(itemId))))); }
+        function updateHighlights() {}
+
+        // --- TEAMS JOURNAL GENERATOR ---
+        function generateJournal(e) {
+            e.stopPropagation();
+            let htmlContent = `<div style="font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; color: #242424;">`;
+            htmlContent += `<p style="margin-bottom: 16px;"><strong>🗓 Status Update - ${new Date().toLocaleDateString('pt-BR')}</strong></p>`;
+
+            state.forEach(univ => {
+                let univHasItems = false;
+                let univHtml = ``;
+
+                univ.groups.forEach(group => {
+                    let groupHasItems = false;
+                    let groupHtml = `<p style="margin-top: 12px; margin-bottom: 4px;"><strong>${univ.title} | ${group.title}</strong></p><ul style="margin-top: 0; padding-left: 20px;">`;
+
+                    group.checklists.forEach(chk => {
+                        chk.items.forEach(item => {
+                            univHasItems = true; groupHasItems = true;
+                            
+                            let statusIcon = '🟡';
+                            let statusText = 'Em andamento';
+                            const isLate = item.date && new Date(item.date).setHours(23,59,59,999) < new Date().getTime();
+
+                            if (item.done) { statusIcon = '🟢'; statusText = 'Concluído'; } 
+                            else if (checkIsCritical(item.id) || isLate) { statusIcon = '🔴'; statusText = isLate ? 'Atrasado' : 'Bloqueio / Atenção'; }
+
+                            let assigneesArr = item.assignees || [];
+                            if(assigneesArr.length === 0 && item.assignee && item.assignee !== 'Não Atribuído') assigneesArr = [item.assignee];
+                            let assigneesText = assigneesArr.length > 0 ? ` [${assigneesArr.map(a => a.split(' ')[0]).join(', ')}]` : '';
+
+                            const currentStepName = !item.done && chk.currentStep < FLOWS[chk.envType].length ? ` (${FLOWS[chk.envType][chk.currentStep]})` : '';
+                            groupHtml += `<li style="margin-bottom: 4px;">${statusIcon} <strong>${item.title}</strong>${currentStepName}${assigneesText} - <em>${statusText}</em></li>`;
+                        });
+                    });
+                    groupHtml += `</ul>`;
+                    if (groupHasItems) univHtml += groupHtml;
+                });
+                
+                if (univHasItems) htmlContent += univHtml;
+            });
+
+            htmlContent += `</div>`;
+
+            document.getElementById('modal-title').innerText = "Jornal de Status (Teams)";
+            document.getElementById('modal-comments-area').style.display = 'none';
+            document.getElementById('modal-fields').innerHTML = `
+                <div style="padding: 20px; border: 1px solid #CCC; border-radius: 6px; background: #FFF; max-height: 400px; overflow-y: auto; cursor: text;" id="journal-content" contenteditable="true">
+                    ${htmlContent}
+                </div>
+                <p style="font-size: 0.8rem; color: #888; margin-top: 12px;">Dica: Clique dentro da caixa, aperte <strong>Ctrl+A</strong> e <strong>Ctrl+C</strong> para copiar formatado.</p>
+            `;
+            
+            document.getElementById('modal-cancel-btn').style.display = 'none';
+            const confirmBtn = document.getElementById('modal-confirm-btn');
+            confirmBtn.innerText = "Fechar";
+            confirmBtn.onclick = () => { closeModal(); };
+
+            document.getElementById('modal-box-inner').style.width = '600px';
+            document.getElementById('input-modal').style.display = 'flex';
+        }
+
+        // --- COMMENTS ENGINE ---
+        function openComments(itemId) {
+            let item;
+            state.forEach(u => u.groups.forEach(g => g.checklists.forEach(c => c.items.forEach(i => { if(i.id === itemId) item = i; }))));
+            if(!item.comments) item.comments = []; 
+            
+            document.getElementById('modal-title').innerText = "Update: " + item.title;
+            document.getElementById('modal-fields').innerHTML = `
+                <div class="input-group">
+                    <label>Novo Comentário</label>
+                    <input type="text" id="input-comment" placeholder="Digite o update..." autocomplete="off">
+                </div>
+            `;
+            
+            const commentsArea = document.getElementById('modal-comments-area');
+            commentsArea.style.display = 'block';
+            commentsArea.innerHTML = item.comments.map(c => `<div class="comment-entry"><span class="comment-date">${new Date(c.date).toLocaleString('pt-BR')}</span>${c.text}</div>`).join('') || '<p style="color:#AAA; font-size:0.85rem">Nenhum histórico registrado.</p>';
+
+            document.getElementById('modal-cancel-btn').style.display = 'block';
+            document.getElementById('modal-box-inner').style.width = '500px';
+            const confirmBtn = document.getElementById('modal-confirm-btn');
+            confirmBtn.innerText = "Confirmar";
+            
+            confirmBtn.onclick = () => {
+                const text = document.getElementById('input-comment').value;
+                if(text.trim()) { item.comments.push({ text: text, date: new Date().toISOString() }); save(); closeModal(); openComments(itemId); } 
+                else { closeModal(); }
+            };
+            
+            document.getElementById('input-modal').style.display = 'flex';
+            setTimeout(() => { document.getElementById('input-comment').focus(); }, 50);
+        }
+
+        // --- MODAL ENGINE (Forms CRUD) ---
+        let currentModalCallback = null;
+        function openModal(title, fields, callback) {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-comments-area').style.display = 'none';
+            document.getElementById('modal-box-inner').style.width = '500px';
+            document.getElementById('modal-cancel-btn').style.display = 'block';
+            
+            const fieldsContainer = document.getElementById('modal-fields');
+            fieldsContainer.innerHTML = '';
+            
+            fields.forEach(f => {
+                const group = document.createElement('div');
+                group.className = 'input-group';
+                let inputHtml = '';
+                
+                if(f.type === 'select') {
+                    const isSelected = (val) => val === f.value ? 'selected' : '';
+                    inputHtml = `<select id="input-${f.id}">${f.options.map(o => `<option value="${o}" ${isSelected(o)}>${o}</option>`).join('')}</select>`;
+                } else if(f.type === 'date') {
+                    inputHtml = `<input type="date" id="input-${f.id}" value="${f.value || ''}" ${f.required !== false ? 'required' : ''}>`;
+                } else if(f.type === 'autocomplete-tags') {
+                    inputHtml = `
+                        <div class="tags-input-wrapper" id="wrapper-${f.id}" onclick="document.getElementById('input-${f.id}').focus()">
+                            <input type="text" id="input-${f.id}" placeholder="Busque ou use ';' para múltiplos" autocomplete="off">
+                            <div id="autocomplete-list-${f.id}" class="autocomplete-items"></div>
+                        </div>
+                    `;
+                } else {
+                    inputHtml = `<input type="text" id="input-${f.id}" value="${f.value || ''}" placeholder="${f.label}" ${f.required !== false ? 'required' : ''}>`;
+                }
+                group.innerHTML = `<label>${f.label}</label>${inputHtml}`;
+                fieldsContainer.appendChild(group);
+            });
+
+            fields.forEach(f => {
+                if (f.type === 'autocomplete-tags') {
+                    const wrapper = document.getElementById(`wrapper-${f.id}`);
+                    const inputElem = document.getElementById(`input-${f.id}`);
+                    const listElem = document.getElementById(`autocomplete-list-${f.id}`);
+                    let selectedList = Array.isArray(f.value) ? [...f.value] : (f.value ? [f.value] : []);
+
+                    const renderChips = () => {
+                        wrapper.querySelectorAll('.tag-chip').forEach(el => el.remove());
+                        selectedList.forEach((person, idx) => {
+                            const chip = document.createElement('div');
+                            chip.className = 'tag-chip';
+                            chip.innerHTML = `👤 ${person.split(' ')[0]} <span class="tag-chip-remove" title="Remover">×</span>`;
+                            chip.querySelector('.tag-chip-remove').onclick = (e) => {
+                                e.stopPropagation(); selectedList.splice(idx, 1); renderChips();
+                            };
+                            wrapper.insertBefore(chip, inputElem);
+                        });
+                        inputElem.dataset.values = JSON.stringify(selectedList);
+                    };
+
+                    const renderList = () => {
+                        listElem.innerHTML = '';
+                        const val = inputElem.value.toLowerCase().trim();
+                        const filtered = f.options.filter(o => o.toLowerCase().includes(val) && !selectedList.includes(o));
+                        if(filtered.length === 0) { listElem.style.display = 'none'; return; }
+                        
+                        filtered.forEach(o => {
+                            const div = document.createElement('div');
+                            div.className = 'autocomplete-item'; div.innerHTML = o;
+                            div.onmousedown = (e) => { e.preventDefault(); selectedList.push(o); inputElem.value = ''; listElem.style.display = 'none'; renderChips(); };
+                            listElem.appendChild(div);
+                        });
+                        listElem.style.display = 'block';
+                    };
+
+                    inputElem.addEventListener('focus', renderList);
+                    inputElem.addEventListener('input', renderList);
+                    inputElem.addEventListener('blur', () => { setTimeout(() => listElem.style.display = 'none', 150); });
+                    inputElem.addEventListener('keydown', (e) => {
+                        if(e.key === ';' || e.key === 'Enter') {
+                            e.preventDefault();
+                            const val = inputElem.value.trim().replace(/;/g, '');
+                            const matchedOption = f.options.find(o => o.toLowerCase() === val.toLowerCase());
+                            const finalVal = matchedOption ? matchedOption : val;
+                            if(finalVal && !selectedList.includes(finalVal)) { selectedList.push(finalVal); inputElem.value = ''; listElem.style.display = 'none'; renderChips(); }
+                        } else if (e.key === 'Backspace' && inputElem.value === '') { selectedList.pop(); renderChips(); }
+                    });
+                    renderChips();
+                }
+            });
+
+            const confirmBtn = document.getElementById('modal-confirm-btn');
+            confirmBtn.innerText = "Confirmar";
+            currentModalCallback = () => {
+                const result = {};
+                for(let f of fields) {
+                    let val = f.type === 'autocomplete-tags' 
+                        ? (document.getElementById(`input-${f.id}`).dataset.values ? JSON.parse(document.getElementById(`input-${f.id}`).dataset.values) : [])
+                        : document.getElementById(`input-${f.id}`).value;
+                    
+                    if(f.required !== false && f.type !== 'autocomplete-tags' && (!val || !val.trim())) { alert(`Preencha: ${f.label}`); return; }
+                    result[f.id] = val;
+                }
+                callback(result);
+                closeModal();
+            };
+            confirmBtn.onclick = currentModalCallback;
+            document.getElementById('input-modal').style.display = 'flex';
+            setTimeout(() => { document.querySelector('.modal-box input').focus(); }, 50);
+        }
+
+        function closeModal() { document.getElementById('input-modal').style.display = 'none'; }
+
+        render();
+    </script>
+</body>
+</html>
