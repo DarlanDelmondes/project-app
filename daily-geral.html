@@ -147,6 +147,14 @@
         .comment-list { max-height: 250px; overflow-y: auto; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 20px; display: none; }
         .comment-entry { padding: 12px 0; border-bottom: 1px solid #F9F9F9; font-size: 0.95rem; }
         .comment-date { font-size: 0.7rem; color: #AAA; display: block; margin-bottom: 4px; }
+
+
+        /* Flow Stepper */
+        .flow-stepper { display: flex; gap: 12px; margin-bottom: 45px; align-items: center; flex-wrap: wrap; }
+        
+        .parallel-steps-wrapper { display: flex; flex-direction: column; gap: 8px; } /* ADICIONE ESTA LINHA */
+        
+        .flow-step { font-size: 0.8rem; text-transform: uppercase; padding: 12px 24px; border: 1px solid var(--flow-inactive); color: var(--text-muted); border-radius: 30px; cursor: pointer; transition: all 0.3s ease; background: var(--surface); position: relative; }
     </style>
 </head>
 <body>
@@ -200,7 +208,21 @@
     </div>
 
     <script>
-        const FLOWS = { DEV: ["Desenho", "Chassi", "Infra", "Deploy", "Unitária", "Geral"], CAT: ["Infra", "Deploy", "Unitária", "Geral"], PRD: ["Infra", "Deploy", "Unitária", "Geral"] };
+
+        const FLOWS = { 
+            DEV: [
+                "Desenho", 
+                ["Virtualização"], // Agora os 3 estão paralelos nesta fase
+                , ["Deploy","Regra de FW"],
+                ["Teste Unitário"], 
+                "Teste Integrado"
+            ], 
+            CAT: ["Infra", "Deploy", "Unitária", "Geral"], 
+            PRD: ["Infra", "Deploy", "Unitária", "Geral"] 
+        };
+
+        // ... código continua ...
+
         const generateId = () => 'id_' + Math.random().toString(36).substr(2, 9);
 
         // Data Models
@@ -268,12 +290,25 @@
                     group.checklists.forEach((chk, cIdx) => {
                         html += `<div class="checklist-container"><div class="checklist-header"><div style="display: flex; align-items: center;"><h3 class="checklist-title">${chk.title}</h3><span class="badge">${chk.envType}</span></div>
                             <div class="action-btns"><button class="btn-icon" onclick="editChecklist(${uIdx}, ${gIdx}, ${cIdx})">Editar</button><button class="btn-icon danger" onclick="deleteChecklist(${uIdx}, ${gIdx}, ${cIdx})">Excluir</button></div></div><div class="flow-stepper">`;
-                        
-                        FLOWS[chk.envType].forEach((step, sIdx) => {
-                            let sClass = sIdx < chk.currentStep ? 'completed' : (sIdx === chk.currentStep ? 'current' : '');
-                            html += `<div class="flow-step ${sClass}" onclick="event.stopPropagation(); setFlowStep(${uIdx}, ${gIdx}, ${cIdx}, ${sIdx})">${step}</div>`;
-                            if(sIdx < FLOWS[chk.envType].length - 1) html += `<div class="flow-connector"></div>`;
-                        });
+                                                    
+                            // SUBSTITUA ESTE BLOCO DENTRO DO renderList()
+                            FLOWS[chk.envType].forEach((stepItem, sIdx) => {
+                                let sClass = sIdx < chk.currentStep ? 'completed' : (sIdx === chk.currentStep ? 'current' : '');
+                                
+                                if (Array.isArray(stepItem)) {
+                                    // Se for paralelo, cria um empilhamento
+                                    html += `<div class="parallel-steps-wrapper">`;
+                                    stepItem.forEach(subItem => {
+                                        html += `<div class="flow-step ${sClass}" onclick="event.stopPropagation(); setFlowStep(${uIdx}, ${gIdx}, ${cIdx}, ${sIdx})">${subItem}</div>`;
+                                    });
+                                    html += `</div>`;
+                                } else {
+                                    // Se for um passo linear normal
+                                    html += `<div class="flow-step ${sClass}" onclick="event.stopPropagation(); setFlowStep(${uIdx}, ${gIdx}, ${cIdx}, ${sIdx})">${stepItem}</div>`;
+                                }
+
+                                if(sIdx < FLOWS[chk.envType].length - 1) html += `<div class="flow-connector"></div>`;
+                            });
                         
                         html += `</div><div class="items-list">`;
                         chk.items.forEach((item, iIdx) => {
@@ -520,6 +555,8 @@
         }
 
         // --- TEAMS JOURNAL ENGINE ---
+        // --- TEAMS JOURNAL ENGINE ---
+        // --- TEAMS JOURNAL ENGINE ---
         function generateJournal(e) {
             e.stopPropagation(); let htmlContent = `<div style="font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; color: #242424;"><p style="margin-bottom: 16px;"><strong>🗓 Status Update - ${new Date().toLocaleDateString('pt-BR')}</strong></p>`;
             state.forEach(univ => {
@@ -530,12 +567,37 @@
                         chk.items.forEach(item => {
                             univHasItems = true; groupHasItems = true;
                             let statusIcon = '🟡'; let statusText = 'Em andamento';
-                            const isLate = item.date && new Date(item.date).setHours(23,59,59,999) < new Date().getTime();
-                            if (item.done) { statusIcon = '🟢'; statusText = 'Concluído'; } else if (checkIsCritical(item.id) || isLate) { statusIcon = '🔴'; statusText = isLate ? 'Atrasado' : 'Bloqueio / Atenção'; }
+                            
+                            // Lógica de cálculo de data e atraso
+                            const dueDateMs = item.date ? new Date(item.date).setHours(23,59,59,999) : null;
+                            const todayMs = new Date().getTime();
+                            const isLate = dueDateMs && dueDateMs < todayMs;
+
+                            if (item.done) { 
+                                statusIcon = '🟢'; 
+                                statusText = 'Concluído'; 
+                            } else if (checkIsCritical(item.id) || isLate) { 
+                                statusIcon = '🔴'; 
+                                if (isLate) {
+                                    // Calcula a diferença em dias
+                                    const diffDays = Math.ceil((todayMs - dueDateMs) / (1000 * 60 * 60 * 24));
+                                    statusText = `Atrasado há ${diffDays} dia${diffDays > 1 ? 's' : ''}`;
+                                } else {
+                                    statusText = 'Bloqueio / Atenção';
+                                }
+                            }
+
                             let assigneesArr = item.assignees || []; if(assigneesArr.length === 0 && item.assignee && item.assignee !== 'Não Atribuído') assigneesArr = [item.assignee];
                             let assigneesText = assigneesArr.length > 0 ? ` [${assigneesArr.map(a => a.split(' ')[0]).join(', ')}]` : '';
-                            const currentStepName = !item.done && chk.currentStep < FLOWS[chk.envType].length ? ` (${FLOWS[chk.envType][chk.currentStep]})` : '';
-                            groupHtml += `<li style="margin-bottom: 4px;">${statusIcon} <strong>${item.title}</strong>${currentStepName}${assigneesText} - <em>${statusText}</em></li>`;
+
+                            // Procure pela linha antiga do currentStepName na função generateJournal e substitua por isto:
+                            let stepObj = chk.currentStep < FLOWS[chk.envType].length ? FLOWS[chk.envType][chk.currentStep] : '';
+                            let stepName = Array.isArray(stepObj) ? stepObj.join(' / ') : stepObj;
+                            const currentStepName = !item.done && stepName ? ` (${stepName})` : '';
+
+                            let dateText = item.date ? ` (📅 ${new Date(item.date).toLocaleDateString('pt-BR', {timeZone: 'UTC'})})` : '';
+
+                            groupHtml += `<li style="margin-bottom: 4px;">${statusIcon} <strong>${item.title}</strong>${currentStepName}${assigneesText}${dateText} - <em>${statusText}</em></li>`;
                         });
                     });
                     groupHtml += `</ul>`; if (groupHasItems) univHtml += groupHtml;
