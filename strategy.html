@@ -44,21 +44,67 @@
         /* Formulários e Botões */
         .form-group { display: flex; flex-direction: column; gap: 6px; }
         label { font-size: 0.85rem; color: var(--text-muted); }
-        input, select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-base); color: var(--text-main); font-size: 0.9rem; outline: none; }
+        input[type="text"], input[type="number"], select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-base); color: var(--text-main); font-size: 0.9rem; outline: none; }
         input:focus, select:focus { border-color: var(--accent); }
         
         .btn { padding: 10px 16px; border-radius: 6px; font-weight: 500; cursor: pointer; border: none; font-size: 0.9rem; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
         .btn-primary { background: var(--accent); color: white; width: 100%; }
         .btn-primary:hover { background: var(--accent-hover); }
+        .btn-secondary { background: var(--bg-elevated); color: var(--text-main); border: 1px solid var(--border-subtle); }
+        .btn-secondary:hover { background: var(--border-subtle); }
         .btn-success { background: rgba(34, 197, 94, 0.1); color: var(--success); border: 1px solid var(--success); }
         .btn-success:hover { background: var(--success); color: white; }
         .btn-icon { background: transparent; border: none; color: var(--text-muted); cursor: pointer; border-radius: 4px; padding: 4px; }
         .btn-icon:hover { color: var(--danger); background: rgba(239, 68, 68, 0.1); }
+        .btn-danger-outline { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
 
-        /* Matriz de Tempo */
-        .dashboard-header { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
-        .stat-pill { background: var(--bg-surface); border: 1px solid var(--border-subtle); padding: 10px 15px; border-radius: 8px; display: flex; align-items: center; gap: 10px; font-size: 0.85rem; }
+        .checkbox-group { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 5px; }
+        .checkbox-label { display: flex; align-items: center; gap: 5px; font-size: 0.85rem; cursor: pointer; color: var(--text-main); }
+        .checkbox-label input { cursor: pointer; accent-color: var(--accent); }
+
+        /* Matriz de Tempo & Semanas */
+        .week-controller { display: flex; justify-content: space-between; align-items: center; background: var(--bg-surface); padding: 10px 15px; border-radius: 8px; border: 1px solid var(--border-subtle); margin-bottom: 15px; }
+        .week-label { font-weight: 600; font-size: 1rem; color: var(--text-main); display: flex; flex-direction: column; align-items: center; }
+        
+        /* Dashboard Header & Pílulas de Filtro (Atualizado com Progresso) */
+        .dashboard-header { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; min-height: 42px; align-items: center;}
+        
+        .stat-pill { 
+            background: var(--bg-surface); 
+            border: 1px solid var(--border-subtle); 
+            border-radius: 8px; 
+            font-size: 0.85rem; 
+            cursor: pointer; 
+            transition: all 0.2s; 
+            user-select: none; 
+            position: relative; 
+            overflow: hidden; 
+            animation: fadeIn 0.3s ease; 
+        }
+        .stat-pill:hover { filter: brightness(1.2); }
+        .stat-pill.active-filter { border-color: var(--text-main); background: var(--bg-elevated); box-shadow: 0 0 0 1px var(--text-main); }
+        .stat-pill.dimmed { opacity: 0.4; filter: grayscale(100%); }
+        
+        .stat-pill-inner { 
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+            padding: 8px 15px; 
+            position: relative; 
+            z-index: 2; 
+        }
+        .pill-progress { 
+            position: absolute; 
+            left: 0; 
+            top: 0; 
+            bottom: 0; 
+            z-index: 1; 
+            transition: width 0.3s ease, background-color 0.3s ease; 
+        }
+
         .stat-color { width: 12px; height: 12px; border-radius: 50%; display: inline-block;}
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
         .calendar-container { flex: 1; overflow-y: auto; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 8px; position: relative; }
         .calendar-header { display: grid; grid-template-columns: 60px repeat(7, 1fr); background: var(--bg-elevated); border-bottom: 1px solid var(--border-subtle); position: sticky; top: 0; z-index: 10; }
         .day-header { padding: 12px 5px; text-align: center; font-weight: 500; font-size: 0.85rem; color: var(--text-muted); border-right: 1px solid var(--border-subtle); }
@@ -66,24 +112,31 @@
         .time-col { display: flex; flex-direction: column; border-right: 1px solid var(--border-subtle); }
         .time-label { height: 40px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: var(--text-muted); }
         .day-col { display: flex; flex-direction: column; border-right: 1px solid var(--border-subtle); }
-        .time-cell { height: 40px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: crosshair; }
+        
+        /* Células da Matriz */
+        .time-cell { height: 40px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: crosshair; position: relative; transition: opacity 0.2s, background-color 0.1s; }
         .time-cell:hover { background-color: rgba(255,255,255,0.03); }
         .time-cell.selecting { background-color: var(--selection-bg) !important; border: 1px dashed var(--selection-border) !important; z-index: 5; }
+        
+        .work-hour { background-color: rgba(255, 255, 255, 0.04); }
+        .work-hour::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background-color: rgba(255, 255, 255, 0.2); pointer-events: none; }
 
-        /* Componentes Específicos: Data Cards, Repetições e Trade-offs */
+        /* Filtragem Visual na Grade */
+        .calendar-body.filtering .time-cell { opacity: 0.1; }
+        .calendar-body.filtering .time-cell.highlight { opacity: 1; z-index: 2; box-shadow: 0 0 10px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); }
+
+        /* Componentes de Cards */
         .list-container { display: flex; flex-direction: column; gap: 15px; }
         .data-card { background: var(--bg-base); border: 1px solid var(--border-subtle); padding: 20px; border-radius: 8px; display: flex; flex-direction: column; gap: 12px; margin-bottom: 15px; }
         .rep-title { display: flex; justify-content: space-between; align-items: center; font-weight: 600; font-size: 1.05rem; color: var(--text-main); }
         .progress-bar { height: 8px; background: var(--bg-elevated); border-radius: 4px; overflow: hidden; width: 100%; }
         .progress-fill { height: 100%; background: var(--accent); transition: width 0.3s; }
         .rep-stats { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-muted); }
-        
         .sac-input-group { display: flex; gap: 10px; margin-bottom: 10px; }
-        .sac-input-group input { flex: 1; }
         .sacrifice-list { display: flex; flex-direction: column; gap: 8px; border-top: 1px dashed var(--border-subtle); padding-top: 15px; margin-top: 5px; }
         .sacrifice-item { display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; color: var(--warning); background: rgba(245, 158, 11, 0.05); padding: 10px 15px; border-radius: 6px; border-left: 2px solid var(--warning); }
 
-        /* Analytics Donut Chart */
+        /* Analytics */
         .analytics-container { display: flex; gap: 40px; align-items: flex-start; height: 100%; overflow-y: auto; }
         .chart-panel { flex: 1; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .donut-chart-wrapper { position: relative; width: 300px; height: 300px; }
@@ -91,7 +144,7 @@
         .donut-hole { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 220px; height: 220px; background: var(--bg-surface); border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; box-shadow: inset 0 4px 10px rgba(0,0,0,0.2); }
         .donut-hole-val { font-size: 2.5rem; font-weight: 700; color: var(--text-main); }
         .donut-hole-label { font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; }
-        .legend-panel { flex: 1; display: flex; flex-direction: column; gap: 15px; }
+        .legend-panel { flex: 1; display: flex; flex-direction: column; gap: 15px; width: 100%; }
         .legend-item { display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface); padding: 15px 20px; border-radius: 8px; border: 1px solid var(--border-subtle); }
 
         /* Modal */
@@ -99,8 +152,6 @@
         .modal-overlay.active { display: flex; }
         .modal-content { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; width: 400px; padding: 25px; }
         .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;}
-        .btn-secondary { background: var(--bg-elevated); color: var(--text-main); border: 1px solid var(--border-subtle); }
-        .btn-danger-outline { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
     </style>
 </head>
 <body>
@@ -112,7 +163,7 @@
         </div>
         <div class="nav-tabs">
             <div class="tab-btn active" onclick="switchTab('matriz')">1. Matriz de Tempo</div>
-            <div class="tab-btn" onclick="switchTab('cadastro')">2. Vetores</div>
+            <div class="tab-btn" onclick="switchTab('cadastro')">2. Vetores & Expediente</div>
             <div class="tab-btn" onclick="switchTab('maestria')">3. Forja de Maestria</div>
             <div class="tab-btn" onclick="switchTab('tradeoff')">4. Custo de Oportunidade</div>
             <div class="tab-btn" onclick="switchTab('analytics')">5. Analytics</div>
@@ -121,7 +172,19 @@
 
     <!-- ABA 1: Matriz de Tempo -->
     <main id="tab-matriz" class="tab-content active">
-        <div class="dashboard-header" id="dashboardStats"></div>
+        <div class="week-controller">
+            <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem;" onclick="changeWeek(-1)">❮ Semana Anterior</button>
+            <div class="week-label" id="weekDisplayLabel">
+                Semana de --/--/----
+                <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal; margin-top: 2px;">Clique em um vetor abaixo para isolar as horas alocadas.</span>
+            </div>
+            <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem;" onclick="changeWeek(1)">Próxima Semana ❯</button>
+        </div>
+
+        <div class="dashboard-header" id="dashboardStats">
+            <!-- Pílulas preenchidas cumulativamente via JS -->
+        </div>
+        
         <div class="calendar-container">
             <div class="calendar-header">
                 <div class="day-header">Hora</div>
@@ -132,18 +195,42 @@
         </div>
     </main>
 
-    <!-- ABA 2: Vetores -->
+    <!-- ABA 2: Vetores e Expediente -->
     <main id="tab-cadastro" class="tab-content">
         <div class="grid-2col">
-            <div class="panel">
-                <h2>Novo Vetor de Foco</h2>
-                <div class="form-group"><label>Nome do Vetor</label><input type="text" id="catName" placeholder="Ex: Arquitetura, Reuniões"></div>
-                <div class="form-group" style="display: flex; flex-direction: row; align-items: center; gap: 15px;">
-                    <label>Cor Identificadora</label><input type="color" id="catColor" value="#3b82f6" style="padding: 2px; height: 38px; flex: 1;">
+            <div style="display: flex; flex-direction: column; gap: 20px;">
+                <div class="panel">
+                    <h2>Horário de Expediente</h2>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: -5px; margin-bottom: 10px;">Demarque as horas vendidas ao corporativo para metrificar seu tempo livre.</p>
+                    <div class="form-group">
+                        <label>Dias de Trabalho</label>
+                        <div class="checkbox-group">
+                            <label class="checkbox-label"><input type="checkbox" value="0" class="work-cb"> Seg</label>
+                            <label class="checkbox-label"><input type="checkbox" value="1" class="work-cb"> Ter</label>
+                            <label class="checkbox-label"><input type="checkbox" value="2" class="work-cb"> Qua</label>
+                            <label class="checkbox-label"><input type="checkbox" value="3" class="work-cb"> Qui</label>
+                            <label class="checkbox-label"><input type="checkbox" value="4" class="work-cb"> Sex</label>
+                            <label class="checkbox-label"><input type="checkbox" value="5" class="work-cb"> Sáb</label>
+                            <label class="checkbox-label"><input type="checkbox" value="6" class="work-cb"> Dom</label>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 15px;">
+                        <div class="form-group" style="flex: 1;"><label>Início (h)</label><input type="number" id="wStart" min="0" max="23" placeholder="Ex: 9"></div>
+                        <div class="form-group" style="flex: 1;"><label>Fim (h)</label><input type="number" id="wEnd" min="0" max="24" placeholder="Ex: 18"></div>
+                    </div>
+                    <button class="btn btn-secondary" onclick="saveWorkHours()">Aplicar Expediente</button>
                 </div>
-                <div class="form-group"><label>Regra do Sistema</label><select id="catLimitType"><option value="min">MÍNIMO exigido (Evolução)</option><option value="max">Teto MÁXIMO (Operacional)</option></select></div>
-                <div class="form-group"><label>Meta (% da Semana)</label><input type="number" id="catLimitValue" placeholder="Ex: 20"></div>
-                <button class="btn btn-primary" onclick="addCategory()">Cadastrar Vetor</button>
+
+                <div class="panel">
+                    <h2>Novo Vetor de Foco</h2>
+                    <div class="form-group"><label>Nome do Vetor</label><input type="text" id="catName" placeholder="Ex: Arquitetura, Reuniões"></div>
+                    <div class="form-group" style="display: flex; flex-direction: row; align-items: center; gap: 15px;">
+                        <label>Cor Identificadora</label><input type="color" id="catColor" value="#3b82f6" style="padding: 2px; height: 38px; flex: 1;">
+                    </div>
+                    <div class="form-group"><label>Regra do Sistema</label><select id="catLimitType"><option value="min">MÍNIMO exigido (Evolução)</option><option value="max">Teto MÁXIMO (Operacional)</option></select></div>
+                    <div class="form-group"><label>Meta (% da Semana)</label><input type="number" id="catLimitValue" placeholder="Ex: 20"></div>
+                    <button class="btn btn-primary" onclick="addCategory()">Cadastrar Vetor</button>
+                </div>
             </div>
             <div class="panel"><h2>Vetores Ativos</h2><div class="list-container" id="categoryList"></div></div>
         </div>
@@ -163,7 +250,7 @@
         </div>
     </main>
 
-    <!-- ABA 4: Custo de Oportunidade (Trade-offs) -->
+    <!-- ABA 4: Custo de Oportunidade -->
     <main id="tab-tradeoff" class="tab-content">
         <div class="grid-2col">
             <div class="panel">
@@ -179,20 +266,29 @@
     <!-- ABA 5: Analytics -->
     <main id="tab-analytics" class="tab-content">
         <div class="analytics-container">
-            <div class="chart-panel">
+            <div class="chart-panel" style="flex: 1.2;">
+                <div class="form-group" style="width: 100%; margin-bottom: 30px; text-align: left;">
+                    <label style="font-weight: bold; color: var(--text-main);">Profundidade Analítica (Filtro Global)</label>
+                    <select id="analyticsPeriod" onchange="updateAllUIs()" style="margin-top: 5px;">
+                        <option value="1">Base: 1 Semana (168h)</option>
+                        <option value="2">Base: Última Quinzena (336h)</option>
+                        <option value="4">Base: Último Mês (672h)</option>
+                    </select>
+                </div>
                 <div class="donut-chart-wrapper">
                     <div class="donut-chart" id="mainDonutChart"></div>
                     <div class="donut-hole">
                         <div class="donut-hole-val" id="totalAllocatedText">0h</div>
-                        <div class="donut-hole-label">Tempo Planificado<br><span style="font-size:0.7rem; opacity:0.6;">de 168h</span></div>
+                        <div class="donut-hole-label">Tempo Planificado<br><span style="font-size:0.7rem; opacity:0.6;" id="totalMaxHoursLabel">de 168h</span></div>
                     </div>
                 </div>
+                <div style="width: 100%; margin-top: 40px; border-top: 1px solid var(--border-subtle); padding-top: 20px;" id="workMetricsContainer"></div>
             </div>
-            <div class="legend-panel" id="chartLegend"></div>
+            <div class="legend-panel" style="padding-top: 20px;" id="chartLegend"></div>
         </div>
     </main>
 
-    <!-- Modal de Alocação (Matriz) -->
+    <!-- Modal de Alocação -->
     <div class="modal-overlay" id="allocationModal">
         <div class="modal-content">
             <h2 style="border: none; padding: 0; margin-bottom: 15px;">Alocar Tempo</h2>
@@ -207,21 +303,30 @@
     </div>
 
     <script>
-        const TOTAL_HOURS = 168;
-        let data = { categories: [], blocks: {}, repetitions: [], tradeoffs: [] };
+        const HOURS_PER_WEEK = 168;
+        let data = { categories: [], weeklyBlocks: {}, repetitions: [], tradeoffs: [], workHours: null };
         let isDragging = false, startCell = null, selectedCells = [];
+        let currentDisplayDate = new Date();
+        let activeFilterId = null; 
+
+        function getMonday(d) { const date = new Date(d); const day = date.getDay(); const diff = date.getDate() - day + (day === 0 ? -6 : 1); return new Date(date.setDate(diff)); }
+        function getWeekKey(d) { const m = getMonday(d); return `${m.getFullYear()}-${(m.getMonth()+1).toString().padStart(2,'0')}-${m.getDate().toString().padStart(2,'0')}`; }
+        function formatDateBR(d) { const m = getMonday(d); return `${m.getDate().toString().padStart(2,'0')}/${(m.getMonth()+1).toString().padStart(2,'0')}/${m.getFullYear()}`; }
+        function addWeeks(d, offset) { let res = new Date(d); res.setDate(res.getDate() + (offset * 7)); return res; }
+        
+        window.changeWeek = function(offset) { activeFilterId = null; currentDisplayDate = addWeeks(currentDisplayDate, offset); buildGrid(); updateAllUIs(); }
 
         function init() {
             const saved = localStorage.getItem('imersaoExecutivaData');
             if (saved) {
                 const parsed = JSON.parse(saved);
-                data.categories = parsed.categories || [];
-                data.blocks = parsed.blocks || {};
-                data.repetitions = parsed.repetitions || [];
-                data.tradeoffs = parsed.tradeoffs || [];
+                data.categories = parsed.categories || []; data.repetitions = parsed.repetitions || []; data.tradeoffs = parsed.tradeoffs || []; data.workHours = parsed.workHours;
+                if (parsed.blocks && !parsed.weeklyBlocks) { data.weeklyBlocks = {}; data.weeklyBlocks[getWeekKey(new Date())] = parsed.blocks; } 
+                else { data.weeklyBlocks = parsed.weeklyBlocks || {}; }
             }
-            buildGrid();
-            updateAllUIs();
+            if(!data.workHours) data.workHours = { start: 9, end: 18, days: [0,1,2,3,4] };
+            
+            populateWorkHoursForm(); buildGrid(); updateAllUIs();
         }
 
         function saveData() { localStorage.setItem('imersaoExecutivaData', JSON.stringify(data)); updateAllUIs(); }
@@ -232,10 +337,21 @@
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             event.target.classList.add('active');
             document.getElementById('tab-' + tabId).classList.add('active');
+            if(tabId === 'analytics' || tabId === 'matriz') { activeFilterId = null; updateAllUIs(); applyGridFilter(); }
         }
 
-        /* --- MATRIZ DE TEMPO --- */
+        function populateWorkHoursForm() { document.querySelectorAll('.work-cb').forEach(cb => cb.checked = data.workHours.days.includes(parseInt(cb.value))); document.getElementById('wStart').value = data.workHours.start; document.getElementById('wEnd').value = data.workHours.end; }
+        window.saveWorkHours = function() {
+            let days = []; document.querySelectorAll('.work-cb:checked').forEach(cb => days.push(parseInt(cb.value)));
+            let start = parseInt(document.getElementById('wStart').value), end = parseInt(document.getElementById('wEnd').value);
+            if(isNaN(start) || isNaN(end) || start >= end) { alert("Horários inválidos."); return; }
+            data.workHours = { days, start, end }; saveData(); buildGrid(); alert("Expediente Atualizado.");
+        }
+
         function buildGrid() {
+            document.getElementById('weekDisplayLabel').innerHTML = `Semana de ${formatDateBR(currentDisplayDate)} <br><span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal; margin-top: 4px;">As marcações com borda lateral clara representam seu Expediente.</span>`;
+            const weekBlocks = data.weeklyBlocks[getWeekKey(currentDisplayDate)] || {};
+
             const body = document.getElementById('calendarBody'); body.innerHTML = '';
             const timeCol = document.createElement('div'); timeCol.className = 'time-col';
             for (let h = 0; h < 24; h++) { const lbl = document.createElement('div'); lbl.className = 'time-label'; lbl.innerText = `${h.toString().padStart(2, '0')}:00`; timeCol.appendChild(lbl); }
@@ -244,146 +360,161 @@
             for (let d = 0; d < 7; d++) {
                 const dayCol = document.createElement('div'); dayCol.className = 'day-col';
                 for (let h = 0; h < 24; h++) {
-                    const cell = document.createElement('div'); cell.className = 'time-cell'; const key = `${d}-${h}`; cell.dataset.key = key; cell.dataset.day = d; cell.dataset.hour = h;
-                    if (data.blocks[key]) { const cat = data.categories.find(c => c.id === data.blocks[key]); if (cat) cell.style.backgroundColor = cat.color; }
+                    const cell = document.createElement('div'); cell.className = 'time-cell'; 
+                    const key = `${d}-${h}`; cell.dataset.key = key; cell.dataset.day = d; cell.dataset.hour = h;
+                    
+                    if (data.workHours.days.includes(d) && h >= data.workHours.start && h < data.workHours.end) cell.classList.add('work-hour');
+
+                    if (weekBlocks[key]) {
+                        const catId = weekBlocks[key];
+                        cell.dataset.catId = catId; 
+                        const cat = data.categories.find(c => c.id === catId); 
+                        if (cat) cell.style.backgroundColor = cat.color; 
+                    }
+                    
                     cell.addEventListener('mousedown', (e) => { if(e.button===0){ isDragging=true; startCell={day:d, hour:h}; selectedCells=[]; clearVisualSelection(); updateSelection(d, h); }});
                     cell.addEventListener('mouseenter', () => { if(isDragging) updateSelection(d, h); });
                     dayCol.appendChild(cell);
                 }
                 body.appendChild(dayCol);
             }
-            document.addEventListener('mouseup', () => { if(isDragging){ isDragging=false; if(selectedCells.length>0) openModal(); } });
+            document.addEventListener('mouseup', handleMouseUp);
+            applyGridFilter(); 
         }
 
-        function updateSelection(cDay, cHour) {
-            clearVisualSelection(); selectedCells = [];
-            const minDay = Math.min(startCell.day, cDay), maxDay = Math.max(startCell.day, cDay);
-            const minHour = Math.min(startCell.hour, cHour), maxHour = Math.max(startCell.hour, cHour);
-            for (let d = minDay; d <= maxDay; d++) { for (let h = minHour; h <= maxHour; h++) { const key = `${d}-${h}`; selectedCells.push(key); const el = document.querySelector(`.time-cell[data-key="${key}"]`); if(el) el.classList.add('selecting'); } }
-        }
-        function clearVisualSelection() { document.querySelectorAll('.time-cell.selecting').forEach(el => el.classList.remove('selecting')); }
-        function openModal() {
-            if(data.categories.length === 0) { alert("Cadastre um Vetor primeiro."); clearVisualSelection(); return; }
-            const select = document.getElementById('modalCategorySelect'); select.innerHTML = '';
-            data.categories.forEach(cat => { const opt = document.createElement('option'); opt.value = cat.id; opt.innerText = cat.name; select.appendChild(opt); });
-            document.getElementById('selectionInfo').innerText = `${selectedCells.length} blocos de 1h selecionados.`;
-            document.getElementById('allocationModal').classList.add('active');
-        }
-        window.closeModal = function() { document.getElementById('allocationModal').classList.remove('active'); clearVisualSelection(); selectedCells = []; }
-        window.saveAllocation = function() { const catId = document.getElementById('modalCategorySelect').value; selectedCells.forEach(key => data.blocks[key] = catId); saveData(); closeModal(); buildGrid(); }
-        window.clearSelection = function() { selectedCells.forEach(key => delete data.blocks[key]); saveData(); closeModal(); buildGrid(); }
-
-        /* --- CATEGORIAS --- */
-        window.addCategory = function() {
-            const name = document.getElementById('catName').value.trim(), color = document.getElementById('catColor').value;
-            const limitType = document.getElementById('catLimitType').value, limitValue = parseInt(document.getElementById('catLimitValue').value);
-            if (!name || isNaN(limitValue)) return;
-            data.categories.push({ id: generateId(), name, color, limitType, limitValue });
-            document.getElementById('catName').value = ''; document.getElementById('catLimitValue').value = ''; saveData();
-        }
-        window.deleteCategory = function(id) {
-            if(confirm("Remover Vetor e limpar a matriz?")) { data.categories = data.categories.filter(c => c.id !== id); for (let key in data.blocks) if (data.blocks[key] === id) delete data.blocks[key]; saveData(); buildGrid(); }
+        window.toggleMatrixFilter = function(catId) {
+            if (activeFilterId === catId) activeFilterId = null;
+            else activeFilterId = catId; 
+            updatePillsState(); applyGridFilter();
         }
 
-        /* --- FORJA DE MAESTRIA (Aba 3) --- */
-        window.addRepetition = function() {
-            const name = document.getElementById('repName').value.trim();
-            const target = parseInt(document.getElementById('repTarget').value);
-            if(!name || isNaN(target) || target <= 0) return;
-            data.repetitions.push({ id: generateId(), name, target, current: 0 });
-            document.getElementById('repName').value = ''; document.getElementById('repTarget').value = '';
-            saveData();
-        }
-        window.incrementRepetition = function(id) { const rep = data.repetitions.find(r => r.id === id); if(rep && rep.current < rep.target) { rep.current++; saveData(); } }
-        window.deleteRepetition = function(id) { if(confirm("Excluir esta trilha?")) { data.repetitions = data.repetitions.filter(r => r.id !== id); saveData(); } }
-        
-        function updateRepetitionsUI() {
-            const list = document.getElementById('repetitionList');
-            list.innerHTML = '';
-            if(data.repetitions.length === 0) { list.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem;">Nenhum sistema de repetição cadastrado.</p>'; return; }
-            data.repetitions.forEach(rep => {
-                const perc = Math.min((rep.current / rep.target) * 100, 100);
-                list.innerHTML += `
-                    <div class="data-card">
-                        <div class="rep-title">${rep.name} <button class="btn-icon" onclick="deleteRepetition('${rep.id}')">✕</button></div>
-                        <div class="progress-bar"><div class="progress-fill" style="width: ${perc}%;"></div></div>
-                        <div class="rep-stats"><span><strong>${rep.current}</strong> / ${rep.target} execuções</span><span>${perc.toFixed(2)}% concluído</span></div>
-                        <button class="btn btn-success" style="width: 100%; padding: 12px; font-weight: 600; font-size: 1rem;" onclick="incrementRepetition('${rep.id}')">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 5px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                            Registrar +1 Execução
-                        </button>
-                    </div>`;
-            });
-        }
-
-        /* --- TRADE-OFFS (Aba 4) --- */
-        window.addTradeoff = function() {
-            const goal = document.getElementById('tradeoffName').value.trim();
-            if(!goal) return;
-            data.tradeoffs.push({ id: generateId(), goal, sacrifices: [] });
-            document.getElementById('tradeoffName').value = '';
-            saveData();
-        }
-        window.deleteTradeoff = function(id) { if(confirm("Remover este foco e seus sacrifícios?")) { data.tradeoffs = data.tradeoffs.filter(t => t.id !== id); saveData(); } }
-        window.addSacrifice = function(tradeoffId) {
-            const input = document.getElementById(`sacInput_${tradeoffId}`); const text = input.value.trim();
-            if(!text) return;
-            const t = data.tradeoffs.find(x => x.id === tradeoffId);
-            if(t) { t.sacrifices.push(text); saveData(); }
-        }
-        window.deleteSacrifice = function(tradeoffId, sacIndex) { const t = data.tradeoffs.find(x => x.id === tradeoffId); if(t) { t.sacrifices.splice(sacIndex, 1); saveData(); } }
-
-        function updateTradeoffsUI() {
-            const list = document.getElementById('tradeoffList');
-            list.innerHTML = '';
-            if(data.tradeoffs.length === 0) { list.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem;">Nenhum foco estabelecido.</p>'; return; }
-            data.tradeoffs.forEach(trade => {
-                let sacHtml = '';
-                trade.sacrifices.forEach((sac, index) => {
-                    sacHtml += `<div class="sacrifice-item"><span>🚫 ${sac}</span><button class="btn-icon" style="padding: 2px;" onclick="deleteSacrifice('${trade.id}', ${index})">✕</button></div>`;
+        function applyGridFilter() {
+            const body = document.getElementById('calendarBody');
+            if (!activeFilterId) {
+                body.classList.remove('filtering');
+                document.querySelectorAll('.time-cell').forEach(c => c.classList.remove('highlight'));
+            } else {
+                body.classList.add('filtering');
+                document.querySelectorAll('.time-cell').forEach(c => {
+                    if (c.dataset.catId === activeFilterId) c.classList.add('highlight');
+                    else c.classList.remove('highlight');
                 });
-                list.innerHTML += `
-                    <div class="data-card">
-                        <div class="rep-title" style="margin-bottom: 5px;">🎯 Foco: ${trade.goal} <button class="btn-icon" onclick="deleteTradeoff('${trade.id}')">✕</button></div>
-                        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">Para garantir este alvo, eu ativamente elimino:</div>
-                        <div class="sac-input-group">
-                            <input type="text" id="sacInput_${trade.id}" placeholder="O que eu digo NÃO para focar nisso..." style="padding: 8px;">
-                            <button class="btn btn-primary" style="width: auto; padding: 8px 12px;" onclick="addSacrifice('${trade.id}')">Adicionar</button>
-                        </div>
-                        ${trade.sacrifices.length > 0 ? `<div class="sacrifice-list">${sacHtml}</div>` : ''}
-                    </div>`;
+            }
+        }
+
+        function updatePillsState() {
+            document.querySelectorAll('.stat-pill').forEach(pill => {
+                if (!activeFilterId) {
+                    pill.classList.remove('dimmed', 'active-filter');
+                } else {
+                    if (pill.dataset.id === activeFilterId) {
+                        pill.classList.add('active-filter'); pill.classList.remove('dimmed');
+                    } else {
+                        pill.classList.add('dimmed'); pill.classList.remove('active-filter');
+                    }
+                }
             });
         }
 
-        /* --- UI GLOBAL UPDATE --- */
+        function handleMouseUp() { if(isDragging){ isDragging=false; if(selectedCells.length>0) openModal(); } }
+        function updateSelection(cDay, cHour) { clearVisualSelection(); selectedCells = []; const minDay = Math.min(startCell.day, cDay), maxDay = Math.max(startCell.day, cDay); const minHour = Math.min(startCell.hour, cHour), maxHour = Math.max(startCell.hour, cHour); for (let d = minDay; d <= maxDay; d++) { for (let h = minHour; h <= maxHour; h++) { const key = `${d}-${h}`; selectedCells.push(key); const el = document.querySelector(`.time-cell[data-key="${key}"]`); if(el) el.classList.add('selecting'); } } }
+        function clearVisualSelection() { document.querySelectorAll('.time-cell.selecting').forEach(el => el.classList.remove('selecting')); }
+        function openModal() { if(data.categories.length === 0) { alert("Cadastre um Vetor primeiro."); clearVisualSelection(); return; } const select = document.getElementById('modalCategorySelect'); select.innerHTML = ''; data.categories.forEach(cat => { const opt = document.createElement('option'); opt.value = cat.id; opt.innerText = cat.name; select.appendChild(opt); }); document.getElementById('selectionInfo').innerText = `${selectedCells.length} blocos de 1h selecionados.`; document.getElementById('allocationModal').classList.add('active'); }
+        window.closeModal = function() { document.getElementById('allocationModal').classList.remove('active'); clearVisualSelection(); selectedCells = []; }
+        window.saveAllocation = function() { const catId = document.getElementById('modalCategorySelect').value; const wk = getWeekKey(currentDisplayDate); if(!data.weeklyBlocks[wk]) data.weeklyBlocks[wk]={}; selectedCells.forEach(key => data.weeklyBlocks[wk][key] = catId); saveData(); closeModal(); buildGrid(); }
+        window.clearSelection = function() { const wk = getWeekKey(currentDisplayDate); if(data.weeklyBlocks[wk]) selectedCells.forEach(key => delete data.weeklyBlocks[wk][key]); saveData(); closeModal(); buildGrid(); }
+
+        window.addCategory = function() { const name = document.getElementById('catName').value.trim(), color = document.getElementById('catColor').value; const limitType = document.getElementById('catLimitType').value, limitValue = parseInt(document.getElementById('catLimitValue').value); if (!name || isNaN(limitValue)) return; data.categories.push({ id: generateId(), name, color, limitType, limitValue }); document.getElementById('catName').value = ''; document.getElementById('catLimitValue').value = ''; saveData(); }
+        window.deleteCategory = function(id) { if(confirm("Remover Vetor e limpar os blocos em TODAS as semanas?")) { data.categories = data.categories.filter(c => c.id !== id); for (let w in data.weeklyBlocks) { for (let b in data.weeklyBlocks[w]) { if (data.weeklyBlocks[w][b] === id) delete data.weeklyBlocks[w][b]; } } if(activeFilterId === id) activeFilterId = null; saveData(); buildGrid(); } }
+
+        window.addRepetition = function() { const n = document.getElementById('repName').value.trim(), t = parseInt(document.getElementById('repTarget').value); if(!n || isNaN(t) || t<=0) return; data.repetitions.push({ id: generateId(), name: n, target: t, current: 0 }); document.getElementById('repName').value=''; document.getElementById('repTarget').value=''; saveData(); }
+        window.incrementRepetition = function(id) { const rep = data.repetitions.find(r => r.id === id); if(rep && rep.current < rep.target) { rep.current++; saveData(); } }
+        window.deleteRepetition = function(id) { if(confirm("Excluir trilha?")) { data.repetitions = data.repetitions.filter(r => r.id !== id); saveData(); } }
+        window.addTradeoff = function() { const g = document.getElementById('tradeoffName').value.trim(); if(!g) return; data.tradeoffs.push({ id: generateId(), goal: g, sacrifices: [] }); document.getElementById('tradeoffName').value=''; saveData(); }
+        window.deleteTradeoff = function(id) { if(confirm("Remover foco?")) { data.tradeoffs = data.tradeoffs.filter(t => t.id !== id); saveData(); } }
+        window.addSacrifice = function(tid) { const inp = document.getElementById(`sacInput_${tid}`), txt = inp.value.trim(); if(!txt) return; const t = data.tradeoffs.find(x => x.id === tid); if(t) { t.sacrifices.push(txt); saveData(); } }
+        window.deleteSacrifice = function(tid, idx) { const t = data.tradeoffs.find(x => x.id === tid); if(t) { t.sacrifices.splice(idx, 1); saveData(); } }
+
         function updateAllUIs() {
-            updateRepetitionsUI();
-            updateTradeoffsUI();
+            const rList = document.getElementById('repetitionList'); rList.innerHTML = '';
+            data.repetitions.forEach(rep => { const perc = Math.min((rep.current / rep.target) * 100, 100); rList.innerHTML += `<div class="data-card"><div class="rep-title">${rep.name} <button class="btn-icon" onclick="deleteRepetition('${rep.id}')">✕</button></div><div class="progress-bar"><div class="progress-fill" style="width: ${perc}%;"></div></div><div class="rep-stats"><span><strong>${rep.current}</strong> / ${rep.target} execuções</span><span>${perc.toFixed(2)}% concluído</span></div><button class="btn btn-success" style="width: 100%; padding: 12px; font-weight: 600; font-size: 1rem;" onclick="incrementRepetition('${rep.id}')">Registrar +1 Execução</button></div>`; });
+            const tList = document.getElementById('tradeoffList'); tList.innerHTML = '';
+            data.tradeoffs.forEach(trade => { let sacHtml = ''; trade.sacrifices.forEach((sac, i) => { sacHtml += `<div class="sacrifice-item"><span>🚫 ${sac}</span><button class="btn-icon" style="padding: 2px;" onclick="deleteSacrifice('${trade.id}', ${i})">✕</button></div>`; }); tList.innerHTML += `<div class="data-card"><div class="rep-title" style="margin-bottom: 5px;">🎯 Foco: ${trade.goal} <button class="btn-icon" onclick="deleteTradeoff('${trade.id}')">✕</button></div><div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">Para garantir este alvo, elimino ativamente:</div><div class="sac-input-group"><input type="text" id="sacInput_${trade.id}" placeholder="O que eu digo NÃO..."><button class="btn btn-primary" style="width: auto; padding: 8px 12px;" onclick="addSacrifice('${trade.id}')">Adicionar</button></div>${trade.sacrifices.length > 0 ? `<div class="sacrifice-list">${sacHtml}</div>` : ''}</div>`; });
 
             const catList = document.getElementById('categoryList'), dash = document.getElementById('dashboardStats'), leg = document.getElementById('chartLegend');
             catList.innerHTML = ''; dash.innerHTML = ''; leg.innerHTML = '';
             
+            const periodMultiplier = parseInt(document.getElementById('analyticsPeriod').value || '1');
+            const totalMaxHours = periodMultiplier * HOURS_PER_WEEK;
+            document.getElementById('totalMaxHoursLabel').innerText = `de ${totalMaxHours}h`;
+
+            let targetKeys = []; for(let i = 0; i < periodMultiplier; i++) targetKeys.push(getWeekKey(addWeeks(currentDisplayDate, -i)));
             const counts = {}; data.categories.forEach(c => counts[c.id] = 0);
-            Object.values(data.blocks).forEach(id => { if (counts[id] !== undefined) counts[id]++; });
+            let workCapacity = periodMultiplier * (data.workHours.days.length * (data.workHours.end - data.workHours.start));
+            let workAllocated = 0, freeAllocated = 0;
+
+            targetKeys.forEach(wk => {
+                const wData = data.weeklyBlocks[wk] || {};
+                for(let key in wData) {
+                    let catId = wData[key]; if (counts[catId] !== undefined) counts[catId]++;
+                    let [d, h] = key.split('-').map(Number);
+                    if (data.workHours.days.includes(d) && h >= data.workHours.start && h < data.workHours.end) workAllocated++; else freeAllocated++;
+                }
+            });
+
+            const cwData = data.weeklyBlocks[getWeekKey(currentDisplayDate)] || {};
+            const cwCounts = {}; data.categories.forEach(c => cwCounts[c.id] = 0);
+            Object.values(cwData).forEach(id => { if (cwCounts[id] !== undefined) cwCounts[id]++; });
 
             let totalH = 0, conicParts = [], currentAng = 0;
             const sortedCat = [...data.categories].sort((a, b) => counts[b.id] - counts[a.id]);
 
+            if (Object.keys(cwData).length === 0) {
+                dash.innerHTML = `<span style="color: var(--text-muted); font-size: 0.85rem; font-style: italic;">Nenhuma hora alocada nesta semana ainda. Selecione na grade.</span>`;
+            }
+
             sortedCat.forEach(cat => {
-                const h = counts[cat.id], perc = (h / TOTAL_HOURS) * 100; totalH += h;
+                const h = counts[cat.id]; const perc = (h / totalMaxHours) * 100; totalH += h;
                 if (h > 0) { conicParts.push(`${cat.color} ${currentAng}% ${currentAng + perc}%`); currentAng += perc; }
                 let isAlert = ((cat.limitType === 'min' && perc < cat.limitValue) || (cat.limitType === 'max' && perc > cat.limitValue));
                 catList.innerHTML += `<div class="data-card" style="padding: 15px;"><div class="rep-title"><div style="display:flex;align-items:center;gap:8px;"><span class="stat-color" style="background:${cat.color}"></span>${cat.name}</div><button class="btn-icon" onclick="deleteCategory('${cat.id}')">✕</button></div><div class="progress-bar"><div class="progress-fill" style="width:${Math.min(perc,100)}%;background:${isAlert && cat.limitType==='max'?'var(--danger)':cat.color}"></div></div><div class="rep-stats"><span>${h}h (${perc.toFixed(1)}%)</span><span>${cat.limitType==='min'?'Mín':'Máx'} ${cat.limitValue}%</span></div></div>`;
-                dash.innerHTML += `<div class="stat-pill" style="border-color:${isAlert&&h>0?'var(--danger)':'var(--border-subtle)'}"><span class="stat-color" style="background:${cat.color}"></span><strong>${cat.name}:</strong> ${h}h</div>`;
                 leg.innerHTML += `<div class="legend-item"><div style="display:flex;align-items:center;gap:10px;"><span class="stat-color" style="background:${cat.color}"></span>${cat.name}</div><div style="text-align:right;font-weight:600;">${h}h<br><span style="font-size:0.8rem;color:var(--text-muted);font-weight:400">${perc.toFixed(1)}%</span></div></div>`;
+
+                const cwH = cwCounts[cat.id];
+                if(cwH > 0) {
+                    let isAlertCW = ((cat.limitType === 'min' && (cwH/HOURS_PER_WEEK)*100 < cat.limitValue) || (cat.limitType === 'max' && (cwH/HOURS_PER_WEEK)*100 > cat.limitValue));
+                    
+                    let targetHours = (cat.limitValue / 100) * HOURS_PER_WEEK;
+                    let fillPerc = Math.min((cwH / targetHours) * 100, 100);
+                    let barColor = cat.color;
+                    let opacity = 0.25;
+
+                    // Vermelho se estourar limite MÁXIMO
+                    if (cat.limitType === 'max' && cwH > targetHours) {
+                        barColor = 'var(--danger)';
+                        opacity = 0.5;
+                    }
+
+                    dash.innerHTML += `
+                        <div class="stat-pill" data-id="${cat.id}" onclick="toggleMatrixFilter('${cat.id}')" style="border-color:${isAlertCW?'var(--danger)':'var(--border-subtle)'}">
+                            <div class="pill-progress" style="width: ${fillPerc}%; background-color: ${barColor}; opacity: ${opacity};"></div>
+                            <div class="stat-pill-inner">
+                                <span class="stat-color" style="background:${cat.color}"></span>
+                                <strong>${cat.name}:</strong> ${cwH}h
+                            </div>
+                        </div>`;
+                }
             });
 
-            if(totalH < TOTAL_HOURS) {
-                conicParts.push(`var(--bg-elevated) ${currentAng}% 100%`);
-                leg.innerHTML += `<div class="legend-item" style="opacity:0.6"><div style="display:flex;align-items:center;gap:10px;"><span class="stat-color" style="background:var(--bg-elevated)"></span>Não Alocado</div><div style="text-align:right;font-weight:600;">${TOTAL_HOURS - totalH}h</div></div>`;
-            }
+            if(totalH < totalMaxHours) { conicParts.push(`var(--bg-elevated) ${currentAng}% 100%`); leg.innerHTML += `<div class="legend-item" style="opacity:0.6"><div style="display:flex;align-items:center;gap:10px;"><span class="stat-color" style="background:var(--bg-elevated)"></span>Não Alocado</div><div style="text-align:right;font-weight:600;">${totalMaxHours - totalH}h</div></div>`; }
             document.getElementById('mainDonutChart').style.background = totalH === 0 ? 'var(--bg-elevated)' : `conic-gradient(${conicParts.join(',')})`;
             document.getElementById('totalAllocatedText').innerText = `${totalH}h`;
+
+            const wMetrics = document.getElementById('workMetricsContainer');
+            let workPerc = workCapacity > 0 ? (workAllocated / workCapacity) * 100 : 0;
+            wMetrics.innerHTML = `<div style="font-weight: 500; margin-bottom: 15px; color: var(--text-main);">Horas de Expediente Ocupadas</div><div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.85rem;"><span>${workAllocated}h alocadas de ${workCapacity}h disponíveis</span><span style="font-weight: bold; color: ${workPerc > 100 ? 'var(--danger)' : 'var(--accent)'}">${workPerc.toFixed(1)}%</span></div><div class="progress-bar" style="margin-bottom: 20px; height: 10px;"><div class="progress-fill" style="width: ${Math.min(workPerc, 100)}%; background: ${workPerc > 100 ? 'var(--danger)' : 'var(--accent)'};"></div></div><div style="background: rgba(255,255,255,0.03); border-left: 2px solid var(--success); padding: 15px; border-radius: 6px;"><div style="font-size: 0.85rem; color: var(--text-muted);">Investimento do Tempo Livre (Evolução / Descanso):</div><div style="font-size: 1.2rem; font-weight: bold; color: var(--success); margin-top: 5px;">${freeAllocated}h <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">alocadas fora do expediente.</span></div></div>`;
+            
+            updatePillsState(); 
         }
 
         window.onload = init;
