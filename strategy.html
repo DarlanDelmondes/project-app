@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Matriz de Imersão Estratégica</title>
+    <title>Sistemas de Evolução: Execução</title>
     <style>
         :root {
             --bg-base: #09090b;
@@ -16,6 +16,7 @@
             --accent-hover: #2563eb;
             --danger: #ef4444;
             --success: #22c55e;
+            --warning: #f59e0b;
             --selection-bg: rgba(59, 130, 246, 0.3);
             --selection-border: #3b82f6;
         }
@@ -25,89 +26,81 @@
         body { background-color: var(--bg-base); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
         /* Navegação */
-        .navbar { display: flex; padding: 15px 30px; border-bottom: 1px solid var(--border-subtle); background: var(--bg-surface); align-items: center; justify-content: space-between; }
-        .nav-brand { font-weight: 600; font-size: 1.1rem; letter-spacing: -0.5px; display: flex; align-items: center; gap: 10px; }
-        .nav-tabs { display: flex; gap: 10px; background: var(--bg-base); padding: 4px; border-radius: 8px; border: 1px solid var(--border-subtle); }
-        .tab-btn { padding: 8px 16px; border-radius: 6px; cursor: pointer; color: var(--text-muted); transition: all 0.2s; font-size: 0.9rem; font-weight: 500; }
+        .navbar { display: flex; padding: 15px 30px; border-bottom: 1px solid var(--border-subtle); background: var(--bg-surface); align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+        .nav-brand { font-weight: 600; font-size: 1.1rem; display: flex; align-items: center; gap: 10px; }
+        .nav-tabs { display: flex; gap: 5px; background: var(--bg-base); padding: 4px; border-radius: 8px; border: 1px solid var(--border-subtle); flex-wrap: wrap; }
+        .tab-btn { padding: 8px 14px; border-radius: 6px; cursor: pointer; color: var(--text-muted); transition: all 0.2s; font-size: 0.85rem; font-weight: 500; }
         .tab-btn:hover { color: var(--text-main); }
         .tab-btn.active { background: var(--bg-elevated); color: var(--text-main); box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
 
-        /* Conteúdo */
+        /* Layout Global */
         .tab-content { display: none; flex: 1; overflow: hidden; padding: 20px 30px; }
         .tab-content.active { display: flex; flex-direction: column; }
-
-        /* ABA 1: Matriz */
-        .dashboard-header { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
-        .stat-pill { background: var(--bg-surface); border: 1px solid var(--border-subtle); padding: 10px 15px; border-radius: 8px; display: flex; align-items: center; gap: 10px; font-size: 0.85rem; }
-        .stat-color { width: 12px; height: 12px; border-radius: 50%; }
+        .grid-2col { display: grid; grid-template-columns: 350px 1fr; gap: 30px; height: 100%; overflow-y: auto; align-items: start; }
         
-        .calendar-container { flex: 1; overflow-y: auto; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 8px; position: relative; }
-        .calendar-header { display: grid; grid-template-columns: 60px repeat(7, 1fr); background: var(--bg-elevated); border-bottom: 1px solid var(--border-subtle); position: sticky; top: 0; z-index: 10; }
-        .day-header { padding: 12px 5px; text-align: center; font-weight: 500; font-size: 0.85rem; color: var(--text-muted); border-right: 1px solid var(--border-subtle); }
-        .day-header:last-child { border-right: none; }
+        .panel { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 25px; display: flex; flex-direction: column; gap: 15px;}
+        h2 { font-size: 1.1rem; font-weight: 500; border-bottom: 1px solid var(--border-subtle); padding-bottom: 10px; color: var(--text-main); }
         
-        .calendar-body { display: grid; grid-template-columns: 60px repeat(7, 1fr); }
-        .time-col { display: flex; flex-direction: column; border-right: 1px solid var(--border-subtle); }
-        .time-label { height: 40px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: var(--text-muted); }
-        
-        .day-col { display: flex; flex-direction: column; border-right: 1px solid var(--border-subtle); position: relative; }
-        .day-col:last-child { border-right: none; }
-        .time-cell { height: 40px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: crosshair; transition: filter 0.1s; }
-        .time-cell:hover { background-color: rgba(255,255,255,0.03); }
-        .time-cell.selecting { background-color: var(--selection-bg) !important; border: 1px dashed var(--selection-border) !important; z-index: 5; }
-
-        /* ABA 2: Cadastro */
-        .settings-grid { display: grid; grid-template-columns: 350px 1fr; gap: 30px; height: 100%; overflow-y: auto; }
-        .panel { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 25px; }
-        h2 { font-size: 1.2rem; margin-bottom: 20px; font-weight: 500; border-bottom: 1px solid var(--border-subtle); padding-bottom: 10px; }
-        
-        .form-group { margin-bottom: 15px; }
-        label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px; }
+        /* Formulários e Botões */
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        label { font-size: 0.85rem; color: var(--text-muted); }
         input, select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-base); color: var(--text-main); font-size: 0.9rem; outline: none; }
         input:focus, select:focus { border-color: var(--accent); }
         
-        .btn { padding: 10px 16px; border-radius: 6px; font-weight: 500; cursor: pointer; border: none; font-size: 0.9rem; transition: 0.2s; }
+        .btn { padding: 10px 16px; border-radius: 6px; font-weight: 500; cursor: pointer; border: none; font-size: 0.9rem; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
         .btn-primary { background: var(--accent); color: white; width: 100%; }
         .btn-primary:hover { background: var(--accent-hover); }
-        
-        .category-list { display: flex; flex-direction: column; gap: 10px; }
-        .category-card { background: var(--bg-base); border: 1px solid var(--border-subtle); padding: 15px; border-radius: 8px; display: flex; flex-direction: column; gap: 10px; }
-        .cat-header { display: flex; justify-content: space-between; align-items: center; }
-        .cat-title { display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 0.95rem; }
-        .btn-icon { background: transparent; border: none; color: var(--text-muted); cursor: pointer; }
-        .btn-icon:hover { color: var(--danger); }
-        .progress-bar { height: 6px; background: var(--bg-elevated); border-radius: 3px; overflow: hidden; }
-        .progress-fill { height: 100%; transition: width 0.3s; }
-        .cat-stats { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); }
-        .alert-text { color: var(--danger); font-size: 0.75rem; font-weight: 500; margin-top: 4px; }
+        .btn-success { background: rgba(34, 197, 94, 0.1); color: var(--success); border: 1px solid var(--success); }
+        .btn-success:hover { background: var(--success); color: white; }
+        .btn-icon { background: transparent; border: none; color: var(--text-muted); cursor: pointer; border-radius: 4px; padding: 4px; }
+        .btn-icon:hover { color: var(--danger); background: rgba(239, 68, 68, 0.1); }
 
-        /* ABA 3: Analytics (Gráfico de Pizza) */
+        /* Matriz de Tempo */
+        .dashboard-header { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
+        .stat-pill { background: var(--bg-surface); border: 1px solid var(--border-subtle); padding: 10px 15px; border-radius: 8px; display: flex; align-items: center; gap: 10px; font-size: 0.85rem; }
+        .stat-color { width: 12px; height: 12px; border-radius: 50%; display: inline-block;}
+        .calendar-container { flex: 1; overflow-y: auto; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 8px; position: relative; }
+        .calendar-header { display: grid; grid-template-columns: 60px repeat(7, 1fr); background: var(--bg-elevated); border-bottom: 1px solid var(--border-subtle); position: sticky; top: 0; z-index: 10; }
+        .day-header { padding: 12px 5px; text-align: center; font-weight: 500; font-size: 0.85rem; color: var(--text-muted); border-right: 1px solid var(--border-subtle); }
+        .calendar-body { display: grid; grid-template-columns: 60px repeat(7, 1fr); }
+        .time-col { display: flex; flex-direction: column; border-right: 1px solid var(--border-subtle); }
+        .time-label { height: 40px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: var(--text-muted); }
+        .day-col { display: flex; flex-direction: column; border-right: 1px solid var(--border-subtle); }
+        .time-cell { height: 40px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: crosshair; }
+        .time-cell:hover { background-color: rgba(255,255,255,0.03); }
+        .time-cell.selecting { background-color: var(--selection-bg) !important; border: 1px dashed var(--selection-border) !important; z-index: 5; }
+
+        /* Componentes Específicos: Data Cards, Repetições e Trade-offs */
+        .list-container { display: flex; flex-direction: column; gap: 15px; }
+        .data-card { background: var(--bg-base); border: 1px solid var(--border-subtle); padding: 20px; border-radius: 8px; display: flex; flex-direction: column; gap: 12px; margin-bottom: 15px; }
+        .rep-title { display: flex; justify-content: space-between; align-items: center; font-weight: 600; font-size: 1.05rem; color: var(--text-main); }
+        .progress-bar { height: 8px; background: var(--bg-elevated); border-radius: 4px; overflow: hidden; width: 100%; }
+        .progress-fill { height: 100%; background: var(--accent); transition: width 0.3s; }
+        .rep-stats { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-muted); }
+        
+        .sac-input-group { display: flex; gap: 10px; margin-bottom: 10px; }
+        .sac-input-group input { flex: 1; }
+        .sacrifice-list { display: flex; flex-direction: column; gap: 8px; border-top: 1px dashed var(--border-subtle); padding-top: 15px; margin-top: 5px; }
+        .sacrifice-item { display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; color: var(--warning); background: rgba(245, 158, 11, 0.05); padding: 10px 15px; border-radius: 6px; border-left: 2px solid var(--warning); }
+
+        /* Analytics Donut Chart */
         .analytics-container { display: flex; gap: 40px; align-items: flex-start; height: 100%; overflow-y: auto; }
         .chart-panel { flex: 1; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        
         .donut-chart-wrapper { position: relative; width: 300px; height: 300px; }
         .donut-chart { width: 100%; height: 100%; border-radius: 50%; background: conic-gradient(var(--bg-elevated) 0 100%); transition: background 0.3s ease; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .donut-hole { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 220px; height: 220px; background: var(--bg-surface); border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; box-shadow: inset 0 4px 10px rgba(0,0,0,0.2); }
         .donut-hole-val { font-size: 2.5rem; font-weight: 700; color: var(--text-main); }
         .donut-hole-label { font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; }
-        
         .legend-panel { flex: 1; display: flex; flex-direction: column; gap: 15px; }
         .legend-item { display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface); padding: 15px 20px; border-radius: 8px; border: 1px solid var(--border-subtle); }
-        .legend-info { display: flex; align-items: center; gap: 12px; font-weight: 500; }
-        .legend-val { font-size: 1.1rem; font-weight: 600; display: flex; flex-direction: column; text-align: right; }
-        .legend-perc { font-size: 0.8rem; color: var(--text-muted); font-weight: 400; }
 
         /* Modal */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(2px); display: none; align-items: center; justify-content: center; z-index: 100; }
         .modal-overlay.active { display: flex; }
-        .modal-content { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; width: 400px; padding: 25px; animation: modalIn 0.2s ease-out; }
-        @keyframes modalIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        .modal-header { font-size: 1.1rem; font-weight: 500; margin-bottom: 20px; }
-        .modal-body { margin-bottom: 25px; }
-        .modal-footer { display: flex; gap: 10px; justify-content: flex-end; }
+        .modal-content { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; width: 400px; padding: 25px; }
+        .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;}
         .btn-secondary { background: var(--bg-elevated); color: var(--text-main); border: 1px solid var(--border-subtle); }
         .btn-danger-outline { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
-        .selection-info { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px; background: var(--bg-base); padding: 10px; border-radius: 6px; text-align: center; }
     </style>
 </head>
 <body>
@@ -115,64 +108,75 @@
     <header class="navbar">
         <div class="nav-brand">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-            Sistemas de Evolução
+            Terminal Estratégico
         </div>
         <div class="nav-tabs">
-            <div class="tab-btn active" onclick="switchTab('matriz')">Matriz de Tempo</div>
-            <div class="tab-btn" onclick="switchTab('cadastro')">Engenharia de Vetores</div>
-            <div class="tab-btn" onclick="switchTab('analytics')">Analytics (Gráficos)</div>
+            <div class="tab-btn active" onclick="switchTab('matriz')">1. Matriz de Tempo</div>
+            <div class="tab-btn" onclick="switchTab('cadastro')">2. Vetores</div>
+            <div class="tab-btn" onclick="switchTab('maestria')">3. Forja de Maestria</div>
+            <div class="tab-btn" onclick="switchTab('tradeoff')">4. Custo de Oportunidade</div>
+            <div class="tab-btn" onclick="switchTab('analytics')">5. Analytics</div>
         </div>
     </header>
 
-    <!-- ABA 1: Matriz -->
+    <!-- ABA 1: Matriz de Tempo -->
     <main id="tab-matriz" class="tab-content active">
         <div class="dashboard-header" id="dashboardStats"></div>
         <div class="calendar-container">
             <div class="calendar-header">
                 <div class="day-header">Hora</div>
-                <div class="day-header">Segunda</div><div class="day-header">Terça</div><div class="day-header">Quarta</div>
-                <div class="day-header">Quinta</div><div class="day-header">Sexta</div><div class="day-header">Sábado</div><div class="day-header">Domingo</div>
+                <div class="day-header">Seg</div><div class="day-header">Ter</div><div class="day-header">Qua</div>
+                <div class="day-header">Qui</div><div class="day-header">Sex</div><div class="day-header">Sáb</div><div class="day-header">Dom</div>
             </div>
             <div class="calendar-body" id="calendarBody"></div>
         </div>
     </main>
 
-    <!-- ABA 2: Cadastro -->
+    <!-- ABA 2: Vetores -->
     <main id="tab-cadastro" class="tab-content">
-        <div class="settings-grid">
+        <div class="grid-2col">
             <div class="panel">
                 <h2>Novo Vetor de Foco</h2>
-                <div class="form-group">
-                    <label>Nome do Vetor</label>
-                    <input type="text" id="catName" placeholder="Ex: Arquitetura, Descanso">
+                <div class="form-group"><label>Nome do Vetor</label><input type="text" id="catName" placeholder="Ex: Arquitetura, Reuniões"></div>
+                <div class="form-group" style="display: flex; flex-direction: row; align-items: center; gap: 15px;">
+                    <label>Cor Identificadora</label><input type="color" id="catColor" value="#3b82f6" style="padding: 2px; height: 38px; flex: 1;">
                 </div>
-                <div class="form-group" style="display: flex; gap: 15px;">
-                    <div style="flex: 1;">
-                        <label>Cor</label>
-                        <input type="color" id="catColor" value="#3b82f6" style="padding: 2px; height: 38px;">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Regra do Sistema</label>
-                    <select id="catLimitType">
-                        <option value="min">MÍNIMO exigido (Evolução)</option>
-                        <option value="max">Teto MÁXIMO (Operacional)</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Meta (% da Semana)</label>
-                    <input type="number" id="catLimitValue" placeholder="Ex: 20" min="1" max="100">
-                </div>
+                <div class="form-group"><label>Regra do Sistema</label><select id="catLimitType"><option value="min">MÍNIMO exigido (Evolução)</option><option value="max">Teto MÁXIMO (Operacional)</option></select></div>
+                <div class="form-group"><label>Meta (% da Semana)</label><input type="number" id="catLimitValue" placeholder="Ex: 20"></div>
                 <button class="btn btn-primary" onclick="addCategory()">Cadastrar Vetor</button>
             </div>
-            <div class="panel">
-                <h2>Vetores Ativos</h2>
-                <div class="category-list" id="categoryList"></div>
-            </div>
+            <div class="panel"><h2>Vetores Ativos</h2><div class="list-container" id="categoryList"></div></div>
         </div>
     </main>
 
-    <!-- ABA 3: Analytics -->
+    <!-- ABA 3: Forja de Maestria -->
+    <main id="tab-maestria" class="tab-content">
+        <div class="grid-2col">
+            <div class="panel">
+                <h2>Nova Trilha de Maestria</h2>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">A sequência vence os hábitos. Cadastre sua repetição alvo.</p>
+                <div class="form-group"><label>Habilidade / Tarefa</label><input type="text" id="repName" placeholder="Ex: Resolver Questões Law"></div>
+                <div class="form-group"><label>Alvo de Repetições</label><input type="number" id="repTarget" placeholder="10000"></div>
+                <button class="btn btn-primary" onclick="addRepetition()">Forjar Objetivo</button>
+            </div>
+            <div class="list-container" id="repetitionList" style="padding-top: 0;"></div>
+        </div>
+    </main>
+
+    <!-- ABA 4: Custo de Oportunidade (Trade-offs) -->
+    <main id="tab-tradeoff" class="tab-content">
+        <div class="grid-2col">
+            <div class="panel">
+                <h2>Definir Foco Primário</h2>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">Para garantir o foco, você deve listar ativamente o que irá eliminar.</p>
+                <div class="form-group"><label>O Grande Objetivo</label><input type="text" id="tradeoffName" placeholder="Ex: Aprovação na OAB"></div>
+                <button class="btn btn-primary" onclick="addTradeoff()">Mapear Objetivo</button>
+            </div>
+            <div class="list-container" id="tradeoffList" style="padding-top: 0;"></div>
+        </div>
+    </main>
+
+    <!-- ABA 5: Analytics -->
     <main id="tab-analytics" class="tab-content">
         <div class="analytics-container">
             <div class="chart-panel">
@@ -184,25 +188,18 @@
                     </div>
                 </div>
             </div>
-            <div class="legend-panel" id="chartLegend">
-                <!-- Legendas geradas via JS -->
-            </div>
+            <div class="legend-panel" id="chartLegend"></div>
         </div>
     </main>
 
-    <!-- Modal -->
+    <!-- Modal de Alocação (Matriz) -->
     <div class="modal-overlay" id="allocationModal">
         <div class="modal-content">
-            <div class="modal-header">Alocar Blocos de Tempo</div>
-            <div class="modal-body">
-                <div class="selection-info" id="selectionInfo"></div>
-                <div class="form-group">
-                    <label>Selecione o Vetor:</label>
-                    <select id="modalCategorySelect"></select>
-                </div>
-            </div>
+            <h2 style="border: none; padding: 0; margin-bottom: 15px;">Alocar Tempo</h2>
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px; background: var(--bg-base); padding: 10px; border-radius: 6px; text-align: center;" id="selectionInfo"></div>
+            <div class="form-group"><label>Selecione o Vetor:</label><select id="modalCategorySelect"></select></div>
             <div class="modal-footer">
-                <button class="btn btn-danger-outline" onclick="clearSelection()" style="margin-right: auto;">Limpar Blocos</button>
+                <button class="btn btn-danger-outline" onclick="clearSelection()" style="margin-right: auto;">Limpar</button>
                 <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
                 <button class="btn btn-primary" style="width: auto;" onclick="saveAllocation()">Aplicar</button>
             </div>
@@ -211,232 +208,182 @@
 
     <script>
         const TOTAL_HOURS = 168;
-        const diasSemana = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
-        
-        let data = { categories: [], blocks: {} };
-        let isDragging = false;
-        let startCell = null;
-        let selectedCells = [];
+        let data = { categories: [], blocks: {}, repetitions: [], tradeoffs: [] };
+        let isDragging = false, startCell = null, selectedCells = [];
 
         function init() {
-            const saved = localStorage.getItem('imersaoStrategicaData');
+            const saved = localStorage.getItem('imersaoExecutivaData');
             if (saved) {
-                data = JSON.parse(saved);
-            } else {
-                data.categories = [
-                    { id: '1', name: 'Arquitetura / Sistemas', color: '#8b5cf6', limitType: 'min', limitValue: 15 },
-                    { id: '2', name: 'Operacional / Rotina', color: '#f59e0b', limitType: 'max', limitValue: 25 },
-                    { id: '3', name: 'Físico / Saúde', color: '#10b981', limitType: 'min', limitValue: 10 }
-                ];
+                const parsed = JSON.parse(saved);
+                data.categories = parsed.categories || [];
+                data.blocks = parsed.blocks || {};
+                data.repetitions = parsed.repetitions || [];
+                data.tradeoffs = parsed.tradeoffs || [];
             }
             buildGrid();
-            updateUI();
+            updateAllUIs();
         }
+
+        function saveData() { localStorage.setItem('imersaoExecutivaData', JSON.stringify(data)); updateAllUIs(); }
+        function generateId() { return Math.random().toString(36).substr(2, 9); }
 
         window.switchTab = function(tabId) {
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             event.target.classList.add('active');
             document.getElementById('tab-' + tabId).classList.add('active');
-            if(tabId === 'analytics') updateUI(); // Força render do gráfico
         }
 
-        // Matriz & Seleção (Outlook Style)
+        /* --- MATRIZ DE TEMPO --- */
         function buildGrid() {
-            const body = document.getElementById('calendarBody');
-            body.innerHTML = '';
-            const timeCol = document.createElement('div');
-            timeCol.className = 'time-col';
-            for (let h = 0; h < 24; h++) {
-                const label = document.createElement('div');
-                label.className = 'time-label'; label.innerText = `${h.toString().padStart(2, '0')}:00`;
-                timeCol.appendChild(label);
-            }
+            const body = document.getElementById('calendarBody'); body.innerHTML = '';
+            const timeCol = document.createElement('div'); timeCol.className = 'time-col';
+            for (let h = 0; h < 24; h++) { const lbl = document.createElement('div'); lbl.className = 'time-label'; lbl.innerText = `${h.toString().padStart(2, '0')}:00`; timeCol.appendChild(lbl); }
             body.appendChild(timeCol);
 
             for (let d = 0; d < 7; d++) {
                 const dayCol = document.createElement('div'); dayCol.className = 'day-col';
                 for (let h = 0; h < 24; h++) {
-                    const cell = document.createElement('div'); cell.className = 'time-cell';
-                    const key = `${d}-${h}`; cell.dataset.key = key; cell.dataset.day = d; cell.dataset.hour = h;
-                    if (data.blocks[key]) {
-                        const cat = data.categories.find(c => c.id === data.blocks[key]);
-                        if (cat) cell.style.backgroundColor = cat.color;
-                    }
-                    cell.addEventListener('mousedown', (e) => startSelection(d, h, e));
-                    cell.addEventListener('mouseenter', () => updateSelection(d, h));
+                    const cell = document.createElement('div'); cell.className = 'time-cell'; const key = `${d}-${h}`; cell.dataset.key = key; cell.dataset.day = d; cell.dataset.hour = h;
+                    if (data.blocks[key]) { const cat = data.categories.find(c => c.id === data.blocks[key]); if (cat) cell.style.backgroundColor = cat.color; }
+                    cell.addEventListener('mousedown', (e) => { if(e.button===0){ isDragging=true; startCell={day:d, hour:h}; selectedCells=[]; clearVisualSelection(); updateSelection(d, h); }});
+                    cell.addEventListener('mouseenter', () => { if(isDragging) updateSelection(d, h); });
                     dayCol.appendChild(cell);
                 }
                 body.appendChild(dayCol);
             }
-            document.addEventListener('mouseup', endSelection);
+            document.addEventListener('mouseup', () => { if(isDragging){ isDragging=false; if(selectedCells.length>0) openModal(); } });
         }
 
-        function startSelection(day, hour, event) {
-            if (event.button !== 0) return;
-            isDragging = true; startCell = { day, hour }; selectedCells = [];
-            clearVisualSelection(); updateSelection(day, hour);
-        }
-
-        function updateSelection(currentDay, currentHour) {
-            if (!isDragging) return;
+        function updateSelection(cDay, cHour) {
             clearVisualSelection(); selectedCells = [];
-            const minDay = Math.min(startCell.day, currentDay), maxDay = Math.max(startCell.day, currentDay);
-            const minHour = Math.min(startCell.hour, currentHour), maxHour = Math.max(startCell.hour, currentHour);
-            for (let d = minDay; d <= maxDay; d++) {
-                for (let h = minHour; h <= maxHour; h++) {
-                    const key = `${d}-${h}`; selectedCells.push(key);
-                    const cellEl = document.querySelector(`.time-cell[data-key="${key}"]`);
-                    if(cellEl) cellEl.classList.add('selecting');
-                }
-            }
+            const minDay = Math.min(startCell.day, cDay), maxDay = Math.max(startCell.day, cDay);
+            const minHour = Math.min(startCell.hour, cHour), maxHour = Math.max(startCell.hour, cHour);
+            for (let d = minDay; d <= maxDay; d++) { for (let h = minHour; h <= maxHour; h++) { const key = `${d}-${h}`; selectedCells.push(key); const el = document.querySelector(`.time-cell[data-key="${key}"]`); if(el) el.classList.add('selecting'); } }
         }
-
-        function endSelection() {
-            if (!isDragging) return;
-            isDragging = false;
-            if (selectedCells.length > 0) openModal();
-        }
-
         function clearVisualSelection() { document.querySelectorAll('.time-cell.selecting').forEach(el => el.classList.remove('selecting')); }
-
-        // Modal Lógica
         function openModal() {
-            if(data.categories.length === 0) { alert("Cadastre um Vetor de Foco primeiro."); clearVisualSelection(); return; }
+            if(data.categories.length === 0) { alert("Cadastre um Vetor primeiro."); clearVisualSelection(); return; }
             const select = document.getElementById('modalCategorySelect'); select.innerHTML = '';
-            data.categories.forEach(cat => {
-                const opt = document.createElement('option'); opt.value = cat.id; opt.innerText = cat.name;
-                select.appendChild(opt);
-            });
-            const infoBox = document.getElementById('selectionInfo');
-            if(selectedCells.length === 1) {
-                const [d, h] = selectedCells[0].split('-'); infoBox.innerText = `${diasSemana[d]} às ${h.padStart(2,'0')}h00`;
-            } else { infoBox.innerText = `${selectedCells.length} blocos selecionados.`; }
+            data.categories.forEach(cat => { const opt = document.createElement('option'); opt.value = cat.id; opt.innerText = cat.name; select.appendChild(opt); });
+            document.getElementById('selectionInfo').innerText = `${selectedCells.length} blocos de 1h selecionados.`;
             document.getElementById('allocationModal').classList.add('active');
         }
-
         window.closeModal = function() { document.getElementById('allocationModal').classList.remove('active'); clearVisualSelection(); selectedCells = []; }
-        window.saveAllocation = function() {
-            const catId = document.getElementById('modalCategorySelect').value;
-            selectedCells.forEach(key => data.blocks[key] = catId);
-            saveData(); closeModal(); buildGrid();
-        }
-        window.clearSelection = function() {
-            selectedCells.forEach(key => delete data.blocks[key]);
-            saveData(); closeModal(); buildGrid();
-        }
+        window.saveAllocation = function() { const catId = document.getElementById('modalCategorySelect').value; selectedCells.forEach(key => data.blocks[key] = catId); saveData(); closeModal(); buildGrid(); }
+        window.clearSelection = function() { selectedCells.forEach(key => delete data.blocks[key]); saveData(); closeModal(); buildGrid(); }
 
-        // Cadastro Lógica
+        /* --- CATEGORIAS --- */
         window.addCategory = function() {
-            const name = document.getElementById('catName').value.trim();
-            const color = document.getElementById('catColor').value;
-            const limitType = document.getElementById('catLimitType').value;
-            const limitValue = parseInt(document.getElementById('catLimitValue').value);
-            if (!name || isNaN(limitValue)) { alert("Nome e Percentual são obrigatórios."); return; }
-            data.categories.push({ id: Math.random().toString(36).substr(2, 9), name, color, limitType, limitValue });
-            document.getElementById('catName').value = ''; document.getElementById('catLimitValue').value = '';
-            saveData(); updateUI();
+            const name = document.getElementById('catName').value.trim(), color = document.getElementById('catColor').value;
+            const limitType = document.getElementById('catLimitType').value, limitValue = parseInt(document.getElementById('catLimitValue').value);
+            if (!name || isNaN(limitValue)) return;
+            data.categories.push({ id: generateId(), name, color, limitType, limitValue });
+            document.getElementById('catName').value = ''; document.getElementById('catLimitValue').value = ''; saveData();
         }
-
         window.deleteCategory = function(id) {
-            if(confirm("Remover este Vetor e limpar os blocos?")) {
-                data.categories = data.categories.filter(c => c.id !== id);
-                for (let key in data.blocks) { if (data.blocks[key] === id) delete data.blocks[key]; }
-                saveData(); buildGrid(); updateUI();
-            }
+            if(confirm("Remover Vetor e limpar a matriz?")) { data.categories = data.categories.filter(c => c.id !== id); for (let key in data.blocks) if (data.blocks[key] === id) delete data.blocks[key]; saveData(); buildGrid(); }
         }
-        function saveData() { localStorage.setItem('imersaoStrategicaData', JSON.stringify(data)); updateUI(); }
 
-        // Motor Analítico Global (Atualiza Listas, Matriz e Gráfico Donut)
-        function updateUI() {
-            const list = document.getElementById('categoryList');
-            const dashboard = document.getElementById('dashboardStats');
-            const legendPanel = document.getElementById('chartLegend');
-            list.innerHTML = ''; dashboard.innerHTML = ''; legendPanel.innerHTML = '';
+        /* --- FORJA DE MAESTRIA (Aba 3) --- */
+        window.addRepetition = function() {
+            const name = document.getElementById('repName').value.trim();
+            const target = parseInt(document.getElementById('repTarget').value);
+            if(!name || isNaN(target) || target <= 0) return;
+            data.repetitions.push({ id: generateId(), name, target, current: 0 });
+            document.getElementById('repName').value = ''; document.getElementById('repTarget').value = '';
+            saveData();
+        }
+        window.incrementRepetition = function(id) { const rep = data.repetitions.find(r => r.id === id); if(rep && rep.current < rep.target) { rep.current++; saveData(); } }
+        window.deleteRepetition = function(id) { if(confirm("Excluir esta trilha?")) { data.repetitions = data.repetitions.filter(r => r.id !== id); saveData(); } }
+        
+        function updateRepetitionsUI() {
+            const list = document.getElementById('repetitionList');
+            list.innerHTML = '';
+            if(data.repetitions.length === 0) { list.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem;">Nenhum sistema de repetição cadastrado.</p>'; return; }
+            data.repetitions.forEach(rep => {
+                const perc = Math.min((rep.current / rep.target) * 100, 100);
+                list.innerHTML += `
+                    <div class="data-card">
+                        <div class="rep-title">${rep.name} <button class="btn-icon" onclick="deleteRepetition('${rep.id}')">✕</button></div>
+                        <div class="progress-bar"><div class="progress-fill" style="width: ${perc}%;"></div></div>
+                        <div class="rep-stats"><span><strong>${rep.current}</strong> / ${rep.target} execuções</span><span>${perc.toFixed(2)}% concluído</span></div>
+                        <button class="btn btn-success" style="width: 100%; padding: 12px; font-weight: 600; font-size: 1rem;" onclick="incrementRepetition('${rep.id}')">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 5px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            Registrar +1 Execução
+                        </button>
+                    </div>`;
+            });
+        }
 
-            const counts = {};
-            data.categories.forEach(c => counts[c.id] = 0);
+        /* --- TRADE-OFFS (Aba 4) --- */
+        window.addTradeoff = function() {
+            const goal = document.getElementById('tradeoffName').value.trim();
+            if(!goal) return;
+            data.tradeoffs.push({ id: generateId(), goal, sacrifices: [] });
+            document.getElementById('tradeoffName').value = '';
+            saveData();
+        }
+        window.deleteTradeoff = function(id) { if(confirm("Remover este foco e seus sacrifícios?")) { data.tradeoffs = data.tradeoffs.filter(t => t.id !== id); saveData(); } }
+        window.addSacrifice = function(tradeoffId) {
+            const input = document.getElementById(`sacInput_${tradeoffId}`); const text = input.value.trim();
+            if(!text) return;
+            const t = data.tradeoffs.find(x => x.id === tradeoffId);
+            if(t) { t.sacrifices.push(text); saveData(); }
+        }
+        window.deleteSacrifice = function(tradeoffId, sacIndex) { const t = data.tradeoffs.find(x => x.id === tradeoffId); if(t) { t.sacrifices.splice(sacIndex, 1); saveData(); } }
+
+        function updateTradeoffsUI() {
+            const list = document.getElementById('tradeoffList');
+            list.innerHTML = '';
+            if(data.tradeoffs.length === 0) { list.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem;">Nenhum foco estabelecido.</p>'; return; }
+            data.tradeoffs.forEach(trade => {
+                let sacHtml = '';
+                trade.sacrifices.forEach((sac, index) => {
+                    sacHtml += `<div class="sacrifice-item"><span>🚫 ${sac}</span><button class="btn-icon" style="padding: 2px;" onclick="deleteSacrifice('${trade.id}', ${index})">✕</button></div>`;
+                });
+                list.innerHTML += `
+                    <div class="data-card">
+                        <div class="rep-title" style="margin-bottom: 5px;">🎯 Foco: ${trade.goal} <button class="btn-icon" onclick="deleteTradeoff('${trade.id}')">✕</button></div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">Para garantir este alvo, eu ativamente elimino:</div>
+                        <div class="sac-input-group">
+                            <input type="text" id="sacInput_${trade.id}" placeholder="O que eu digo NÃO para focar nisso..." style="padding: 8px;">
+                            <button class="btn btn-primary" style="width: auto; padding: 8px 12px;" onclick="addSacrifice('${trade.id}')">Adicionar</button>
+                        </div>
+                        ${trade.sacrifices.length > 0 ? `<div class="sacrifice-list">${sacHtml}</div>` : ''}
+                    </div>`;
+            });
+        }
+
+        /* --- UI GLOBAL UPDATE --- */
+        function updateAllUIs() {
+            updateRepetitionsUI();
+            updateTradeoffsUI();
+
+            const catList = document.getElementById('categoryList'), dash = document.getElementById('dashboardStats'), leg = document.getElementById('chartLegend');
+            catList.innerHTML = ''; dash.innerHTML = ''; leg.innerHTML = '';
+            
+            const counts = {}; data.categories.forEach(c => counts[c.id] = 0);
             Object.values(data.blocks).forEach(id => { if (counts[id] !== undefined) counts[id]++; });
 
-            let totalAllocatedHours = 0;
-            let conicGradientParts = [];
-            let currentAngle = 0;
+            let totalH = 0, conicParts = [], currentAng = 0;
+            const sortedCat = [...data.categories].sort((a, b) => counts[b.id] - counts[a.id]);
 
-            // Ordena categorias do maior para o menor uso para melhor visualização no gráfico
-            const sortedCategories = [...data.categories].sort((a, b) => counts[b.id] - counts[a.id]);
-
-            sortedCategories.forEach(cat => {
-                const hours = counts[cat.id];
-                totalAllocatedHours += hours;
-                const perc = (hours / TOTAL_HOURS) * 100;
-                
-                // Constrói fatias do gráfico de pizza
-                if (hours > 0) {
-                    conicGradientParts.push(`${cat.color} ${currentAngle}% ${currentAngle + perc}%`);
-                    currentAngle += perc;
-                }
-
-                // --- Elementos HTML ---
-                let alertHtml = ''; let isAlert = false;
-                if (cat.limitType === 'min' && perc < cat.limitValue) {
-                    alertHtml = `<div class="alert-text">⚠️ Abaixo da meta evolutiva (> ${cat.limitValue}%)</div>`; isAlert = true;
-                } else if (cat.limitType === 'max' && perc > cat.limitValue) {
-                    alertHtml = `<div class="alert-text">⚠️ Teto rompido (< ${cat.limitValue}%)</div>`; isAlert = true;
-                }
-
-                // 1. Aba Cadastro
-                const card = document.createElement('div'); card.className = 'category-card';
-                card.innerHTML = `
-                    <div class="cat-header">
-                        <div class="cat-title"><span class="stat-color" style="background: ${cat.color}"></span> ${cat.name}</div>
-                        <button class="btn-icon" onclick="deleteCategory('${cat.id}')">✕</button>
-                    </div>
-                    <div class="progress-bar"><div class="progress-fill" style="width: ${Math.min(perc, 100)}%; background: ${isAlert && cat.limitType === 'max' ? 'var(--danger)' : cat.color};"></div></div>
-                    <div class="cat-stats"><span>${hours}h (${perc.toFixed(1)}%)</span><span>${cat.limitType === 'min' ? 'Mín' : 'Máx'} ${cat.limitValue}%</span></div>
-                    ${hours > 0 ? alertHtml : ''}
-                `;
-                list.appendChild(card);
-
-                // 2. Aba Matriz (Pills)
-                const pill = document.createElement('div'); pill.className = 'stat-pill';
-                pill.style.borderColor = isAlert && hours > 0 ? 'var(--danger)' : 'var(--border-subtle)';
-                pill.innerHTML = `<span class="stat-color" style="background: ${cat.color}"></span><strong>${cat.name}:</strong> ${hours}h <span style="color: var(--text-muted)">(${perc.toFixed(1)}%)</span>`;
-                dashboard.appendChild(pill);
-
-                // 3. Aba Analytics (Legenda)
-                const legItem = document.createElement('div'); legItem.className = 'legend-item';
-                legItem.innerHTML = `
-                    <div class="legend-info"><span class="stat-color" style="background: ${cat.color}; width: 16px; height: 16px;"></span> ${cat.name}</div>
-                    <div class="legend-val">${hours}h <span class="legend-perc">${perc.toFixed(1)}%</span></div>
-                `;
-                legendPanel.appendChild(legItem);
+            sortedCat.forEach(cat => {
+                const h = counts[cat.id], perc = (h / TOTAL_HOURS) * 100; totalH += h;
+                if (h > 0) { conicParts.push(`${cat.color} ${currentAng}% ${currentAng + perc}%`); currentAng += perc; }
+                let isAlert = ((cat.limitType === 'min' && perc < cat.limitValue) || (cat.limitType === 'max' && perc > cat.limitValue));
+                catList.innerHTML += `<div class="data-card" style="padding: 15px;"><div class="rep-title"><div style="display:flex;align-items:center;gap:8px;"><span class="stat-color" style="background:${cat.color}"></span>${cat.name}</div><button class="btn-icon" onclick="deleteCategory('${cat.id}')">✕</button></div><div class="progress-bar"><div class="progress-fill" style="width:${Math.min(perc,100)}%;background:${isAlert && cat.limitType==='max'?'var(--danger)':cat.color}"></div></div><div class="rep-stats"><span>${h}h (${perc.toFixed(1)}%)</span><span>${cat.limitType==='min'?'Mín':'Máx'} ${cat.limitValue}%</span></div></div>`;
+                dash.innerHTML += `<div class="stat-pill" style="border-color:${isAlert&&h>0?'var(--danger)':'var(--border-subtle)'}"><span class="stat-color" style="background:${cat.color}"></span><strong>${cat.name}:</strong> ${h}h</div>`;
+                leg.innerHTML += `<div class="legend-item"><div style="display:flex;align-items:center;gap:10px;"><span class="stat-color" style="background:${cat.color}"></span>${cat.name}</div><div style="text-align:right;font-weight:600;">${h}h<br><span style="font-size:0.8rem;color:var(--text-muted);font-weight:400">${perc.toFixed(1)}%</span></div></div>`;
             });
 
-            // Lógica do Donut Chart
-            const unallocatedHours = TOTAL_HOURS - totalAllocatedHours;
-            const unallocatedPerc = (unallocatedHours / TOTAL_HOURS) * 100;
-            
-            // Adiciona fatia de tempo livre (cinza)
-            if (unallocatedHours > 0) {
-                conicGradientParts.push(`var(--bg-elevated) ${currentAngle}% 100%`);
-                
-                const legIdle = document.createElement('div'); legIdle.className = 'legend-item'; legIdle.style.opacity = '0.6';
-                legIdle.innerHTML = `
-                    <div class="legend-info"><span class="stat-color" style="background: var(--bg-elevated); width: 16px; height: 16px;"></span> Espaço Livre (Não alocado)</div>
-                    <div class="legend-val">${unallocatedHours}h <span class="legend-perc">${unallocatedPerc.toFixed(1)}%</span></div>
-                `;
-                legendPanel.appendChild(legIdle);
+            if(totalH < TOTAL_HOURS) {
+                conicParts.push(`var(--bg-elevated) ${currentAng}% 100%`);
+                leg.innerHTML += `<div class="legend-item" style="opacity:0.6"><div style="display:flex;align-items:center;gap:10px;"><span class="stat-color" style="background:var(--bg-elevated)"></span>Não Alocado</div><div style="text-align:right;font-weight:600;">${TOTAL_HOURS - totalH}h</div></div>`;
             }
-
-            // Aplica o gradiente gerado dinamicamente
-            const chartEl = document.getElementById('mainDonutChart');
-            if (totalAllocatedHours === 0) {
-                chartEl.style.background = `conic-gradient(var(--bg-elevated) 0 100%)`;
-            } else {
-                chartEl.style.background = `conic-gradient(${conicGradientParts.join(', ')})`;
-            }
-
-            document.getElementById('totalAllocatedText').innerText = `${totalAllocatedHours}h`;
+            document.getElementById('mainDonutChart').style.background = totalH === 0 ? 'var(--bg-elevated)' : `conic-gradient(${conicParts.join(',')})`;
+            document.getElementById('totalAllocatedText').innerText = `${totalH}h`;
         }
 
         window.onload = init;
