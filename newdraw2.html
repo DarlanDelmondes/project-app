@@ -3362,6 +3362,8 @@ function updateElasticParent(childrenContainer) {
         parent.appendChild(el); calcDynamicFont(el);
         if (parent !== world) setTimeout(() => updateElasticParent(parent), 0);
         markUnsaved();
+
+        updateBoxColors();
     }
     
     function addRootBox() { 
@@ -10099,11 +10101,11 @@ function updateBoxColors() {
 // Substitua o array 'colors' na sua função updateBoxColors por este:
         const colors = [
             '#ffffff', // Nível 0: Branco puro
-            '#f1f5f9', // Nível 1: Cinza muito claro (Slate 100)
-            '#e2e8f0', // Nível 2: Cinza claro (Slate 200)
-            '#cbd5e1', // Nível 3: Cinza médio (Slate 300)
-            '#94a3b8', // Nível 4: Cinza escuro (Slate 400)
-            '#64748b'  // Nível 5: Cinza azulado (Slate 500)
+            '#ddd', // Nível 1: Cinza muito claro (Slate 100)
+            '#bbb', // Nível 2: Cinza claro (Slate 200)
+            '#999', // Nível 3: Cinza médio (Slate 300)
+            '#888', // Nível 4: Cinza escuro (Slate 400)
+            '#777'  // Nível 5: Cinza azulado (Slate 500)
         ];
 
         // E ajuste a cor do texto para ser sempre preta, 
