@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -24,6 +24,23 @@
             /* UI Scaling (Controlled by JS) */
             --ui-scale: 1;
         }
+
+/* Variáveis para o Modo Escuro (Padrão) */
+:root[data-theme="dark"] {
+    --bg-color: #0f172a;        /* Fundo escuro */
+    --grid-color: #334155;      /* Grid mais sutil */
+    --box-border: #475569;      /* Borda das caixas escurecida */
+    --text-color: #f8fafc;      /* Texto claro principal */
+    --box-bg: #1e293b;          /* Fundo da caixa */
+}
+
+/* Modificações nas caixas para respeitar o tema */
+.box { 
+    background: var(--box-bg, white); 
+}
+input.title { 
+    color: var(--text-color, #1e293b); 
+}
 
         body, html { 
             margin: 0; 
@@ -624,32 +641,29 @@ body.filtering .box.filter-match {
 
 
 
-
-        /* --- BOX STYLES --- */
-        .box {
-            position: absolute; 
-            background: white; 
-            border: 2px solid var(--box-border); 
-            border-radius: 16px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
-            display: flex; 
-            flex-direction: column; 
-            z-index: 10;
-            min-width: 200px; 
-            min-height: 180px; 
-            
-            --dynamic-font-size: 24px; 
-            --static-font-size: 16px; 
-            
-            --header-height: 36px;
-            cursor: grab; 
-            transition: width 0.8s cubic-bezier(0.25, 0.8, 0.25, 1), 
-                height 0.8s cubic-bezier(0.25, 0.8, 0.25, 1),
-                left 0.8s cubic-bezier(0.25, 0.8, 0.25, 1), 
-                top 0.8s cubic-bezier(0.25, 0.8, 0.25, 1),
-                box-shadow 0.2s, background-color 0.2s; /* Adicione left/top para garantir */
-
-        }
+/* --- BOX STYLES --- */
+.box {
+    position: absolute; 
+    background: white; 
+    border: 2px solid var(--box-border); 
+    border-radius: 16px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
+    display: flex; 
+    flex-direction: column; 
+    z-index: 10;
+    min-width: 200px; 
+    min-height: 180px; 
+    
+    --dynamic-font-size: 24px; 
+    --static-font-size: 16px; 
+    
+    --header-height: 36px;
+    cursor: grab; 
+    
+    /* A MÁGICA DA VELOCIDADE ACONTECE AQUI: */
+    /* Apenas cosméticos, sem propriedades de geometria (width/height) ou posição (left/top) */
+    transition: box-shadow 0.2s, background-color 0.2s, border-color 0.2s;
+}
         
         /* Focus Animation when jumping from Journal */
         .box.highlight-focus { 
@@ -2712,7 +2726,11 @@ body.exporting-anim .conn-group:not(.export-target) {
 
     <div id="toolbar" class="no-pan">
 
+        <button class="btn-outline" onclick="openGlobalSearch()" title="Pesquisa Global (Ctrl+K)">
+            🔍 
+        </button>
 
+        <button class="btn-outline" onclick="toggleTheme()" title="Alternar Tema">🌙/☀️</button>
         
         <button id="toolbar-toggle-btn" class="no-pan" onclick="toggleToolbar()" title="Recolher Painel">◀</button>
 
@@ -2950,8 +2968,97 @@ closeSound.volume = 0.2;
         if(pos==='top') y=r.top; if(pos==='bottom') y=r.bottom; if(pos==='left') x=r.left; if(pos==='right') x=r.right;
         return screenToWorld(x,y);
     }
+
+
+    function searchAcrossProjects(searchTerm) {
+        const db = getDB(); // Lê todos os projetos
+        const term = searchTerm.toLowerCase();
+        const results = [];
     
+        db.forEach(proj => {
+            if (!proj.data || !proj.data.boxes) return;
+            
+            const boxes = proj.data.boxes;
+            const connections = proj.data.connections || []; // Pega as setas do projeto
     
+            boxes.forEach(box => {
+                let matched = false;
+                let matchReason = "";
+    
+                // Busca no Título
+                if (box.title && box.title.toLowerCase().includes(term)) {
+                    matched = true;
+                    matchReason = `Título da Caixa`;
+                }
+    
+                // Busca nas Tarefas
+                if (box.tasks) {
+                    box.tasks.forEach(task => {
+                        if (task.text && task.text.toLowerCase().includes(term)) {
+                            matched = true;
+                            matchReason = `Tarefa: ${task.text}`;
+                        }
+                    });
+                }
+    
+                // Busca nas Reuniões
+                if (box.meetings) {
+                    box.meetings.forEach(m => {
+                        if (m.title && m.title.toLowerCase().includes(term)) {
+                            matched = true;
+                            matchReason = `Reunião: ${m.title}`;
+                        }
+                    });
+                }
+    
+                if (matched) {
+                    // --- MAPEAMENTO DO DIAGRAMA ---
+                    
+                    // 1. Antecessoras (Setas que terminam nesta caixa)
+                    const preds = connections
+                        .filter(c => c.tid === box.id)
+                        .map(c => boxes.find(b => b.id === c.sid))
+                        .filter(b => b) // Garante que a caixa existe
+                        .map(b => b.title || 'Sem Título');
+                    
+                    // 2. Sucessoras (Setas que saem desta caixa)
+                    const succs = connections
+                        .filter(c => c.sid === box.id)
+                        .map(c => boxes.find(b => b.id === c.tid))
+                        .filter(b => b)
+                        .map(b => b.title || 'Sem Título');
+    
+                    results.push({
+                        projectId: proj.id,
+                        projectName: proj.name,
+                        boxId: box.id,
+                        boxTitle: box.title || 'Sem Título',
+                        reason: matchReason,
+                        predecessors: preds,
+                        successors: succs
+                    });
+                }
+            });
+        });
+    
+        return results;
+    }
+
+function initTheme() {
+    // Lê a preferência salva ou assume 'dark' como padrão
+    const savedTheme = localStorage.getItem('canvas_theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+}
+
+function toggleTheme() {
+    const root = document.documentElement;
+    const newTheme = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', newTheme);
+    localStorage.setItem('canvas_theme', newTheme);
+}
+
+// Chame initTheme() logo que a página carregar
+initTheme();
 
     /* =================================================================
    ENGINE DE CONEXÕES V2 - CORREÇÃO DEFINITIVA
@@ -4179,6 +4286,9 @@ function createBoxElement(id, titleVal = "Novo Item") {
                 <button class="icon-btn btn-font no-pan" onclick="openMeetingModal('${id}')" title="Gerenciar Reuniões">📅</button>
                 <button class="icon-btn btn-font no-pan" onclick="addNoteToBox('${id}')" title="Adicionar Nota">📝</button>
                 <div class="separator"></div>
+
+                <button class="icon-btn btn-font no-pan" onclick="openCrossCommentModal('${id}')" title="Novo Status no Nexus">🆕</button>
+
                 <button class="icon-btn btn-font no-pan" onclick="adjustFontSize('${id}', -0.1)" title="Diminuir Texto">A-</button>
                 <button class="icon-btn btn-font no-pan" onclick="adjustFontSize('${id}', 0.1)" title="Aumentar Texto">A+</button>
                 
@@ -10479,6 +10589,110 @@ function toggleToolbar() {
 
 
 
+// Variável global para armazenar qual caixa está gerando o comentário
+let currentCrossBoxId = null;
+
+function openCrossCommentModal(boxId) {
+    currentCrossBoxId = boxId; // Salva a referência da caixa atual
+    if (!state.isEditMode) return;
+    const box = document.getElementById(boxId);
+    const boxTitle = box.querySelector('input.title').value.toLowerCase().trim();
+    
+    let nexusState = [];
+    try { nexusState = JSON.parse(localStorage.getItem('nexus_v13_state')) || []; } catch (e) {}
+    
+    const select = document.getElementById('cross-comment-project-select');
+    select.innerHTML = '';
+    
+    if (nexusState.length === 0) {
+        select.innerHTML = '<option value="">(Nenhum projeto encontrado)</option>';
+        select.disabled = true;
+    } else {
+        select.disabled = false;
+        let optionsHtml = '<option value="">-- Selecione o Projeto Destino --</option>';
+        let bestMatchId = null;
+        
+        nexusState.forEach(univ => {
+            const optgroup = document.createElement('optgroup');
+            optgroup.label = `Universo: ${univ.title}`;
+            univ.groups.forEach(group => {
+                const option = document.createElement('option');
+                option.value = group.id;
+                option.innerText = group.title;
+                if (boxTitle && (boxTitle.includes(group.title.toLowerCase()) || group.title.toLowerCase().includes(boxTitle))) { bestMatchId = group.id; }
+                optgroup.appendChild(option);
+            });
+            select.appendChild(optgroup);
+        });
+        if (bestMatchId) select.value = bestMatchId;
+    }
+    document.getElementById('cross-comment-text').value = '';
+    document.getElementById('cross-comment-modal').style.display = 'flex';
+    setTimeout(() => document.getElementById('cross-comment-text').focus(), 50);
+}
+
+function saveCrossComment() {
+    const groupId = document.getElementById('cross-comment-project-select').value;
+    const text = document.getElementById('cross-comment-text').value;
+    
+    if (!groupId || !text.trim()) {
+        if(typeof showToast === 'function') showToast("⚠️ Preencha os dados e selecione o projeto.");
+        return;
+    }
+    
+    // Captura a geometria da caixa atual
+    const box = document.getElementById(currentCrossBoxId);
+    const rect = box.getBoundingClientRect();
+    
+    // Define uma margem de 70px para garantir que as setas conectadas sejam capturadas
+    const padding = 70; 
+    
+    // Recorta a tela exatamente no quadrante da caixa
+    html2canvas(document.body, {
+        x: rect.left - padding + window.scrollX,
+        y: rect.top - padding + window.scrollY,
+        width: rect.width + (padding * 2),
+        height: rect.height + (padding * 2),
+        scale: 0.8, // Escala reduzida para economizar armazenamento
+        useCORS: true
+    }).then(canvas => {
+        // Converte a imagem capturada em Base64 (JPEG com 60% de qualidade)
+        const thumbBase64 = canvas.toDataURL('image/jpeg', 0.6);
+        
+        let nexusState = JSON.parse(localStorage.getItem('nexus_v13_state')) || [];
+        let found = false;
+        
+        nexusState.forEach(univ => {
+            univ.groups.forEach(group => {
+                if (group.id === groupId) {
+                    if (!group.comments) group.comments = [];
+                    group.comments.push({ 
+                        text: text.trim(), 
+                        date: new Date().toISOString(),
+                        thumb: thumbBase64 // <- Salvando a imagem recortada
+                    });
+                    found = true;
+                }
+            });
+        });
+        
+        if (found) {
+            localStorage.setItem('nexus_v13_state', JSON.stringify(nexusState));
+            document.getElementById('cross-comment-modal').style.display = 'none';
+            if(typeof showToast === 'function') showToast("✅ Update visual salvo no Nexus!");
+            if(typeof openSound !== 'undefined') openSound.play().catch(()=>{});
+        }
+    });
+}
+
+
+
+
+
+
+
+
+
 
 
 
@@ -11360,6 +11574,144 @@ function closeReminder() {
         <button onclick="closeReminder()" style="background: #eab308; color: white; border: none; padding: 6px 18px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 11px; transition: background 0.2s; text-transform: uppercase; letter-spacing: 0.5px;" onmouseover="this.style.background='#ca8a04'" onmouseout="this.style.background='#eab308'">Concluído</button>
     </div>
 </div>
+
+
+
+<div id="cross-comment-modal" class="modal-overlay">
+    <div class="modal-panel no-pan" style="width: 500px; max-height: 80vh;">
+        <div class="dash-header">
+            <div>
+                <span class="dash-title">🆕 Status do Projeto (Nexus)</span>
+                <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Consolide este update diretamente no ambiente do daily-geral.</div>
+            </div>
+            <span class="dash-close" onclick="document.getElementById('cross-comment-modal').style.display='none'">×</span>
+        </div>
+        <div class="dash-content" style="background: #f8fafc; padding: 20px; display: flex; flex-direction: column; gap: 15px;">
+            <div>
+                <label style="font-size: 12px; font-weight: bold; color: #475569; margin-bottom: 5px; display: block;">Vincular ao Projeto:</label>
+                <select id="cross-comment-project-select" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 14px; outline: none; cursor: pointer;"></select>
+            </div>
+            <div>
+                <label style="font-size: 12px; font-weight: bold; color: #475569; margin-bottom: 5px; display: block;">Comentário / Status Geral:</label>
+                <textarea id="cross-comment-text" rows="4" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 14px; outline: none; resize: vertical;" placeholder="Descreva o update de status para anexar ao histórico do projeto..."></textarea>
+            </div>
+            <button class="btn-primary" style="width: 100%; padding: 12px; font-size: 14px; margin-top: 10px;" onclick="saveCrossComment()">Salvar no Nexus</button>
+        </div>
+    </div>
+</div>
+
+
+<div id="search-modal-overlay" class="modal-overlay" onclick="closeGlobalSearch()">
+    <div class="modal-panel no-pan" style="width: 600px; max-height: 70vh;" onclick="event.stopPropagation()">
+        <input type="text" id="global-search-input" placeholder="Buscar em todos os projetos (Ctrl+K)..." 
+               style="width: 100%; padding: 20px; font-size: 18px; border: none; border-bottom: 1px solid #cbd5e1; outline: none; box-sizing: border-box;" 
+               oninput="renderSearchResults(this.value)">
+        <div id="search-results" style="padding: 10px; overflow-y: auto; background: #f8fafc; flex-grow: 1;">
+            <div style="text-align: center; color: #94a3b8; padding: 20px;">Digite algo para pesquisar...</div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    function openGlobalSearch() {
+        document.getElementById('search-modal-overlay').style.display = 'flex';
+        setTimeout(() => document.getElementById('global-search-input').focus(), 100);
+    }
+    
+    function closeGlobalSearch() {
+        document.getElementById('search-modal-overlay').style.display = 'none';
+    }
+    
+    function renderSearchResults(term) {
+        const container = document.getElementById('search-results');
+        if (term.length < 2) {
+            container.innerHTML = '<div style="text-align: center; color: #94a3b8; padding: 20px;">Digite pelo menos 2 caracteres...</div>';
+            return;
+        }
+    
+        const results = searchAcrossProjects(term);
+    
+        if (results.length === 0) {
+            container.innerHTML = '<div style="text-align: center; color: #ef4444; padding: 20px;">Nenhum resultado encontrado.</div>';
+            return;
+        }
+    
+        let html = '';
+        results.forEach(res => {
+            // === CONSTRUÇÃO DO MINI DIAGRAMA HTML ===
+            let diagramHtml = '<div style="display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 11px; overflow-x: auto; padding-bottom: 4px;">';
+            
+            // 1. Coluna de Antecessoras
+            if (res.predecessors.length > 0) {
+                diagramHtml += '<div style="display: flex; flex-direction: column; gap: 4px;">';
+                res.predecessors.forEach(p => {
+                    diagramHtml += `<span style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 3px 6px; border-radius: 4px; color: #475569; white-space: nowrap;">${p}</span>`;
+                });
+                diagramHtml += '</div><div style="color: #94a3b8; font-weight: bold; font-size: 14px;">➔</div>';
+            }
+    
+            // 2. Caixa Alvo (A que você pesquisou) - Maior e Azul
+            diagramHtml += `
+                <div style="background: #e0f2fe; border: 2px solid #3b82f6; padding: 8px 12px; border-radius: 6px; font-weight: bold; color: #0369a1; white-space: nowrap; box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2);">
+                    📦 ${res.boxTitle}
+                </div>
+            `;
+    
+            // 3. Coluna de Sucessoras
+            if (res.successors.length > 0) {
+                diagramHtml += '<div style="color: #94a3b8; font-weight: bold; font-size: 14px;">➔</div><div style="display: flex; flex-direction: column; gap: 4px;">';
+                res.successors.forEach(s => {
+                    diagramHtml += `<span style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 3px 6px; border-radius: 4px; color: #475569; white-space: nowrap;">${s}</span>`;
+                });
+                diagramHtml += '</div>';
+            }
+            diagramHtml += '</div>';
+            // ========================================
+    
+            // Montagem Final do Card
+            html += `
+                <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 12px; cursor: pointer; transition: transform 0.1s, box-shadow 0.1s;" 
+                     onmouseover="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 4px 10px rgba(0,0,0,0.08)';" 
+                     onmouseout="this.style.borderColor='#e2e8f0'; this.style.boxShadow='none';"
+                     onclick="jumpToSearchResult('${res.projectId}', '${res.boxId}')">
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #e2e8f0; padding-bottom: 8px;">
+                        <div style="font-size: 11px; color: #0ea5e9; font-weight: 800; text-transform: uppercase;">📂 Projeto: ${res.projectName}</div>
+                        <div style="font-size: 10px; color: #64748b; font-style: italic;">Match: ${res.reason}</div>
+                    </div>
+                    
+                    ${diagramHtml}
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    }
+    
+    // A mágica que viaja entre projetos
+    function jumpToSearchResult(projectId, boxId) {
+        closeGlobalSearch();
+        
+        // Se não estivermos no projeto correto, carregamos ele primeiro
+        if (currentDrawingName !== getDB().find(p => p.id === projectId).name) {
+            loadProject(projectId);
+        }
+        
+        // Pequeno delay para garantir que o DOM do projeto renderizou as caixas
+        setTimeout(() => {
+            focusOnBox(boxId); // Sua função atual de câmera cinemática!
+        }, 300);
+    }
+    
+    // Atalho de teclado (Ctrl + K)
+    window.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            openGlobalSearch();
+        }
+    });
+</script>
 
 </body>
 </html>
