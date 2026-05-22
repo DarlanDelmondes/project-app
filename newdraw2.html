@@ -4654,6 +4654,8 @@ function repairBoxStructure() {
         recursiveClone(original, originalParent, true);
         markUnsaved(); 
         showToast("Caixa duplicada com sucesso!");
+
+        updateBoxColors();
     }
 
     function renderInsightCards(tasks) {
@@ -10100,7 +10102,7 @@ function updateBoxColors() {
         // Pode ajustar o valor final (ex: #1e3a8a) para o azul que desejar
 // Substitua o array 'colors' na sua função updateBoxColors por este:
         const colors = [
-            '#ffffff', // Nível 0: Branco puro
+            '#fff', // Nível 0: Branco puro
             '#ddd', // Nível 1: Cinza muito claro (Slate 100)
             '#bbb', // Nível 2: Cinza claro (Slate 200)
             '#999', // Nível 3: Cinza médio (Slate 300)
