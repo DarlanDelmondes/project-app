@@ -658,34 +658,17 @@ body.filtering .box.filter-match {
     border-color: #10b981 !important;
 }
 
-
-
 .box {
-    position: absolute; 
-    /* Fundo levemente distinto do bg principal para dar profundidade sem sombra */
-    background: white; 
+    position: absolute;
+    /* Usamos o modo escuro como base, mas a cor é definida pelo nível de profundidade */
+    /* Nível 0 = quase branco | Nível 5 = azul escuro quase preto */
+    background-color: var(--depth-color, #ffffff) !important;
     
-    /* Borda sutil (o segredo do Poclab) */
-    border: 1px solid var(--box-border); 
-    
-    /* Cantos vivos ou levemente arredondados */
-    
-    /* A chave da simplicidade: NENHUMA SOMBRA */
-    box-shadow: none; 
-    
-    display: flex; 
-    flex-direction: column; 
+    border: none;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
     z-index: 10;
-    min-width: 200px; 
-    min-height: 80px; 
-    cursor: grab; 
-    
-    /* Transições apenas para interação visual leve */
-    transition: border-color 0.15s, background-color 0.15s;
-}
-/* Estado de foco: apenas uma borda mais forte, sem luzes ou sombras */
-.box:hover {
-    border-color: var(--handle-color);
 }
 
 
@@ -3829,9 +3812,29 @@ function toggleTaskView(boxId) {
             // Aplica o movimento horizontal NO INPUT DE TEXTO
             // Dividimos pelo scale porque o transform acontece no "mundo" do zoom
             titleInput.style.transform = `translateX(${shiftX / state.scale}px)`;
+
+            // ... dentro da sua função de renderização, após o loop que cria as caixas:
+            
+            // ATUALIZAÇÃO DE PROFUNDIDADE (Obrigatorio após o HTML estar pronto)
+            document.querySelectorAll('.box').forEach(box => {
+                const depth = getBoxDepth(box);
+                box.style.setProperty('--depth', depth);
+            });
         });
     }
 
+
+    function getBoxDepth(boxElement) {
+        let depth = 0;
+        // O seu código atual depende da estrutura do DOM.
+        // Se a caixa estiver dentro de outra caixa, isso funcionará:
+        let parent = boxElement.parentElement.closest('.box');
+        while(parent) {
+            depth++;
+            parent = parent.parentElement.closest('.box');
+        }
+        return depth;
+    }
 
 // --- HELPERS DO GANTT ---
 
@@ -9260,6 +9263,9 @@ function loadProject(id, isIslandNavigation = false) {
 
     closeDashboard(); 
     showToast(`Carregado: ${proj.name}`); 
+
+
+    updateBoxColors();
 }
 
 // =========================================================================
@@ -10074,6 +10080,43 @@ function exportTeams() {
     URL.revokeObjectURL(url);
     
     showToast("✅ Equipes exportadas com sucesso!");
+}
+
+
+
+
+function updateBoxColors() {
+    document.querySelectorAll('.box').forEach(box => {
+        let depth = 0;
+        let parent = box.parentElement.closest('.box');
+        while(parent) {
+            depth++;
+            parent = parent.parentElement.closest('.box');
+        }
+
+        // Definimos a cor aqui: do branco (0) para o azul escuro (5+)
+        // Pode ajustar o valor final (ex: #1e3a8a) para o azul que desejar
+// Substitua o array 'colors' na sua função updateBoxColors por este:
+        const colors = [
+            '#ffffff', // Nível 0: Branco puro
+            '#f1f5f9', // Nível 1: Cinza muito claro (Slate 100)
+            '#e2e8f0', // Nível 2: Cinza claro (Slate 200)
+            '#cbd5e1', // Nível 3: Cinza médio (Slate 300)
+            '#94a3b8', // Nível 4: Cinza escuro (Slate 400)
+            '#64748b'  // Nível 5: Cinza azulado (Slate 500)
+        ];
+
+        // E ajuste a cor do texto para ser sempre preta, 
+        // já que agora todos os fundos são claros o suficiente:
+        box.style.color = '#0f172a'; // Um azul-quase-preto que combina com o tema
+        const color = colors[Math.min(depth, colors.length - 1)];
+        
+        // Aplica a cor diretamente no estilo do elemento
+        box.style.setProperty('--depth-color', color);
+        
+        // Ajuste de texto para contraste (se a caixa for escura, texto branco)
+        box.style.color = depth > 3 ? 'white' : 'black';
+    });
 }
 
 function importTeams(event) {
@@ -11747,6 +11790,24 @@ function closeReminder() {
             openGlobalSearch();
         }
     });
+// Este código vigia todas as mudanças no canvas em tempo real
+const canvasObserver = new MutationObserver((mutations) => {
+    // Verifica se houve alguma mudança relevante nas caixas
+    updateBoxColors();
+});
+
+// Selecione o elemento que contém as suas caixas
+const canvasElement = document.getElementById('canvas-container'); // Ajuste para o ID correto se for outro
+if (canvasElement) {
+    canvasObserver.observe(canvasElement, { 
+        childList: true, 
+        subtree: true, 
+        attributes: true, 
+        attributeFilter: ['style', 'class'] 
+    });
+}
+
+
 </script>
 
 </body>
