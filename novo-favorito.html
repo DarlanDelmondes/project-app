@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Favoritos & Workspaces</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --danger: #ef4444;
+            --success: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #334155;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+        }
+
+        button {
+            background-color: var(--card-bg);
+            color: var(--text-main);
+            border: 1px solid #334155;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        button:hover {
+            background-color: #334155;
+        }
+
+        button.primary {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        button.primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        /* Grid de Cards */
+        #grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            align-items: start;
+        }
+
+        /* Card do Grupo */
+        .group-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border: 1px solid #334155;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-header {
+            min-height: 130px;
+            background-size: cover;
+            background-position: center;
+            position: relative;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            cursor: pointer;
+        }
+
+        .card-header::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.85) 100%);
+            z-index: 1;
+        }
+
+        .card-actions {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            opacity: 0;
+            transition: opacity 0.2s;
+            margin-bottom: 1rem;
+        }
+
+        .card-header:hover .card-actions {
+            opacity: 1;
+        }
+
+        .icon-btn {
+            background: rgba(0,0,0,0.5);
+            border: none;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.8rem;
+            border-radius: 4px;
+        }
+
+        .icon-btn:hover { background: rgba(0,0,0,0.8); }
+
+        .header-bottom {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        }
+
+        /* Tags dos Mais Clicados */
+        .top-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+        }
+
+        .top-tag {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: var(--text-main);
+            font-size: 0.7rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            max-width: 140px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .top-tag:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+            transform: translateY(-1px);
+        }
+
+        /* Expansão Animada */
+        .links-wrapper {
+            display: grid;
+            grid-template-rows: 0fr;
+            transition: grid-template-rows 0.3s ease-out;
+        }
+
+        .group-card.expanded .links-wrapper {
+            grid-template-rows: 1fr;
+        }
+
+        .links-inner {
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .links-list {
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .link-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255,255,255,0.03);
+            padding: 0.75rem;
+            border-radius: 6px;
+            border: 1px solid #334155;
+        }
+
+        .link-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            flex-grow: 1;
+        }
+
+        .link-title {
+            font-weight: 500;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .link-clicks {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-weight: normal;
+        }
+
+        .link-copy-text {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-family: monospace;
+        }
+
+        .link-action-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            margin-left: 1rem;
+        }
+
+        .link-action-btn:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .add-link-btn {
+            margin: 0 1rem 1rem 1rem;
+            width: calc(100% - 2rem);
+            border-style: dashed;
+        }
+
+        /* Modais */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .modal-overlay.active { display: flex; }
+
+        .modal-content {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 400px;
+            border: 1px solid #334155;
+        }
+
+        .modal-title { margin-bottom: 1.5rem; }
+
+        .form-group {
+            margin-bottom: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.75rem;
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: white;
+            border-radius: 4px;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--success);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 6px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Workspaces</h1>
+        <div class="controls">
+            <input type="file" id="import-file" style="display: none" accept=".json">
+            <button onclick="document.getElementById('import-file').click()">📥 Importar</button>
+            <button onclick="exportData()">📤 Exportar</button>
+            <button class="primary" onclick="openGroupModal()">+ Novo Grupo</button>
+        </div>
+    </header>
+
+    <!-- Aqui estava o glitch. Resolvido! -->
+    <main id="grid-container"></main>
+
+    <!-- Modal Grupo -->
+    <div class="modal-overlay" id="group-modal">
+        <div class="modal-content">
+            <h2 class="modal-title" id="group-modal-title">Novo Grupo</h2>
+            <input type="hidden" id="group-id">
+            <div class="form-group">
+                <label>Título do Grupo</label>
+                <input type="text" id="group-title" placeholder="Ex: Infra AWS">
+            </div>
+            <div class="form-group">
+                <label>URL da Imagem de Fundo</label>
+                <input type="text" id="group-bg" placeholder="https://...">
+            </div>
+            <div class="modal-actions">
+                <button onclick="closeModals()">Cancelar</button>
+                <button class="primary" onclick="saveGroup()">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Link -->
+    <div class="modal-overlay" id="link-modal">
+        <div class="modal-content">
+            <h2 class="modal-title">Novo Favorito</h2>
+            <input type="hidden" id="link-group-id">
+            <div class="form-group">
+                <label>Título do Link</label>
+                <input type="text" id="link-title" placeholder="Ex: Console de Pagamentos">
+            </div>
+            <div class="form-group">
+                <label>URL</label>
+                <input type="text" id="link-url" placeholder="https://...">
+            </div>
+            <div class="form-group">
+                <label>Texto para Copiar (Ex: credenciais, comandos)</label>
+                <input type="text" id="link-copy" placeholder="Texto a ser copiado ao clicar...">
+            </div>
+            <div class="modal-actions">
+                <button onclick="closeModals()">Cancelar</button>
+                <button class="primary" onclick="saveLink()">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast">Ação realizada com sucesso!</div>
+
+    <script>
+        // State Management
+        let groups = JSON.parse(localStorage.getItem('workspaces_data')) || [];
+        let expandedGroups = new Set(); // Memória dos cards abertos
+
+        function saveData() {
+            localStorage.setItem('workspaces_data', JSON.stringify(groups));
+            render();
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // Render Engine
+        function render() {
+            const grid = document.getElementById('grid-container');
+            grid.innerHTML = '';
+
+            groups.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+            groups.forEach((group, index) => {
+                const card = document.createElement('div');
+                card.className = `group-card ${expandedGroups.has(group.id) ? 'expanded' : ''}`;
+                card.id = `group-${group.id}`;
+                
+                const bgImage = group.bgImage || 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&w=500&q=80';
+
+                // Lógica de Top 5
+                const topLinks = [...group.links]
+                    .sort((a, b) => (b.clicks || 0) - (a.clicks || 0))
+                    .slice(0, 5);
+
+                const tagsHtml = topLinks.length > 0 ? `
+                    <div class="top-tags">
+                        ${topLinks.map(link => `
+                            <button class="top-tag" onclick="handleTagClick(event, '${group.id}', '${link.id}', '${link.url}', '${(link.copyText||'').replace(/'/g, "\\'")}')" title="${link.title}">
+                                ${link.title}
+                            </button>
+                        `).join('')}
+                    </div>
+                ` : '';
+
+                card.innerHTML = `
+                    <div class="card-header" style="background-image: url('${bgImage}')" onclick="toggleExpand('${group.id}')">
+                        <div class="card-actions" onclick="event.stopPropagation()">
+                            <button class="icon-btn" onclick="moveGroup(${index}, -1)" title="Mover para Esquerda">◀</button>
+                            <button class="icon-btn" onclick="moveGroup(${index}, 1)" title="Mover para Direita">▶</button>
+                            <button class="icon-btn" onclick="editGroup('${group.id}')" title="Editar Grupo">✏️</button>
+                            <button class="icon-btn" onclick="deleteGroup('${group.id}')" title="Excluir Grupo">🗑️</button>
+                        </div>
+                        <div class="header-bottom">
+                            <div class="card-title">${group.title}</div>
+                            ${tagsHtml}
+                        </div>
+                    </div>
+                    <div class="links-wrapper">
+                        <div class="links-inner">
+                            <div class="links-list">
+                                ${group.links.map(link => `
+                                    <div class="link-item">
+                                        <div class="link-info">
+                                            <span class="link-title">
+                                                ${link.title} 
+                                                <span class="link-clicks">(Acessos: ${link.clicks || 0})</span>
+                                            </span>
+                                            <span class="link-copy-text">📋 ${link.copyText}</span>
+                                        </div>
+                                        <button class="link-action-btn" onclick="executeLinkAction('${group.id}', '${link.id}', '${link.url}', '${(link.copyText||'').replace(/'/g, "\\'")}')">
+                                            Abrir & Copiar
+                                        </button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <button class="add-link-btn" onclick="openLinkModal('${group.id}')">+ Adicionar Favorito</button>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // UI Interactions
+        function toggleExpand(groupId) {
+            if (expandedGroups.has(groupId)) {
+                expandedGroups.delete(groupId);
+            } else {
+                expandedGroups.add(groupId);
+            }
+            const card = document.getElementById(`group-${groupId}`);
+            card.classList.toggle('expanded');
+        }
+
+        function handleTagClick(event, groupId, linkId, url, copyText) {
+            event.stopPropagation(); // Evita que o card expanda/recolha ao clicar na tag
+            executeLinkAction(groupId, linkId, url, copyText);
+        }
+
+        // Core Interaction: Contabiliza click, copia e abre link
+        function executeLinkAction(groupId, linkId, url, textToCopy) {
+            // Incrementa o contador de cliques
+            const group = groups.find(g => g.id === groupId);
+            if (group) {
+                const link = group.links.find(l => l.id === linkId);
+                if (link) {
+                    link.clicks = (link.clicks || 0) + 1;
+                    saveData(); // Re-renderiza para atualizar os Top 5
+                }
+            }
+
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                showToast('Texto copiado para a área de transferência!');
+                window.open(url, '_blank');
+            }).catch(err => {
+                console.error('Falha ao copiar:', err);
+                alert('Aviso: O navegador bloqueou a cópia automática, mas o link será aberto.');
+                window.open(url, '_blank');
+            });
+        }
+
+        // Group CRUD
+        function openGroupModal(id = null) {
+            document.getElementById('group-modal').classList.add('active');
+            if (id) {
+                const group = groups.find(g => g.id === id);
+                document.getElementById('group-id').value = group.id;
+                document.getElementById('group-title').value = group.title;
+                document.getElementById('group-bg').value = group.bgImage;
+                document.getElementById('group-modal-title').innerText = "Editar Grupo";
+            } else {
+                document.getElementById('group-id').value = '';
+                document.getElementById('group-title').value = '';
+                document.getElementById('group-bg').value = '';
+                document.getElementById('group-modal-title').innerText = "Novo Grupo";
+            }
+        }
+
+        function saveGroup() {
+            const id = document.getElementById('group-id').value;
+            const title = document.getElementById('group-title').value;
+            const bgImage = document.getElementById('group-bg').value;
+
+            if (!title) return alert("O título é obrigatório.");
+
+            if (id) {
+                const group = groups.find(g => g.id === id);
+                group.title = title;
+                group.bgImage = bgImage;
+            } else {
+                groups.push({
+                    id: crypto.randomUUID(),
+                    title,
+                    bgImage,
+                    order: groups.length,
+                    links: []
+                });
+            }
+            saveData();
+            closeModals();
+        }
+
+        function deleteGroup(id) {
+            if (confirm('Tem certeza que deseja excluir este grupo e todos os seus links?')) {
+                groups = groups.filter(g => g.id !== id);
+                expandedGroups.delete(id);
+                saveData();
+            }
+        }
+
+        function moveGroup(index, direction) {
+            if (index + direction < 0 || index + direction >= groups.length) return;
+            const tempOrder = groups[index].order;
+            groups[index].order = groups[index + direction].order;
+            groups[index + direction].order = tempOrder;
+            saveData();
+        }
+
+        // Link CRUD
+        function openLinkModal(groupId) {
+            document.getElementById('link-modal').classList.add('active');
+            document.getElementById('link-group-id').value = groupId;
+            document.getElementById('link-title').value = '';
+            document.getElementById('link-url').value = '';
+            document.getElementById('link-copy').value = '';
+        }
+
+        function saveLink() {
+            const groupId = document.getElementById('link-group-id').value;
+            const title = document.getElementById('link-title').value;
+            const url = document.getElementById('link-url').value;
+            const copyText = document.getElementById('link-copy').value;
+
+            if (!title || !url) return alert("Título e URL são obrigatórios.");
+
+            const group = groups.find(g => g.id === groupId);
+            group.links.push({
+                id: crypto.randomUUID(),
+                title,
+                url,
+                copyText,
+                clicks: 0 // Inicia com 0 cliques
+            });
+
+            expandedGroups.add(groupId); // Garante que o card fique aberto
+            saveData();
+            closeModals();
+        }
+
+        // Utils
+        function closeModals() {
+            document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
+        }
+
+        // Import / Export Systems
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(groups));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", `workspaces_backup_${new Date().toISOString().split('T')[0]}.json`);
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+            showToast('Backup exportado com sucesso!');
+        }
+
+        document.getElementById('import-file').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const importedGroups = JSON.parse(event.target.result);
+                    if (Array.isArray(importedGroups)) {
+                        groups = importedGroups;
+                        saveData();
+                        showToast('Backup importado com sucesso!');
+                    } else {
+                        alert('Formato de arquivo inválido.');
+                    }
+                } catch (err) {
+                    alert('Erro ao ler o arquivo JSON.');
+                }
+            };
+            reader.readAsText(file);
+            e.target.value = '';
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModals();
+        });
+
+        render();
+    </script>
+</body>
+</html>
