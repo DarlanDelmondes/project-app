@@ -14,6 +14,7 @@
             --primary-hover: #2563eb;
             --danger: #ef4444;
             --success: #10b981;
+            --sidebar-width: 420px;
         }
 
         * {
@@ -28,6 +29,7 @@
             color: var(--text-main);
             padding: 2rem;
             min-height: 100vh;
+            overflow-x: hidden;
         }
 
         header {
@@ -55,18 +57,9 @@
             font-weight: 500;
         }
 
-        button:hover {
-            background-color: #334155;
-        }
-
-        button.primary {
-            background-color: var(--primary);
-            border-color: var(--primary);
-        }
-
-        button.primary:hover {
-            background-color: var(--primary-hover);
-        }
+        button:hover { background-color: #334155; }
+        button.primary { background-color: var(--primary); border-color: var(--primary); }
+        button.primary:hover { background-color: var(--primary-hover); }
 
         /* Grid de Cards */
         #grid-container {
@@ -76,27 +69,48 @@
             align-items: start;
         }
 
-        /* Card do Grupo */
+        /* Card do Grupo & Arrastar e Soltar */
         .group-card {
             background-color: var(--card-bg);
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             border: 1px solid #334155;
-            display: flex;
-            flex-direction: column;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+        }
+
+        .group-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+            border-color: #475569;
+        }
+
+        /* Efeitos visuais do Drag and Drop */
+        .group-card.dragging {
+            opacity: 0.4;
+            transform: scale(0.95);
+        }
+
+        .group-card.drag-over {
+            border: 2px dashed var(--primary);
+            transform: scale(1.02);
+        }
+
+        /* Impede que elementos filhos roubem o evento de drag causando flickering */
+        body.is-dragging .group-card * {
+            pointer-events: none !important;
         }
 
         .card-header {
-            min-height: 130px;
+            height: 160px;
             background-size: cover;
             background-position: center;
             position: relative;
-            padding: 1rem;
+            padding: 1.25rem;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            cursor: pointer;
         }
 
         .card-header::before {
@@ -116,21 +130,16 @@
             opacity: 0;
             transition: opacity 0.2s;
             margin-bottom: 1rem;
+            pointer-events: none; /* Garante que o container invisível não roube cliques */
         }
 
-        .card-header:hover .card-actions {
-            opacity: 1;
-        }
+        .card-header:hover .card-actions { opacity: 1; }
 
         .icon-btn {
-            background: rgba(0,0,0,0.5);
-            border: none;
-            color: white;
-            padding: 0.25rem 0.5rem;
-            font-size: 0.8rem;
-            border-radius: 4px;
+            background: rgba(0,0,0,0.5); border: none; color: white;
+            padding: 0.25rem 0.5rem; font-size: 0.8rem; border-radius: 4px;
+            pointer-events: auto; /* Reativa os cliques apenas exatamente em cima do botão */
         }
-
         .icon-btn:hover { background: rgba(0,0,0,0.8); }
 
         .header-bottom {
@@ -138,187 +147,103 @@
             z-index: 2;
             display: flex;
             flex-direction: column;
-            gap: 0.5rem;
+            gap: 0.75rem;
+            height: 100%;
+            justify-content: flex-end;
         }
 
         .card-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+            font-size: 1.25rem; font-weight: 600; text-shadow: 0 2px 4px rgba(0,0,0,0.8);
         }
 
         /* Tags dos Mais Clicados */
-        .top-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.4rem;
-        }
+        .top-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; pointer-events: auto; }
 
         .top-tag {
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(4px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: var(--text-main);
-            font-size: 0.7rem;
-            padding: 0.25rem 0.6rem;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
-            white-space: nowrap;
-            max-width: 140px;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.2); color: var(--text-main);
+            font-size: 0.7rem; padding: 0.3rem 0.6rem; border-radius: 12px;
+            cursor: pointer; transition: all 0.2s; white-space: nowrap;
+            max-width: 140px; overflow: hidden; text-overflow: ellipsis;
+            z-index: 3;
         }
 
         .top-tag:hover {
-            background: var(--primary);
-            border-color: var(--primary);
-            transform: translateY(-1px);
+            background: var(--primary); border-color: var(--primary); transform: translateY(-1px);
         }
 
-        /* Expansão Animada */
-        .links-wrapper {
-            display: grid;
-            grid-template-rows: 0fr;
-            transition: grid-template-rows 0.3s ease-out;
+        /* Sidebar (Barra Lateral) */
+        .sidebar-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6); z-index: 50;
+            display: none; opacity: 0; transition: opacity 0.3s;
+            backdrop-filter: blur(2px);
+        }
+        .sidebar-overlay.active { display: block; opacity: 1; }
+
+        .sidebar {
+            position: fixed; top: 0; right: calc(var(--sidebar-width) * -1);
+            width: var(--sidebar-width); max-width: 100vw; height: 100vh;
+            background: var(--bg-color); border-left: 1px solid #334155;
+            z-index: 60; transition: right 0.3s ease;
+            display: flex; flex-direction: column;
+            box-shadow: -5px 0 25px rgba(0,0,0,0.5);
+        }
+        .sidebar.active { right: 0; }
+
+        .sidebar-header {
+            padding: 1.5rem; border-bottom: 1px solid #334155;
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--card-bg);
+        }
+        .sidebar-title { font-size: 1.25rem; font-weight: 600; }
+        .close-sidebar-btn { background: transparent; border: none; font-size: 1.5rem; padding: 0 0.5rem; cursor: pointer;}
+        .close-sidebar-btn:hover { color: var(--danger); }
+
+        .sidebar-content {
+            padding: 1.5rem; overflow-y: auto; flex-grow: 1;
+            display: flex; flex-direction: column; gap: 1rem;
         }
 
-        .group-card.expanded .links-wrapper {
-            grid-template-rows: 1fr;
-        }
-
-        .links-inner {
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .links-list {
-            padding: 1rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-        }
-
+        /* Links na Sidebar */
         .link-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(255,255,255,0.03);
-            padding: 0.75rem;
-            border-radius: 6px;
-            border: 1px solid #334155;
+            background: var(--card-bg); border: 1px solid #334155;
+            padding: 1rem; border-radius: 8px;
+            display: flex; flex-direction: column; gap: 0.75rem;
         }
 
-        .link-info {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            flex-grow: 1;
-        }
-
-        .link-title {
-            font-weight: 500;
-            color: var(--text-main);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
+        .link-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .link-title { font-weight: 500; font-size: 1rem; color: var(--text-main); word-break: break-word; }
+        .link-clicks { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; display: block; }
         
-        .link-clicks {
-            font-size: 0.7rem;
-            color: var(--text-muted);
-            font-weight: normal;
-        }
+        .link-actions-top { display: flex; gap: 0.4rem; }
+        .link-actions-top button { padding: 0.25rem 0.5rem; font-size: 0.8rem; }
 
-        .link-action-btn {
-            background-color: var(--primary);
-            color: white;
-            border: none;
-            padding: 0.5rem;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            margin-left: 1rem;
-        }
-
-        .link-action-btn:hover {
-            background-color: var(--primary-hover);
-        }
-
-        .add-link-btn {
-            margin: 0 1rem 1rem 1rem;
-            width: calc(100% - 2rem);
-            border-style: dashed;
-        }
+        .add-link-btn { width: 100%; border-style: dashed; padding: 1rem; margin-top: 0.5rem; }
 
         /* Modais */
         .modal-overlay {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.7);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7); display: none;
+            justify-content: center; align-items: center; z-index: 100;
         }
-
         .modal-overlay.active { display: flex; }
 
         .modal-content {
-            background: var(--card-bg);
-            padding: 2rem;
-            border-radius: 8px;
-            width: 100%;
-            max-width: 400px;
-            border: 1px solid #334155;
+            background: var(--card-bg); padding: 2rem; border-radius: 8px;
+            width: 100%; max-width: 400px; border: 1px solid #334155;
         }
+        .form-group { margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
+        input { width: 100%; padding: 0.75rem; background: #0f172a; border: 1px solid #334155; color: white; border-radius: 4px; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem; }
 
-        .modal-title { margin-bottom: 1.5rem; }
-
-        .form-group {
-            margin-bottom: 1rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        input {
-            width: 100%;
-            padding: 0.75rem;
-            background: #0f172a;
-            border: 1px solid #334155;
-            color: white;
-            border-radius: 4px;
-        }
-
-        .modal-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 1rem;
-            margin-top: 1.5rem;
-        }
-
-        /* Toast Notification */
+        /* Toast */
         .toast {
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
-            background: var(--success);
-            color: white;
-            padding: 1rem 1.5rem;
-            border-radius: 6px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            transform: translateY(100px);
-            opacity: 0;
-            transition: all 0.3s ease;
-            z-index: 1000;
+            position: fixed; bottom: 2rem; right: 2rem; background: var(--success);
+            color: white; padding: 1rem 1.5rem; border-radius: 6px;
+            transform: translateY(100px); opacity: 0; transition: all 0.3s ease; z-index: 1000;
         }
-
-        .toast.show {
-            transform: translateY(0);
-            opacity: 1;
-        }
+        .toast.show { transform: translateY(0); opacity: 1; }
     </style>
 </head>
 <body>
@@ -334,6 +259,18 @@
     </header>
 
     <main id="grid-container"></main>
+
+    <!-- Sidebar Direita para os Favoritos -->
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-title" id="sidebar-title">Nome do Grupo</div>
+            <button class="close-sidebar-btn" onclick="closeSidebar()">✕</button>
+        </div>
+        <div class="sidebar-content" id="sidebar-content">
+            <!-- Links renderizados via JS -->
+        </div>
+    </div>
 
     <!-- Modal Grupo -->
     <div class="modal-overlay" id="group-modal">
@@ -355,11 +292,13 @@
         </div>
     </div>
 
-    <!-- Modal Link -->
+    <!-- Modal Link (Serve para Adicionar e Editar) -->
     <div class="modal-overlay" id="link-modal">
         <div class="modal-content">
-            <h2 class="modal-title">Novo Favorito</h2>
+            <h2 class="modal-title" id="link-modal-title">Novo Favorito</h2>
             <input type="hidden" id="link-group-id">
+            <input type="hidden" id="link-id">
+            
             <div class="form-group">
                 <label>Título do Link</label>
                 <input type="text" id="link-title" placeholder="Ex: Console de Pagamentos">
@@ -369,8 +308,8 @@
                 <input type="text" id="link-url" placeholder="https://...">
             </div>
             <div class="form-group">
-                <label>Texto para Copiar (Ex: credenciais, comandos)</label>
-                <input type="text" id="link-copy" placeholder="Texto a ser copiado ao clicar...">
+                <label>Texto Oculto para Copiar (Opcional)</label>
+                <input type="text" id="link-copy" placeholder="Ex: credenciais, comandos a copiar no clique">
             </div>
             <div class="modal-actions">
                 <button onclick="closeModals()">Cancelar</button>
@@ -379,17 +318,17 @@
         </div>
     </div>
 
-    <!-- Toast -->
     <div id="toast" class="toast">Ação realizada com sucesso!</div>
 
     <script>
-        // State Management
         let groups = JSON.parse(localStorage.getItem('workspaces_data')) || [];
-        let expandedGroups = new Set(); // Memória dos cards abertos
+        let currentOpenGroupId = null;
+        let dragSourceElement = null; 
 
         function saveData() {
             localStorage.setItem('workspaces_data', JSON.stringify(groups));
-            render();
+            renderGrid();
+            if (currentOpenGroupId) renderSidebar(currentOpenGroupId);
         }
 
         function showToast(message) {
@@ -399,8 +338,8 @@
             setTimeout(() => toast.classList.remove('show'), 3000);
         }
 
-        // Render Engine
-        function render() {
+        // --- Renderização Principal (Grid) ---
+        function renderGrid() {
             const grid = document.getElementById('grid-container');
             grid.innerHTML = '';
 
@@ -408,12 +347,23 @@
 
             groups.forEach((group, index) => {
                 const card = document.createElement('div');
-                card.className = `group-card ${expandedGroups.has(group.id) ? 'expanded' : ''}`;
+                card.className = 'group-card';
                 card.id = `group-${group.id}`;
+                card.draggable = true; 
+                
+                // O card INTEIRO abre a sidebar
+                card.onclick = () => openSidebar(group.id);
+                
+                // Listeners de Drag and Drop
+                card.addEventListener('dragstart', handleDragStart);
+                card.addEventListener('dragover', handleDragOver);
+                card.addEventListener('dragenter', handleDragEnter);
+                card.addEventListener('dragleave', handleDragLeave);
+                card.addEventListener('drop', handleDrop);
+                card.addEventListener('dragend', handleDragEnd);
                 
                 const bgImage = group.bgImage || 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&w=500&q=80';
 
-                // Lógica de Top 5
                 const topLinks = [...group.links]
                     .sort((a, b) => (b.clicks || 0) - (a.clicks || 0))
                     .slice(0, 5);
@@ -421,6 +371,7 @@
                 const tagsHtml = topLinks.length > 0 ? `
                     <div class="top-tags">
                         ${topLinks.map(link => `
+                            <!-- event.stopPropagation() garante que clicar na tag executa o link sem abrir a sidebar -->
                             <button class="top-tag" onclick="handleTagClick(event, '${group.id}', '${link.id}', '${link.url}', '${(link.copyText||'').replace(/'/g, "\\'")}')" title="${link.title}">
                                 ${link.title}
                             </button>
@@ -429,39 +380,15 @@
                 ` : '';
 
                 card.innerHTML = `
-                    <div class="card-header" style="background-image: url('${bgImage}')" onclick="toggleExpand('${group.id}')">
-                        <div class="card-actions" onclick="event.stopPropagation()">
-                            <button class="icon-btn" onclick="moveGroup(${index}, -1)" title="Mover para Esquerda">◀</button>
-                            <button class="icon-btn" onclick="moveGroup(${index}, 1)" title="Mover para Direita">▶</button>
-                            
-                            <!-- CORREÇÃO: Chama openGroupModal passando o ID -->
-                            <button class="icon-btn" onclick="openGroupModal('${group.id}')" title="Editar Grupo">✏️</button>
-                            
-                            <button class="icon-btn" onclick="deleteGroup('${group.id}')" title="Excluir Grupo">🗑️</button>
+                    <div class="card-header" style="background-image: url('${bgImage}')">
+                        <div class="card-actions">
+                            <!-- O event.stopPropagation() isola o clique EXATAMENTE no botão -->
+                            <button class="icon-btn" onclick="event.stopPropagation(); openGroupModal('${group.id}')" title="Editar Grupo">✏️</button>
+                            <button class="icon-btn" onclick="event.stopPropagation(); deleteGroup('${group.id}')" title="Excluir Grupo">🗑️</button>
                         </div>
                         <div class="header-bottom">
                             <div class="card-title">${group.title}</div>
                             ${tagsHtml}
-                        </div>
-                    </div>
-                    <div class="links-wrapper">
-                        <div class="links-inner">
-                            <div class="links-list">
-                                ${group.links.map(link => `
-                                    <div class="link-item">
-                                        <div class="link-info">
-                                            <span class="link-title">
-                                                ${link.title} 
-                                                <span class="link-clicks">(Acessos: ${link.clicks || 0})</span>
-                                            </span>
-                                        </div>
-                                        <button class="link-action-btn" onclick="executeLinkAction('${group.id}', '${link.id}', '${link.url}', '${(link.copyText||'').replace(/'/g, "\\'")}')">
-                                            Abrir & Copiar
-                                        </button>
-                                    </div>
-                                `).join('')}
-                            </div>
-                            <button class="add-link-btn" onclick="openLinkModal('${group.id}')">+ Adicionar Favorito</button>
                         </div>
                     </div>
                 `;
@@ -469,31 +396,113 @@
             });
         }
 
-        // UI Interactions
-        function toggleExpand(groupId) {
-            if (expandedGroups.has(groupId)) {
-                expandedGroups.delete(groupId);
-            } else {
-                expandedGroups.add(groupId);
-            }
-            const card = document.getElementById(`group-${groupId}`);
-            card.classList.toggle('expanded');
+        // --- Lógica de Drag and Drop ---
+        function handleDragStart(e) {
+            dragSourceElement = this;
+            this.classList.add('dragging');
+            document.body.classList.add('is-dragging'); 
+            e.dataTransfer.effectAllowed = 'move';
         }
 
+        function handleDragOver(e) {
+            if (e.preventDefault) e.preventDefault(); 
+            e.dataTransfer.dropEffect = 'move';
+            return false;
+        }
+
+        function handleDragEnter(e) {
+            if (this !== dragSourceElement) {
+                this.classList.add('drag-over');
+            }
+        }
+
+        function handleDragLeave(e) {
+            this.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            if (e.stopPropagation) e.stopPropagation();
+
+            if (dragSourceElement !== this) {
+                const srcId = dragSourceElement.id.replace('group-', '');
+                const tgtId = this.id.replace('group-', '');
+                
+                const srcIdx = groups.findIndex(g => g.id === srcId);
+                const tgtIdx = groups.findIndex(g => g.id === tgtId);
+
+                // Reordena o array
+                const draggedItem = groups.splice(srcIdx, 1)[0];
+                groups.splice(tgtIdx, 0, draggedItem);
+
+                // Atualiza as ordens internamente
+                groups.forEach((g, i) => g.order = i);
+                saveData();
+            }
+            return false;
+        }
+
+        function handleDragEnd(e) {
+            this.classList.remove('dragging');
+            document.body.classList.remove('is-dragging');
+            document.querySelectorAll('.group-card').forEach(c => c.classList.remove('drag-over'));
+        }
+
+        // --- Lógica da Sidebar ---
+        function openSidebar(groupId) {
+            currentOpenGroupId = groupId;
+            renderSidebar(groupId);
+            
+            document.getElementById('sidebar-overlay').classList.add('active');
+            document.getElementById('sidebar').classList.add('active');
+        }
+
+        function closeSidebar() {
+            document.getElementById('sidebar-overlay').classList.remove('active');
+            document.getElementById('sidebar').classList.remove('active');
+            currentOpenGroupId = null;
+        }
+
+        function renderSidebar(groupId) {
+            const group = groups.find(g => g.id === groupId);
+            if (!group) return;
+
+            document.getElementById('sidebar-title').innerText = group.title;
+            const content = document.getElementById('sidebar-content');
+            
+            content.innerHTML = group.links.map(link => `
+                <div class="link-item">
+                    <div class="link-header">
+                        <div>
+                            <div class="link-title">${link.title}</div>
+                            <span class="link-clicks">Acessos: ${link.clicks || 0}</span>
+                        </div>
+                        <div class="link-actions-top">
+                            <button onclick="openLinkModal('${group.id}', '${link.id}')" title="Editar">✏️</button>
+                            <button onclick="deleteLink('${group.id}', '${link.id}')" title="Excluir">🗑️</button>
+                        </div>
+                    </div>
+                    <button class="primary" onclick="executeLinkAction('${group.id}', '${link.id}', '${link.url}', '${(link.copyText||'').replace(/'/g, "\\'")}')" style="width: 100%">
+                        Abrir Link ${link.copyText ? '& Copiar' : ''}
+                    </button>
+                </div>
+            `).join('');
+
+            content.innerHTML += `<button class="add-link-btn" onclick="openLinkModal('${group.id}')">+ Adicionar Favorito</button>`;
+        }
+
+        // --- Ações de Clique ---
         function handleTagClick(event, groupId, linkId, url, copyText) {
-            event.stopPropagation(); // Evita que o card expanda/recolha ao clicar na tag
+            event.stopPropagation(); // BLOQUEIA o clique para não abrir a sidebar
             executeLinkAction(groupId, linkId, url, copyText);
         }
 
-        // Core Interaction: Contabiliza click, copia e abre link
         function executeLinkAction(groupId, linkId, url, textToCopy) {
-            // Incrementa o contador de cliques
             const group = groups.find(g => g.id === groupId);
             if (group) {
                 const link = group.links.find(l => l.id === linkId);
                 if (link) {
                     link.clicks = (link.clicks || 0) + 1;
-                    saveData(); // Re-renderiza para atualizar os Top 5
+                    saveData(); 
                 }
             }
 
@@ -502,8 +511,6 @@
                     showToast('Texto copiado para a área de transferência!');
                     window.open(url, '_blank');
                 }).catch(err => {
-                    console.error('Falha ao copiar:', err);
-                    alert('Aviso: O navegador bloqueou a cópia automática, mas o link será aberto.');
                     window.open(url, '_blank');
                 });
             } else {
@@ -511,7 +518,7 @@
             }
         }
 
-        // Group CRUD
+        // --- CRUD Grupos ---
         function openGroupModal(id = null) {
             document.getElementById('group-modal').classList.add('active');
             if (id) {
@@ -540,13 +547,7 @@
                 group.title = title;
                 group.bgImage = bgImage;
             } else {
-                groups.push({
-                    id: crypto.randomUUID(),
-                    title,
-                    bgImage,
-                    order: groups.length,
-                    links: []
-                });
+                groups.push({ id: crypto.randomUUID(), title, bgImage, order: groups.length, links: [] });
             }
             saveData();
             closeModals();
@@ -555,30 +556,36 @@
         function deleteGroup(id) {
             if (confirm('Tem certeza que deseja excluir este grupo e todos os seus links?')) {
                 groups = groups.filter(g => g.id !== id);
-                expandedGroups.delete(id);
                 saveData();
             }
         }
 
-        function moveGroup(index, direction) {
-            if (index + direction < 0 || index + direction >= groups.length) return;
-            const tempOrder = groups[index].order;
-            groups[index].order = groups[index + direction].order;
-            groups[index + direction].order = tempOrder;
-            saveData();
-        }
-
-        // Link CRUD
-        function openLinkModal(groupId) {
+        // --- CRUD Links (Favoritos) ---
+        function openLinkModal(groupId, linkId = null) {
             document.getElementById('link-modal').classList.add('active');
             document.getElementById('link-group-id').value = groupId;
-            document.getElementById('link-title').value = '';
-            document.getElementById('link-url').value = '';
-            document.getElementById('link-copy').value = '';
+            
+            if (linkId) {
+                const group = groups.find(g => g.id === groupId);
+                const link = group.links.find(l => l.id === linkId);
+                
+                document.getElementById('link-id').value = link.id;
+                document.getElementById('link-title').value = link.title;
+                document.getElementById('link-url').value = link.url;
+                document.getElementById('link-copy').value = link.copyText || '';
+                document.getElementById('link-modal-title').innerText = "Editar Favorito";
+            } else {
+                document.getElementById('link-id').value = '';
+                document.getElementById('link-title').value = '';
+                document.getElementById('link-url').value = '';
+                document.getElementById('link-copy').value = '';
+                document.getElementById('link-modal-title').innerText = "Novo Favorito";
+            }
         }
 
         function saveLink() {
             const groupId = document.getElementById('link-group-id').value;
+            const linkId = document.getElementById('link-id').value;
             const title = document.getElementById('link-title').value;
             const url = document.getElementById('link-url').value;
             const copyText = document.getElementById('link-copy').value;
@@ -586,25 +593,39 @@
             if (!title || !url) return alert("Título e URL são obrigatórios.");
 
             const group = groups.find(g => g.id === groupId);
-            group.links.push({
-                id: crypto.randomUUID(),
-                title,
-                url,
-                copyText,
-                clicks: 0 // Inicia com 0 cliques
-            });
 
-            expandedGroups.add(groupId); // Garante que o card fique aberto
+            if (linkId) {
+                const link = group.links.find(l => l.id === linkId);
+                link.title = title;
+                link.url = url;
+                link.copyText = copyText;
+            } else {
+                group.links.push({
+                    id: crypto.randomUUID(),
+                    title,
+                    url,
+                    copyText,
+                    clicks: 0
+                });
+            }
+
             saveData();
             closeModals();
         }
 
-        // Utils
-        function closeModals() {
-            document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
+        function deleteLink(groupId, linkId) {
+            if(confirm('Excluir este favorito?')) {
+                const group = groups.find(g => g.id === groupId);
+                group.links = group.links.filter(l => l.id !== linkId);
+                saveData();
+            }
         }
 
-        // Import / Export Systems
+        // --- Utils e Import/Export ---
+        function closeModals() {
+            document.querySelectorAll('.modal-overlay:not(.sidebar-overlay)').forEach(m => m.classList.remove('active'));
+        }
+
         function exportData() {
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(groups));
             const downloadAnchorNode = document.createElement('a');
@@ -628,22 +649,22 @@
                         groups = importedGroups;
                         saveData();
                         showToast('Backup importado com sucesso!');
-                    } else {
-                        alert('Formato de arquivo inválido.');
-                    }
-                } catch (err) {
-                    alert('Erro ao ler o arquivo JSON.');
-                }
+                    } else { alert('Formato de arquivo inválido.'); }
+                } catch (err) { alert('Erro ao ler o arquivo JSON.'); }
             };
             reader.readAsText(file);
             e.target.value = '';
         });
 
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') closeModals();
+            if (e.key === 'Escape') {
+                closeModals();
+                closeSidebar();
+            }
         });
 
-        render();
+        // Init
+        renderGrid();
     </script>
 </body>
 </html>
