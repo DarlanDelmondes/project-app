@@ -660,30 +660,40 @@ body.filtering .box.filter-match {
 
 
 
-
-/* --- BOX STYLES --- */
 .box {
     position: absolute; 
+    /* Fundo levemente distinto do bg principal para dar profundidade sem sombra */
     background: white; 
-    border: 2px solid var(--box-border); 
-    border-radius: 16px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
+    
+    /* Borda sutil (o segredo do Poclab) */
+    border: 1px solid var(--box-border); 
+    
+    /* Cantos vivos ou levemente arredondados */
+    
+    /* A chave da simplicidade: NENHUMA SOMBRA */
+    box-shadow: none; 
+    
     display: flex; 
     flex-direction: column; 
     z-index: 10;
     min-width: 200px; 
-    min-height: 180px; 
-    
-    --dynamic-font-size: 24px; 
-    --static-font-size: 16px; 
-    
-    --header-height: 36px;
+    min-height: 80px; 
     cursor: grab; 
     
-    /* A MÁGICA DA VELOCIDADE ACONTECE AQUI: */
-    /* Apenas cosméticos, sem propriedades de geometria (width/height) ou posição (left/top) */
-    transition: box-shadow 0.2s, background-color 0.2s, border-color 0.2s;
+    /* Transições apenas para interação visual leve */
+    transition: border-color 0.15s, background-color 0.15s;
 }
+/* Estado de foco: apenas uma borda mais forte, sem luzes ou sombras */
+.box:hover {
+    border-color: var(--handle-color);
+}
+
+
+.box .content {
+    padding: 8px;
+    font-size: 12px;
+}
+
         
         /* Focus Animation when jumping from Journal */
         .box.highlight-focus { 
@@ -706,10 +716,7 @@ body.filtering .box.filter-match {
     min-height: var(--header-height);
     height: auto; 
     border-bottom: 1px solid rgba(0,0,0,0.05);
-    backdrop-filter: blur(4px);
-    
-    border-radius: 14px 14px 0 0;
-    
+        
     /* MUDANÇA: Flex Column para empilhar o caminho e o título */
     display: flex; 
     flex-direction: column; 
