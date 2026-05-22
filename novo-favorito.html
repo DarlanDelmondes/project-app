@@ -213,7 +213,7 @@
         .link-info {
             display: flex;
             flex-direction: column;
-            gap: 0.25rem;
+            justify-content: center;
             flex-grow: 1;
         }
 
@@ -229,12 +229,6 @@
             font-size: 0.7rem;
             color: var(--text-muted);
             font-weight: normal;
-        }
-
-        .link-copy-text {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            font-family: monospace;
         }
 
         .link-action-btn {
@@ -339,7 +333,6 @@
         </div>
     </header>
 
-    <!-- Aqui estava o glitch. Resolvido! -->
     <main id="grid-container"></main>
 
     <!-- Modal Grupo -->
@@ -440,7 +433,10 @@
                         <div class="card-actions" onclick="event.stopPropagation()">
                             <button class="icon-btn" onclick="moveGroup(${index}, -1)" title="Mover para Esquerda">◀</button>
                             <button class="icon-btn" onclick="moveGroup(${index}, 1)" title="Mover para Direita">▶</button>
-                            <button class="icon-btn" onclick="editGroup('${group.id}')" title="Editar Grupo">✏️</button>
+                            
+                            <!-- CORREÇÃO: Chama openGroupModal passando o ID -->
+                            <button class="icon-btn" onclick="openGroupModal('${group.id}')" title="Editar Grupo">✏️</button>
+                            
                             <button class="icon-btn" onclick="deleteGroup('${group.id}')" title="Excluir Grupo">🗑️</button>
                         </div>
                         <div class="header-bottom">
@@ -458,7 +454,6 @@
                                                 ${link.title} 
                                                 <span class="link-clicks">(Acessos: ${link.clicks || 0})</span>
                                             </span>
-                                            <span class="link-copy-text">📋 ${link.copyText}</span>
                                         </div>
                                         <button class="link-action-btn" onclick="executeLinkAction('${group.id}', '${link.id}', '${link.url}', '${(link.copyText||'').replace(/'/g, "\\'")}')">
                                             Abrir & Copiar
@@ -502,14 +497,18 @@
                 }
             }
 
-            navigator.clipboard.writeText(textToCopy).then(() => {
-                showToast('Texto copiado para a área de transferência!');
+            if (textToCopy && textToCopy.trim() !== '') {
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    showToast('Texto copiado para a área de transferência!');
+                    window.open(url, '_blank');
+                }).catch(err => {
+                    console.error('Falha ao copiar:', err);
+                    alert('Aviso: O navegador bloqueou a cópia automática, mas o link será aberto.');
+                    window.open(url, '_blank');
+                });
+            } else {
                 window.open(url, '_blank');
-            }).catch(err => {
-                console.error('Falha ao copiar:', err);
-                alert('Aviso: O navegador bloqueou a cópia automática, mas o link será aberto.');
-                window.open(url, '_blank');
-            });
+            }
         }
 
         // Group CRUD
