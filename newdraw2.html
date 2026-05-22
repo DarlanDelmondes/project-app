@@ -3359,7 +3359,15 @@ function updateElasticParent(childrenContainer) {
         let w = '200px'; let h = '180px'; if(parent !== world) { w = '200px'; h = '160px'; }
         el.style.width = w; el.style.height = h; el.dataset.mw = parseFloat(w); el.dataset.mh = parseFloat(h);
         el.dataset.status = 'neutral'; 
-        parent.appendChild(el); calcDynamicFont(el);
+        parent.appendChild(el); 
+        
+        // --- COLAPSO IMEDIATO ---
+        // Buscamos o botão de toggle dentro da nova caixa (assumindo que existe um)
+        const toggleBtn = el.querySelector('.smart-toggle-btn'); // Ajuste o seletor se necessário
+        handleSmartToggle(id, toggleBtn); 
+        // ------------------------
+
+        calcDynamicFont(el);
         if (parent !== world) setTimeout(() => updateElasticParent(parent), 0);
         markUnsaved();
 
