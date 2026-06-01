@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AWS Pro - Jornada de Imersão</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #131F24;
+            --panel-bg: #202F36;
+            --text-main: #FFFFFF;
+            --text-muted: #AFBAC0;
+            --aws-orange: #FF9900;
+            --aws-orange-dark: #cc7a00;
+            --duo-green: #58CC02;
+            --duo-green-dark: #58A700;
+            --duo-blue: #1CB0F6;
+            --border: #37464F;
+            --danger: #FF4B4B;
+            --danger-dark: #cc3939;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body { font-family: 'Nunito', sans-serif; background-color: var(--bg-color); color: var(--text-main); display: flex; min-height: 100vh; }
+
+        aside { width: 260px; background-color: var(--bg-color); border-right: 2px solid var(--border); padding: 2rem 1rem; display: flex; flex-direction: column; position: fixed; height: 100vh; z-index: 10; }
+        .logo { color: var(--aws-orange); font-size: 1.8rem; font-weight: 900; text-align: center; margin-bottom: 3rem; letter-spacing: 1px; }
+        nav { display: flex; flex-direction: column; gap: 0.5rem; }
+        nav button { background: transparent; border: 2px solid transparent; color: var(--text-muted); cursor: pointer; font-size: 1.1rem; font-weight: 700; padding: 0.8rem 1rem; border-radius: 12px; text-align: left; display: flex; align-items: center; gap: 1rem; transition: all 0.2s; }
+        nav button:hover { background-color: rgba(255, 255, 255, 0.05); color: var(--text-main); }
+        nav button.active { background-color: rgba(28, 176, 246, 0.15); color: var(--duo-blue); border: 2px solid var(--duo-blue); }
+        nav button span { font-size: 1.4rem; }
+
+        main { margin-left: 260px; padding: 3rem; width: calc(100% - 260px); max-width: 1000px; }
+
+        .view { display: none; animation: fadeIn 0.3s; }
+        .view.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        h2 { font-size: 2rem; font-weight: 900; margin-bottom: 1.5rem; color: var(--text-main); }
+
+        .btn-action { background-color: var(--duo-green); color: #fff; border: none; border-bottom: 4px solid var(--duo-green-dark); padding: 0.8rem 1.5rem; border-radius: 12px; font-weight: 900; font-size: 1.1rem; text-transform: uppercase; cursor: pointer; transition: transform 0.1s, border-width 0.1s; font-family: inherit; }
+        .btn-action:active { border-bottom-width: 0; transform: translateY(4px); }
+        .btn-aws { background-color: var(--aws-orange); border-bottom-color: var(--aws-orange-dark); color: #000; }
+        .btn-blue { background-color: var(--duo-blue); border-bottom-color: #189ad4; color: #fff; }
+
+        input[type="text"], textarea { width: 100%; background-color: var(--panel-bg); border: 2px solid var(--border); color: var(--text-main); padding: 1rem; border-radius: 12px; font-family: inherit; font-size: 1rem; margin-bottom: 1rem; transition: border-color 0.2s; }
+        input[type="text"]:focus, textarea:focus { outline: none; border-color: var(--duo-blue); }
+
+        /* TRILHA & CARTÕES */
+        .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; font-weight: 700; color: var(--aws-orange); }
+        .progress-bar-bg { background-color: var(--panel-bg); border-radius: 16px; height: 24px; width: 100%; overflow: hidden; margin-bottom: 3rem; }
+        .progress-bar-fill { background-color: var(--aws-orange); height: 100%; width: 0%; transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1); position: relative; }
+        .progress-bar-fill::after { content: ''; position: absolute; top: 4px; left: 8px; right: 8px; height: 6px; background: rgba(255,255,255,0.3); border-radius: 10px; }
+
+        .unit-card { background-color: var(--panel-bg); border: 2px solid var(--border); border-bottom: 6px solid var(--border); border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem; }
+        .unit-card h3 { font-size: 1.3rem; margin-bottom: 1rem; color: #fff; }
+        .mission-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1rem; align-items: start; }
+        
+        .mission-item { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; background-color: rgba(255,255,255,0.05); padding: 0.8rem; border-radius: 12px; cursor: pointer; transition: background 0.2s; font-weight: 700; font-size: 0.95rem; }
+        .mission-item:hover { background-color: rgba(255,255,255,0.1); }
+        .mission-item.locked-teoria { border: 2px dashed rgba(28, 176, 246, 0.4); }
+        .mission-item.locked-quiz { border: 2px dashed rgba(255, 153, 0, 0.4); }
+
+        .mission-item input[type="checkbox"] { appearance: none; width: 24px; height: 24px; border: 2px solid var(--border); border-radius: 6px; background-color: var(--bg-color); cursor: pointer; display: grid; place-content: center; flex-shrink: 0; }
+        .mission-item input[type="checkbox"]::before { content: ""; width: 12px; height: 12px; transform: scale(0); transition: 120ms transform ease-in-out; box-shadow: inset 1em 1em var(--duo-green); transform-origin: center; clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%); }
+        .mission-item input[type="checkbox"]:checked { border-color: var(--duo-green); }
+        .mission-item input[type="checkbox"]:checked::before { transform: scale(1); }
+        .mission-item.completed { color: var(--duo-green); }
+
+        .btn-add-cycle { margin-top: 0.8rem; background: transparent; border: 1px dashed var(--duo-blue); color: var(--duo-blue); padding: 0.5rem; border-radius: 8px; font-size: 0.8rem; font-weight: 700; cursor: pointer; width: 100%; text-align: center; transition: all 0.2s; text-transform: uppercase; }
+        .btn-add-cycle:hover { background: rgba(28, 176, 246, 0.1); color: #5bc8f9; border-color: #5bc8f9; }
+
+        /* HISTÓRICO & NUVEM */
+        .history-area { background-color: rgba(0,0,0,0.2); border-radius: 12px; padding: 1rem; margin-top: 1rem; border: 1px solid rgba(255,255,255,0.05); }
+        .history-title { font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted); font-weight: 900; margin-bottom: 0.8rem; letter-spacing: 1px; }
+        .history-cycle-group { margin-bottom: 0.8rem; border-bottom: 1px dashed rgba(255,255,255,0.05); padding-bottom: 0.8rem; }
+        .history-cycle-group:last-child { margin-bottom: 0; border-bottom: none; padding-bottom: 0; }
+        .history-cycle-label { font-size: 0.8rem; font-weight: 700; color: var(--duo-blue); margin-bottom: 0.4rem; display: block; }
+        .history-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+        .history-tag { background-color: rgba(28, 176, 246, 0.1); color: var(--duo-blue); border: 1px solid var(--duo-blue); padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.8rem; font-weight: 700; }
+
+        .nuvem-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; }
+        .nuvem-card { background-color: var(--panel-bg); border: 2px solid var(--border); border-radius: 16px; padding: 1.5rem; position: relative; }
+        .nuvem-card h3 { color: var(--aws-orange); font-size: 1.1rem; margin-bottom: 1rem; border-bottom: 2px dashed var(--border); padding-bottom: 0.5rem; }
+        .nuvem-cycle-block { margin-bottom: 1rem; }
+        .nuvem-cycle-block:last-child { margin-bottom: 0; }
+        .nuvem-cycle-label { font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 900; margin-bottom: 0.5rem; }
+        .nuvem-tags { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+        .nuvem-tag { background-color: rgba(28, 176, 246, 0.1); color: var(--duo-blue); border: 1px solid var(--duo-blue); padding: 0.4rem 0.8rem; border-radius: 20px; font-size: 0.85rem; font-weight: 700; transition: transform 0.2s; cursor: default; }
+        .nuvem-tag:hover { transform: scale(1.05); background-color: rgba(28, 176, 246, 0.2); }
+        .nuvem-empty { grid-column: 1 / -1; text-align: center; padding: 4rem 2rem; color: var(--text-muted); border: 2px dashed var(--border); border-radius: 16px; background-color: rgba(255,255,255,0.02); }
+
+        /* PROMPTS */
+        .prompt-helper { background-color: rgba(28, 176, 246, 0.05); border: 2px dashed var(--duo-blue); padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; }
+        .prompt-box { display: flex; justify-content: space-between; align-items: center; background-color: var(--bg-color); padding: 1rem; border-radius: 8px; gap: 1.5rem; border: 1px solid var(--border); }
+        .ai-prompt-text { color: var(--text-main); font-size: 0.95rem; line-height: 1.4; font-weight: 400; flex-grow: 1; }
+        .prompt-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
+        .prompt-copy-btn { background: transparent; border: 2px solid var(--duo-blue); color: var(--duo-blue); padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; transition: all 0.2s; font-weight: 700; text-transform: uppercase; font-size: 0.8rem; }
+        .prompt-copy-btn:hover { background: var(--duo-blue); color: #fff; }
+
+        /* LEITOR IMERSIVO */
+        .reader-ui { background-color: var(--panel-bg); border: 2px solid var(--border); border-bottom: 8px solid var(--border); border-radius: 24px; padding: 3rem 2rem; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 450px; }
+        .word-display { font-size: 2.4rem; font-weight: 900; margin-bottom: 1.5rem; height: 220px; width: 100%; display: flex; justify-content: center; align-items: center; flex-wrap: wrap; line-height: 1.4; overflow: hidden; padding: 0 1rem; }
+        .reader-word { display: inline-block; margin: 0 0.4rem; color: var(--text-main); }
+        .clickable-word { cursor: pointer; color: var(--duo-blue); border-bottom: 4px dashed var(--duo-blue); transition: color 0.2s; }
+        .clickable-word:hover { color: #5bc8f9; border-color: #5bc8f9; }
+        
+        .emphasis-anim { color: var(--aws-orange); font-weight: 900; display: inline-block; animation: neonPulse 1.5s ease-in-out infinite alternate; padding: 0.4rem 0.8rem; background-color: rgba(255, 153, 0, 0.1); border-radius: 8px; border-bottom: 2px solid var(--aws-orange); margin: 0.5rem; text-align: center; line-height: 1.3; max-width: 100%; word-wrap: break-word; }
+        @keyframes neonPulse { 0% { text-shadow: 0 0 5px rgba(255, 153, 0, 0); transform: translateY(0); } 100% { text-shadow: 0 0 10px rgba(255, 153, 0, 0.6); transform: translateY(-2px); } }
+
+        .reader-controls { display: flex; gap: 1.5rem; align-items: center; margin-bottom: 1rem;}
+        .reader-controls button.btn-secondary { background: transparent; border: 2px solid var(--border); color: var(--text-muted); padding: 0.8rem 1.5rem; border-radius: 12px; font-weight: 700; cursor: pointer; text-transform: uppercase; transition: all 0.2s; }
+        .reader-controls button.btn-secondary:hover { background: rgba(255,255,255,0.05); color: #fff; border-color: #fff; }
+        .reader-progress { margin-bottom: 2rem; font-weight: 700; color: var(--text-muted); letter-spacing: 1px; }
+
+        /* RADAR DE APROFUNDAMENTO */
+        .capture-area { width: 100%; max-width: 600px; margin-top: 1.5rem; border-top: 2px dashed var(--border); padding-top: 1.5rem; }
+        .capture-area h4 { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px; }
+        .capture-input-wrapper { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+        .capture-input-wrapper input { margin-bottom: 0; background-color: var(--bg-color); border-color: var(--border); }
+        .notes-list { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
+        .note-tag { background-color: rgba(28, 176, 246, 0.1); border: 1px solid var(--duo-blue); color: var(--duo-blue); padding: 0.4rem 0.8rem; border-radius: 20px; font-size: 0.9rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; }
+        .note-tag button { background: none; border: none; color: var(--duo-blue); cursor: pointer; font-weight: 900; font-size: 1rem; padding: 0 0.2rem; }
+        .note-tag button:hover { color: var(--danger); }
+
+        /* QUIZ ENGINE (EXERCÍCIOS) */
+        .quiz-container { background-color: var(--panel-bg); border: 2px solid var(--border); border-bottom: 8px solid var(--border); border-radius: 24px; padding: 2.5rem; min-height: 450px; display: flex; flex-direction: column; }
+        .quiz-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; color: var(--text-muted); font-weight: 700; border-bottom: 2px dashed var(--border); padding-bottom: 1rem; }
+        
+        .btn-star { background: none; border: none; font-size: 1.8rem; cursor: pointer; color: var(--border); transition: color 0.2s, transform 0.2s; display: flex; align-items: center; outline: none; padding: 0 1rem; }
+        .btn-star:hover { transform: scale(1.1); }
+        .btn-star.starred { color: var(--aws-orange); text-shadow: 0 0 10px rgba(255, 153, 0, 0.4); }
+
+        .quiz-question { font-size: 1.15rem; font-weight: 400; margin-bottom: 2rem; white-space: pre-wrap; line-height: 1.6; color: var(--text-main); }
+        
+        .quiz-options { display: flex; gap: 1rem; margin-bottom: 2rem; }
+        .btn-quiz { flex: 1; padding: 1rem; border-radius: 12px; font-size: 1.1rem; font-weight: 900; text-transform: uppercase; cursor: pointer; border: 2px solid var(--border); background: var(--bg-color); color: var(--text-main); transition: all 0.2s; }
+        .btn-quiz:hover { background: rgba(255,255,255,0.05); }
+        .btn-quiz.selected-true { background: var(--duo-green); border-color: var(--duo-green-dark); color: #fff; }
+        .btn-quiz.selected-false { background: var(--danger); border-color: var(--danger-dark); color: #fff; }
+        
+        .quiz-feedback { background-color: var(--bg-color); border: 2px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; display: none; }
+        .quiz-feedback.show { display: block; animation: fadeIn 0.3s; }
+        .feedback-status { font-size: 1.3rem; font-weight: 900; margin-bottom: 0.5rem; }
+        .feedback-status.correct { color: var(--duo-green); }
+        .feedback-status.wrong { color: var(--danger); }
+        .feedback-explanation { font-size: 0.95rem; color: var(--text-muted); line-height: 1.6; white-space: pre-wrap; }
+
+        .quiz-footer { margin-top: auto; display: flex; justify-content: flex-end; }
+
+        /* ESTILOS DE MARKDOWN (CÓDIGO) NO QUIZ E RELATÓRIO */
+        .markdown-render pre { background-color: rgba(0, 0, 0, 0.4); padding: 1rem; border-radius: 8px; overflow-x: auto; font-family: 'Courier New', Courier, monospace; font-size: 0.9rem; margin: 1rem 0; border: 1px solid rgba(255,255,255,0.1); white-space: pre; color: #e6e6e6; }
+        .markdown-render code { font-family: 'Courier New', Courier, monospace; background-color: rgba(0, 0, 0, 0.4); padding: 0.2rem 0.4rem; border-radius: 4px; font-size: 0.9em; color: var(--aws-orange); }
+        .markdown-render pre code { background-color: transparent; padding: 0; color: inherit; }
+        .markdown-render strong { color: #fff; font-weight: 900; }
+
+        /* RELATÓRIO DO QUIZ */
+        .report-section { margin-bottom: 2rem; }
+        .report-item { background: var(--bg-color); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+        .report-item-header { display: flex; justify-content: space-between; margin-bottom: 0.5rem; border-bottom: 1px dashed var(--border); padding-bottom: 0.5rem; }
+        .report-item-badge { font-size: 0.75rem; font-weight: 900; padding: 0.2rem 0.5rem; border-radius: 4px; text-transform: uppercase; }
+        .badge-wrong { background: rgba(255, 75, 75, 0.1); color: var(--danger); border: 1px solid var(--danger); }
+        .badge-marked { background: rgba(255, 153, 0, 0.1); color: var(--aws-orange); border: 1px solid var(--aws-orange); }
+
+        /* MOBILE */
+        @media (max-width: 768px) {
+            aside { width: 100%; height: 75px; bottom: 0; top: auto; border-right: none; border-top: 2px solid var(--border); padding: 0; flex-direction: row; background-color: var(--panel-bg); }
+            .logo { display: none; }
+            nav { flex-direction: row; width: 100%; height: 100%; justify-content: space-around; align-items: center; padding: 0 0.5rem; }
+            nav button { flex-direction: column; gap: 0.3rem; padding: 0.5rem; font-size: 0.75rem; border-radius: 8px; border: none !important; flex: 1; text-align: center; justify-content: center; }
+            nav button span { font-size: 1.3rem; }
+            nav button.active { background-color: rgba(28, 176, 246, 0.1); color: var(--duo-blue); border-bottom: 3px solid var(--duo-blue) !important; border-radius: 0; }
+            main { margin-left: 0; width: 100%; padding: 1.5rem 1rem 90px 1rem; }
+            h2 { font-size: 1.5rem; }
+            .mission-grid { grid-template-columns: 1fr; }
+            .reader-ui { padding: 2rem 1rem; min-height: 350px; }
+            .word-display { font-size: 1.6rem; height: 180px; }
+            .emphasis-anim { font-size: 1.4rem; padding: 0.3rem 0.6rem; }
+            .prompt-box { flex-direction: column; align-items: flex-start; gap: 1rem; }
+            .prompt-actions { width: 100%; justify-content: flex-end; }
+            .reader-controls { flex-direction: row; width: 100%; justify-content: space-between; gap: 0.5rem; }
+            .reader-controls button { flex: 1; padding: 0.8rem 0.5rem; font-size: 0.9rem; }
+            .nuvem-grid { grid-template-columns: 1fr; }
+            .quiz-options { flex-direction: column; gap: 1rem; }
+            .quiz-container { padding: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <aside>
+        <div class="logo">AWS JORNADA</div>
+        <nav>
+            <button class="active" onclick="switchView('trilha', this)"><span>🗺️</span> <span class="nav-text">Trilha</span></button>
+            <button onclick="switchView('nuvem', this)"><span>☁️</span> <span class="nav-text">Nuvem</span></button>
+            <button onclick="switchView('forja', this)"><span>⚙️</span> <span class="nav-text">Forja</span></button>
+            <button onclick="switchView('imersao', this)" id="nav-imersao" style="display:none; color: var(--duo-blue);"><span>⚡</span> <span class="nav-text">Imersão</span></button>
+            <button onclick="switchView('quiz', this)" id="nav-quiz" style="display:none; color: var(--aws-orange);"><span>🧠</span> <span class="nav-text">Quiz</span></button>
+        </nav>
+    </aside>
+
+    <main>
+        <!-- TRILHA -->
+        <section id="trilha" class="view active">
+            <div class="progress-header">
+                <span>Domínio Global AWS</span>
+                <span id="progress-text">0%</span>
+            </div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="progress-fill"></div>
+            </div>
+            <div id="units-container"></div>
+        </section>
+
+        <!-- NUVEM -->
+        <section id="nuvem" class="view">
+            <h2>Mapeamento Ontológico</h2>
+            <p style="color: var(--text-muted); margin-bottom: 2rem;">Rede de conceitos capturados durante o modo imersão.</p>
+            <div id="nuvem-container" class="nuvem-grid"></div>
+        </section>
+
+        <!-- FORJA -->
+        <section id="forja" class="view">
+            <h2>Forja de Missões</h2>
+            <p style="color: var(--text-muted); margin-bottom: 2rem;">Cole as diretrizes estruturais (Markdown).</p>
+            <textarea id="md-input" style="min-height: 200px;" placeholder="- Domain 1.1: Architect network..."></textarea>
+            <button class="btn-action btn-aws" onclick="parseMarkdown()">Forjar Trilha</button>
+        </section>
+
+        <!-- PREPARAR TEORIA -->
+        <section id="preparar-teoria" class="view">
+            <h2>Abastecer Conhecimento</h2>
+            <p style="color: var(--text-muted); margin-bottom: 1.5rem;" id="setup-unit-title"></p>
+            <div class="prompt-helper">
+                <p style="color: var(--duo-blue); font-weight: 700; margin-bottom: 0.8rem;">🤖 Assistente de Extração</p>
+                <div class="prompt-box">
+                    <span class="ai-prompt-text" id="ai-prompt-text-setup"></span>
+                    <div class="prompt-actions">
+                        <button class="prompt-copy-btn" onclick="copyDynamicPrompt('setup', 'pt', this)">🇧🇷 PT</button>
+                        <button class="prompt-copy-btn" onclick="copyDynamicPrompt('setup', 'en', this)">🇺🇸 EN</button>
+                    </div>
+                </div>
+            </div>
+            <div style="background: var(--panel-bg); padding: 2rem; border-radius: 16px; border: 2px solid var(--border);">
+                <textarea id="setup-text-content" style="min-height: 250px;" placeholder="Cole o retorno da IA..."></textarea>
+                <button class="btn-action btn-blue" onclick="saveUnitText()">Iniciar Imersão</button>
+            </div>
+        </section>
+
+        <!-- IMERSÃO -->
+        <section id="imersao" class="view">
+            <h2 id="reader-title" style="text-align: center; color: var(--aws-orange); margin-bottom: 1rem;"></h2>
+            <div class="reader-ui">
+                <div class="word-display" id="word-display"></div>
+                <div class="reader-progress" id="reader-progress">0 / 0</div>
+                <div class="reader-controls">
+                    <button class="btn-secondary" onclick="prevWords()">Retroceder</button>
+                    <button class="btn-action btn-aws" id="btn-reader-forward" onclick="nextWords()">Avançar</button>
+                </div>
+                <div class="capture-area">
+                    <h4>Radar de Aprofundamento</h4>
+                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1rem;">Seta Direita ➔ avança. Enter salva nota.</p>
+                    <div class="capture-input-wrapper">
+                        <input type="text" id="note-input" placeholder="Ex: Transit Gateway..." onkeypress="handleNoteEnter(event)">
+                    </div>
+                    <div class="notes-list" id="notes-container"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SÍNTESE TEORIA -->
+        <section id="sintese" class="view">
+            <h2>Ciclo Concluído! 🏆</h2>
+            <div class="prompt-helper" style="border-color: var(--duo-green); background-color: rgba(88, 204, 2, 0.05);">
+                <p style="color: var(--duo-green); font-weight: 700; margin-bottom: 0.8rem;">🤖 Prompt de Aprofundamento</p>
+                <div class="prompt-box">
+                    <span class="ai-prompt-text" id="ai-prompt-text-sintese"></span>
+                    <div class="prompt-actions">
+                        <button class="prompt-copy-btn" style="border-color: var(--duo-green); color: var(--duo-green);" onclick="copyDynamicPrompt('sintese', 'pt', this)">🇧🇷 PT</button>
+                        <button class="prompt-copy-btn" style="border-color: var(--duo-green); color: var(--duo-green);" onclick="copyDynamicPrompt('sintese', 'en', this)">🇺🇸 EN</button>
+                    </div>
+                </div>
+            </div>
+            <div style="background: var(--panel-bg); padding: 1.5rem; border-radius: 12px; border: 2px solid var(--border); margin-bottom: 2rem;">
+                <h4 style="margin-bottom: 1rem; color: var(--duo-blue);">Adicionar Leitura Imediata</h4>
+                <textarea id="sintese-extra-text" style="min-height: 150px; margin-bottom: 1rem;"></textarea>
+                <button class="btn-action btn-blue" onclick="saveExtraReading()">Injetar Novo Ciclo</button>
+            </div>
+            <button class="btn-action btn-aws" style="width: 100%; background: transparent; border: 2px solid var(--aws-orange); color: var(--aws-orange);" onclick="returnToTrilha()">Voltar para Trilha</button>
+        </section>
+
+        <!-- PREPARAR EXERCÍCIOS (QUIZ SETUP) -->
+        <section id="preparar-quiz" class="view">
+            <h2>Forjar Exercícios (T/F)</h2>
+            <p style="color: var(--text-muted); margin-bottom: 1.5rem;" id="setup-quiz-title"></p>
+            
+            <div class="prompt-helper" style="border-color: var(--aws-orange); background-color: rgba(255, 153, 0, 0.05);">
+                <p style="color: var(--aws-orange); font-weight: 700; margin-bottom: 0.8rem;">🤖 Prompt Examinador AWS</p>
+                <div class="prompt-box">
+                    <span class="ai-prompt-text" id="ai-prompt-text-quiz"></span>
+                    <div class="prompt-actions">
+                        <button class="prompt-copy-btn" style="border-color: var(--aws-orange); color: var(--aws-orange);" onclick="copyDynamicPrompt('quiz', 'pt', this)">🇧🇷 PT</button>
+                        <button class="prompt-copy-btn" style="border-color: var(--aws-orange); color: var(--aws-orange);" onclick="copyDynamicPrompt('quiz', 'en', this)">🇺🇸 EN</button>
+                    </div>
+                </div>
+            </div>
+
+            <div style="background: var(--panel-bg); padding: 2rem; border-radius: 16px; border: 2px solid var(--border);">
+                <p style="font-size: 0.85rem; color: var(--danger); margin-bottom: 1rem;">Cole a saída exata da IA (Q:, R:, E: e K:).</p>
+                <textarea id="setup-quiz-content" style="min-height: 250px;" placeholder="Q: [Questão]&#10;R: [V/F]&#10;E: [Explicação]&#10;K: [Palavras-chave]"></textarea>
+                <button class="btn-action btn-aws" onclick="parseAndStartQuiz()">Processar e Iniciar Quiz</button>
+            </div>
+        </section>
+
+        <!-- MOTOR DE QUIZ -->
+        <section id="quiz" class="view">
+            <h2 id="quiz-title" style="text-align: center; color: var(--aws-orange); margin-bottom: 1rem;"></h2>
+            
+            <div class="quiz-container" id="quiz-runner">
+                <div class="quiz-header">
+                    <div style="display: flex; align-items: center;">
+                        <span id="quiz-progress">Questão 0 / 0</span>
+                        <button id="btn-star" class="btn-star" onclick="toggleStar()" title="Marcar para Revisão">☆</button>
+                    </div>
+                    <span id="quiz-score">Acertos: 0</span>
+                </div>
+                
+                <div class="quiz-question markdown-render" id="quiz-question-text">Carregando cenário...</div>
+                
+                <div class="quiz-options" id="quiz-options-container">
+                    <button class="btn-quiz" onclick="checkAnswer(true)" id="btn-verdadeiro">Verdadeiro</button>
+                    <button class="btn-quiz" onclick="checkAnswer(false)" id="btn-falso">Falso</button>
+                </div>
+
+                <div class="quiz-feedback" id="quiz-feedback">
+                    <div class="feedback-status" id="feedback-status"></div>
+                    <div class="feedback-explanation markdown-render" id="feedback-explanation"></div>
+                    
+                    <!-- NOVO: BOTÃO DE APROFUNDAMENTO DIRETO NO FEEDBACK -->
+                    <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
+                        <button class="btn-action" style="background: transparent; border: 2px solid var(--duo-blue); color: var(--duo-blue); font-size: 0.9rem; padding: 0.5rem 1rem;" onclick="toggleDeepenBox('runner')">🧠 Aprofundar Questão</button>
+                        
+                        <div id="deepen-box-runner" style="display: none; margin-top: 1rem; text-align: left;">
+                            <div class="prompt-helper" style="padding: 1rem; margin-bottom: 1rem;">
+                                <p style="color: var(--duo-blue); font-weight: 700; margin-bottom: 0.5rem; font-size: 0.85rem;">🤖 Prompt Específico da Questão</p>
+                                <div class="prompt-box" style="padding: 0.5rem; flex-direction: column; align-items: stretch;">
+                                    <span class="ai-prompt-text" id="ai-prompt-text-runner" style="font-size: 0.8rem; max-height: 100px; overflow-y: auto;"></span>
+                                    <div class="prompt-actions" style="justify-content: flex-end; margin-top: 0.5rem;">
+                                        <button class="prompt-copy-btn" onclick="copyDynamicPrompt('runner', 'pt', this)">PT</button>
+                                        <button class="prompt-copy-btn" onclick="copyDynamicPrompt('runner', 'en', this)">EN</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <textarea id="deepen-text-runner" style="min-height: 80px; font-size: 0.9rem;" placeholder="Cole o retorno da IA para criar um ciclo desta questão e ler no modo Imersão..."></textarea>
+                            <button class="btn-action btn-blue" style="width: 100%; font-size: 0.9rem;" onclick="injectDeepenCycle('runner')">Injetar Ciclo e Ler Agora</button>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="quiz-footer" style="margin-top: 1.5rem;">
+                    <button class="btn-action btn-aws" id="btn-next-question" style="display:none;" onclick="nextQuestion()">Próxima Questão</button>
+                </div>
+            </div>
+
+            <!-- RELATÓRIO DO QUIZ -->
+            <div class="quiz-container" id="quiz-report" style="display: none;">
+                <h3 style="color: #fff; margin-bottom: 1.5rem; border-bottom: 2px dashed var(--border); padding-bottom: 0.5rem;">Relatório Tático 📊</h3>
+                
+                <div class="report-section">
+                    <h4 style="color: var(--aws-orange); margin-bottom: 0.8rem;">Radar de Foco (Para Revisar)</h4>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">Conceitos extraídos das questões que você errou ou marcou.</p>
+                    <div class="nuvem-tags" id="report-keywords"></div>
+                </div>
+
+                <div class="report-section">
+                    <h4 style="color: var(--danger); margin-bottom: 0.8rem;">Cenários Falhos</h4>
+                    <div id="report-errors"></div>
+                </div>
+
+                <div class="report-section">
+                    <h4 style="color: var(--duo-blue); margin-bottom: 0.8rem;">Marcados para Revisão</h4>
+                    <div id="report-marked"></div>
+                </div>
+
+                <div class="quiz-footer" style="margin-top: 2rem;">
+                    <button class="btn-action btn-aws" style="width: 100%;" onclick="finishQuizReport()">Concluir Missão</button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        let units = JSON.parse(localStorage.getItem('awsUnits')) || [];
+        
+        let currentTokens = [];
+        let currentReadIndex = 0;
+        let activeUnitId = null;
+        let activeTextIndex = -1;
+
+        let currentExercises = [];
+        let currentQuizIndex = 0;
+        let quizScore = 0;
+        let quizHasAnswered = false;
+
+        window.currentPrompts = {
+            setup: { pt: '', en: '' },
+            sintese: { pt: '', en: '' },
+            quiz: { pt: '', en: '' }
+        };
+
+        function renderSimpleMarkdown(text) {
+            if(!text) return '';
+            let html = text;
+            html = html.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            html = html.replace(/`{3}(\w+)?\n([\s\S]*?)`{3}/g, function(match, lang, code) {
+                return `<pre><code class="language-${lang || ''}">${code}</code></pre>`;
+            });
+            html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+            html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+            return html;
+        }
+
+        function migrateData() {
+            units.forEach(u => {
+                if(!u.texts) u.texts = [];
+                u.texts.forEach(t => { if(!t.notes) t.notes = []; });
+                if(!u.exercises) u.exercises = []; 
+                if(u.notes && u.notes.length > 0) {
+                    if(u.texts.length === 0) u.texts.push({ content: '', read: false, notes: [] });
+                    u.texts[0].notes = [...u.notes, ...u.texts[0].notes];
+                    delete u.notes;
+                }
+                if (u.tasks.exercicios === undefined) u.tasks.exercicios = u.tasks.desafio || false;
+            });
+            localStorage.setItem('awsUnits', JSON.stringify(units));
+        }
+
+        function switchView(viewId, btn) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+            
+            if(btn) {
+                if(btn.id !== 'nav-imersao' && btn.id !== 'nav-quiz') btn.classList.add('active');
+            } else {
+                if(viewId === 'imersao') document.getElementById('nav-imersao').classList.add('active');
+                if(viewId === 'quiz') document.getElementById('nav-quiz').classList.add('active');
+            }
+            
+            if(viewId === 'trilha') renderTrilha();
+            if(viewId === 'nuvem') renderNuvem();
+            window.scrollTo(0, 0);
+        }
+
+        function parseMarkdown() {
+            const md = document.getElementById('md-input').value;
+            if(!md.trim()) return;
+            const lines = md.split('\n');
+            const newUnits = [];
+            lines.forEach((line, index) => {
+                const cleanLine = line.replace(/^[\-\*\#]+\s*/, '').trim();
+                if (cleanLine) {
+                    newUnits.push({
+                        id: 'unit_' + Date.now() + '_' + index,
+                        name: cleanLine,
+                        texts: [],
+                        exercises: [],
+                        tasks: { teoria: false, pratica: false, exercicios: false, multi: false }
+                    });
+                }
+            });
+            if(newUnits.length > 0) {
+                units = newUnits;
+                localStorage.setItem('awsUnits', JSON.stringify(units));
+                document.getElementById('md-input').value = '';
+                switchView('trilha', document.querySelector('nav button:nth-child(1)'));
+            }
+        }
+
+        function toggleManualTask(unitId, taskType) {
+            const unit = units.find(u => u.id === unitId);
+            if(unit) {
+                unit.tasks[taskType] = !unit.tasks[taskType];
+                localStorage.setItem('awsUnits', JSON.stringify(units));
+                renderTrilha();
+            }
+        }
+
+        function copyDynamicPrompt(section, lang, btnElement) {
+            const textToCopy = window.currentPrompts[section][lang];
+            if (!textToCopy) return;
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const originalText = btnElement.innerText;
+                const originalBg = btnElement.style.backgroundColor;
+                const originalColor = btnElement.style.color;
+                btnElement.innerText = "Copiado!";
+                btnElement.style.backgroundColor = "var(--text-main)";
+                btnElement.style.color = "#000";
+                setTimeout(() => {
+                    btnElement.innerText = originalText;
+                    btnElement.style.backgroundColor = originalBg || "transparent";
+                    btnElement.style.color = originalColor || "";
+                }, 2000);
+            });
+        }
+
+        // --- FLUXO DE TEORIA ---
+        function setSetupPrompts(isInitial, unitName, notesArray) {
+            let pt = "", en = "";
+            if (isInitial) {
+                pt = `Estou estudando para a AWS Professional e gostaria de detalhes da ontologia que aborda esse conceito: ${unitName}. Essa ontologia deve ter três níveis no mínimo de profundidade, a forma de expressar deve ser em texto corrido, embora a navegação subliminar deva exercitar a ontologia.`;
+                en = `I am studying for the AWS Professional certification and would like detailed information on the ontology covering this concept: ${unitName}. This ontology must have at least three levels of depth. The format should be continuous text, but the subliminal navigation must exercise the ontology. Please write the response entirely in English.`;
+            } else {
+                if (notesArray && notesArray.length > 0) {
+                    pt = `Com base na disciplina ${unitName} aborde com mais profundidade esses itens e objetos respeitando o grau ontológico de cada um: ${notesArray.join(', ')}.`;
+                    en = `Based on the discipline ${unitName}, please elaborate in more depth on these items and objects, respecting the ontological degree of each: ${notesArray.join(', ')}. Please write the response entirely in English.`;
+                } else {
+                    pt = `Estou estudando para a AWS Professional e gostaria de uma leitura complementar aprofundada sobre a ontologia do conceito: ${unitName}.`;
+                    en = `I am studying for the AWS Professional certification and would like an in-depth complementary reading regarding the ontology of the concept: ${unitName}. Please write the response entirely in English.`;
+                }
+            }
+            window.currentPrompts.setup = { pt, en };
+            document.getElementById('ai-prompt-text-setup').innerText = pt;
+        }
+
+        function setSintesePrompts(unitName, cycleNotes) {
+            let pt = "", en = "";
+            if (cycleNotes && cycleNotes.length > 0) {
+                pt = `Com base na disciplina ${unitName} aborde com mais profundidade esses itens e objetos respeitando o grau ontológico de cada um: ${cycleNotes.join(', ')}.`;
+                en = `Based on the discipline ${unitName}, please elaborate in more depth on these items and objects, respecting the ontological degree of each: ${cycleNotes.join(', ')}. Please write the response entirely in English.`;
+            } else {
+                pt = "Você não registrou nenhum item no Radar de Aprofundamento neste ciclo.";
+                en = "You did not register any item in the Deepening Radar this cycle.";
+            }
+            window.currentPrompts.sintese = { pt, en };
+            document.getElementById('ai-prompt-text-sintese').innerText = pt;
+        }
+
+        function handleTeoriaFlux(unitId) {
+            migrateData();
+            const unit = units.find(u => u.id === unitId);
+            if(!unit) return;
+            activeUnitId = unitId;
+            const unreadIndex = unit.texts.findIndex(t => !t.read);
+
+            if (unit.texts.length === 0) {
+                document.getElementById('setup-unit-title').innerText = `Missão Inicial: ${unit.name}`;
+                setSetupPrompts(true, unit.name, null);
+                document.getElementById('setup-text-content').value = '';
+                switchView('preparar-teoria');
+            } else if (unreadIndex !== -1) {
+                activeTextIndex = unreadIndex;
+                launchReader(unit);
+            }
+        }
+
+        function openAddCycle(unitId, event) {
+            if(event) event.stopPropagation();
+            migrateData();
+            const unit = units.find(u => u.id === unitId);
+            if(!unit) return;
+            activeUnitId = unitId;
+            document.getElementById('setup-unit-title').innerText = `Adicionar Novo Ciclo: ${unit.name}`;
+            let lastNotes = unit.texts.length > 0 ? (unit.texts[unit.texts.length - 1].notes || []) : [];
+            setSetupPrompts(false, unit.name, lastNotes);
+            document.getElementById('setup-text-content').value = '';
+            switchView('preparar-teoria');
+        }
+
+        function saveUnitText() {
+            const content = document.getElementById('setup-text-content').value.trim();
+            if(!content) return alert('Insira o texto.');
+            const unit = units.find(u => u.id === activeUnitId);
+            if(unit) {
+                unit.texts.push({ content: content, read: false, notes: [] });
+                unit.tasks.teoria = false;
+                localStorage.setItem('awsUnits', JSON.stringify(units));
+                activeTextIndex = unit.texts.length - 1;
+                launchReader(unit);
+            }
+        }
+
+        function saveExtraReading() {
+            const extraContent = document.getElementById('sintese-extra-text').value.trim();
+            if(!extraContent) return alert('Cole o texto da IA.');
+            const unit = units.find(u => u.id === activeUnitId);
+            if(unit) {
+                unit.texts.push({ content: extraContent, read: false, notes: [] });
+                unit.tasks.teoria = false; 
+                localStorage.setItem('awsUnits', JSON.stringify(units));
+                document.getElementById('sintese-extra-text').value = ''; 
+                returnToTrilha();
+            }
+        }
+
+        function parseMarkdownToTokens(text) {
+            let processed = text.replace(/^[#\->*]\s+/gm, ''); 
+            const tokens = [];
+            const regex = /(\*\*|__)(.*?)\1([.,;!?:]*)|(\*|_)(.*?)\4([.,;!?:]*)|(`)(.*?)\7([.,;!?:]*)|(\S+)/g;
+            let match;
+            while ((match = regex.exec(processed)) !== null) {
+                let textContent = '';
+                let isHighlight = false;
+                if (match[2] !== undefined) { textContent = match[2].trim() + (match[3] || ''); isHighlight = true; } 
+                else if (match[5] !== undefined) { textContent = match[5].trim() + (match[6] || ''); isHighlight = true; } 
+                else if (match[8] !== undefined) { textContent = match[8].trim() + (match[9] || ''); isHighlight = true; } 
+                else if (match[10] !== undefined) { textContent = match[10].replace(/[*_`#\[\]()]/g, ''); }
+                if (textContent.trim().length > 0) tokens.push({ text: textContent, highlight: isHighlight });
+            }
+            return tokens;
+        }
+
+        function launchReader(unit) {
+            const textObj = unit.texts[activeTextIndex];
+            currentTokens = parseMarkdownToTokens(textObj.content);
+            currentReadIndex = 0;
+            document.getElementById('reader-title').innerText = `${unit.name} - Ciclo ${activeTextIndex + 1}`;
+            document.getElementById('nav-imersao').style.display = 'flex';
+            renderNotes(); 
+            switchView('imersao', document.getElementById('nav-imersao'));
+            renderImmersionWords();
+        }
+
+        function renderImmersionWords() {
+            const container = document.getElementById('word-display');
+            const btnForward = document.getElementById('btn-reader-forward');
+            container.innerHTML = '';
+            if (currentTokens.length === 0) return;
+            const chunk = currentTokens.slice(currentReadIndex, currentReadIndex + 3);
+            chunk.forEach((tokenObj, index) => {
+                const span = document.createElement('span');
+                span.innerText = tokenObj.text;
+                span.className = 'reader-word';
+                if (tokenObj.highlight) span.classList.add('emphasis-anim');
+                if (index === chunk.length - 1 || currentReadIndex + index === currentTokens.length - 1) {
+                    span.classList.add('clickable-word');
+                    span.onclick = nextWords;
+                }
+                container.appendChild(span);
+            });
+            const currentPos = Math.min(currentReadIndex + 3, currentTokens.length);
+            document.getElementById('reader-progress').innerText = `${currentPos} / ${currentTokens.length} BLOCOS`;
+
+            if (currentReadIndex + 3 >= currentTokens.length) {
+                btnForward.innerText = "Concluir Ciclo 🏆";
+                btnForward.className = "btn-action";
+                btnForward.style.backgroundColor = "var(--duo-green)";
+                btnForward.style.borderBottomColor = "var(--duo-green-dark)";
+                btnForward.onclick = finalizeTeoriaMission;
+            } else {
+                btnForward.innerText = "Avançar";
+                btnForward.className = "btn-action btn-aws";
+                btnForward.style.backgroundColor = "";
+                btnForward.style.borderBottomColor = "";
+                btnForward.onclick = nextWords;
+            }
+        }
+
+        function nextWords() { if (currentReadIndex + 3 < currentTokens.length) { currentReadIndex += 3; renderImmersionWords(); } }
+        function prevWords() { currentReadIndex = Math.max(0, currentReadIndex - 3); renderImmersionWords(); }
+
+        function handleNoteEnter(e) {
+            if(e.key === 'Enter') {
+                const val = document.getElementById('note-input').value.trim();
+                if(val && activeUnitId) {
+                    const unit = units.find(u => u.id === activeUnitId);
+                    if(unit && unit.texts[activeTextIndex]) {
+                        unit.texts[activeTextIndex].notes.push(val);
+                        localStorage.setItem('awsUnits', JSON.stringify(units));
+                        document.getElementById('note-input').value = '';
+                        renderNotes();
+                        document.getElementById('note-input').blur();
+                    }
+                }
+            }
+        }
+
+        function deleteNote(index) {
+            const unit = units.find(u => u.id === activeUnitId);
+            if(unit && unit.texts[activeTextIndex]) {
+                unit.texts[activeTextIndex].notes.splice(index, 1);
+                localStorage.setItem('awsUnits', JSON.stringify(units));
+                renderNotes();
+            }
+        }
+
+        function renderNotes() {
+            const container = document.getElementById('notes-container');
+            container.innerHTML = '';
+            const unit = units.find(u => u.id === activeUnitId);
+            if(unit && unit.texts[activeTextIndex]) {
+                const currentNotes = unit.texts[activeTextIndex].notes || [];
+                currentNotes.forEach((note, index) => {
+                    const tag = document.createElement('div');
+                    tag.className = 'note-tag';
+                    tag.innerHTML = `${note} <button onclick="deleteNote(${index})">&times;</button>`;
+                    container.appendChild(tag);
+                });
+            }
+        }
+
+        function finalizeTeoriaMission() {
+            const unit = units.find(u => u.id === activeUnitId);
+            if(unit) {
+                unit.texts[activeTextIndex].read = true;
+                unit.tasks.teoria = unit.texts.every(t => t.read);
+                localStorage.setItem('awsUnits', JSON.stringify(units));
+                document.getElementById('nav-imersao').style.display = 'none';
+                setSintesePrompts(unit.name, unit.texts[activeTextIndex].notes || []);
+                document.getElementById('sintese-extra-text').value = '';
+                switchView('sintese');
+            }
+        }
+
+        function returnToTrilha() {
+            document.getElementById('nav-imersao').style.display = 'none';
+            document.getElementById('nav-quiz').style.display = 'none';
+            switchView('trilha', document.querySelector('nav button:nth-child(1)'));
+        }
+
+        // --- FLUXO DE EXERCÍCIOS E APROFUNDAMENTO ---
+        function setQuizPrompts(unitName) {
+            let pt = `Atue como um examinador sênior da certificação AWS Solutions Architect Professional. Gere 10 exercícios de Verdadeiro ou Falso sobre a disciplina: ${unitName}. Os cenários devem ser avançados, profundos e incluir trechos de código em algumas das questões para avaliar o conhecimento prático. Retorne EXATAMENTE neste formato de texto para CADA questão, sem adicionar textos antes ou depois:\n\nQ: [Texto da questão e código]\nR: [V ou F]\nE: [Explicação técnica detalhada]\nK: [Palavras-chave separadas por vírgula]`;
+            let en = `Act as a senior examiner for the AWS Solutions Architect Professional certification. Generate 10 True/False exercises regarding the discipline: ${unitName}. Scenarios must be advanced, deep, and MUST include code snippets in some questions to assess practical knowledge. Return EXACTLY in this text format for EACH question, without adding any prefix or suffix text:\n\nQ: [Question text and code]\nR: [T or F]\nE: [Detailed technical explanation]\nK: [Comma-separated keywords]`;
+            window.currentPrompts.quiz = { pt, en };
+            document.getElementById('ai-prompt-text-quiz').innerText = pt;
+        }
+
+        function handleExerciciosFlux(unitId, event) {
+            if(event) event.stopPropagation();
+            migrateData();
+            const unit = units.find(u => u.id === unitId);
+            if(!unit) return;
+            activeUnitId = unitId;
+
+            if(!unit.exercises || unit.exercises.length === 0 || event) {
+                document.getElementById('setup-quiz-title').innerText = `Disciplina: ${unit.name}`;
+                setQuizPrompts(unit.name);
+                document.getElementById('setup-quiz-content').value = '';
+                switchView('preparar-quiz');
+            } else {
+                currentExercises = unit.exercises;
+                currentExercises.forEach(ex => { ex.isCorrect = null; });
+                startQuizFlow(unit.name);
+            }
+        }
+
+        function parseAndStartQuiz() {
+            const rawText = document.getElementById('setup-quiz-content').value.trim();
+            if(!rawText) return alert('Cole os exercícios gerados pela IA para processar.');
+
+            const blocks = rawText.split(/Q:/i).filter(b => b.trim().length > 0);
+            const parsedExercises = [];
+
+            blocks.forEach(block => {
+                const rSplit = block.split(/\nR:|\s+R:/i);
+                if(rSplit.length < 2) return;
+                const qText = rSplit[0].trim();
+                
+                const eSplit = rSplit[1].split(/\nE:|\s+E:/i);
+                if(eSplit.length < 2) return;
+                const rText = eSplit[0].trim().toUpperCase();
+                
+                const kSplit = eSplit[1].split(/\nK:|\s+K:/i);
+                const eText = kSplit[0].trim();
+                
+                let kText = "AWS";
+                if(kSplit.length > 1) {
+                    kText = kSplit[1].trim();
+                }
+                const keywords = kText.split(',').map(k => k.trim()).filter(k => k);
+
+                const isTrue = rText.startsWith('V') || rText.startsWith('T') || rText.includes('TRUE') || rText.includes('VERDADEIRO');
+                parsedExercises.push({ 
+                    question: qText, 
+                    answer: isTrue, 
+                    explanation: eText, 
+                    keywords: keywords,
+                    isMarked: false,
+                    isCorrect: null
+                });
+            });
+
+            if(parsedExercises.length === 0) return alert('Erro no parsing. Certifique-se de usar Q:, R:, E: e K:.');
+
+            const unit = units.find(u => u.id === activeUnitId);
+            unit.exercises = parsedExercises;
+            unit.tasks.exercicios = false;
+            localStorage.setItem('awsUnits', JSON.stringify(units));
+            currentExercises = parsedExercises;
+            startQuizFlow(unit.name);
+        }
+
+        function startQuizFlow(unitName) {
+            currentQuizIndex = 0;
+            quizScore = 0;
+            document.getElementById('quiz-title').innerText = `Missão AWS: ${unitName}`;
+            
+            document.getElementById('quiz-runner').style.display = 'flex';
+            document.getElementById('quiz-report').style.display = 'none';
+            document.getElementById('nav-quiz').style.display = 'flex';
+            
+            switchView('quiz', document.getElementById('nav-quiz'));
+            renderQuizQuestion();
+        }
+
+        function renderQuizQuestion() {
+            quizHasAnswered = false;
+            const ex = currentExercises[currentQuizIndex];
+            
+            document.getElementById('quiz-progress').innerText = `Questão ${currentQuizIndex + 1} de ${currentExercises.length}`;
+            document.getElementById('quiz-score').innerText = `Acertos: ${quizScore}`;
+            
+            const btnStar = document.getElementById('btn-star');
+            if (ex.isMarked) {
+                btnStar.classList.add('starred');
+                btnStar.innerText = "★";
+            } else {
+                btnStar.classList.remove('starred');
+                btnStar.innerText = "☆";
+            }
+            
+            document.getElementById('quiz-question-text').innerHTML = renderSimpleMarkdown(ex.question);
+            
+            const btnTrue = document.getElementById('btn-verdadeiro');
+            const btnFalse = document.getElementById('btn-falso');
+            btnTrue.className = 'btn-quiz';
+            btnFalse.className = 'btn-quiz';
+            btnTrue.disabled = false;
+            btnFalse.disabled = false;
+            btnTrue.style.borderColor = "";
+            btnFalse.style.borderColor = "";
+
+            const feedbackBox = document.getElementById('quiz-feedback');
+            feedbackBox.classList.remove('show');
+            document.getElementById('btn-next-question').style.display = 'none';
+            document.getElementById('deepen-box-runner').style.display = 'none';
+        }
+
+        function toggleStar() {
+            const ex = currentExercises[currentQuizIndex];
+            ex.isMarked = !ex.isMarked;
+            
+            const unit = units.find(u => u.id === activeUnitId);
+            if(unit) localStorage.setItem('awsUnits', JSON.stringify(units));
+
+            const btnStar = document.getElementById('btn-star');
+            if (ex.isMarked) {
+                btnStar.classList.add('starred');
+                btnStar.innerText = "★";
+            } else {
+                btnStar.classList.remove('starred');
+                btnStar.innerText = "☆";
+            }
+        }
+
+        function checkAnswer(userChoice) {
+            if(quizHasAnswered) return;
+            quizHasAnswered = true;
+
+            const ex = currentExercises[currentQuizIndex];
+            const isCorrect = (userChoice === ex.answer);
+            ex.isCorrect = isCorrect; 
+
+            const unit = units.find(u => u.id === activeUnitId);
+            if(unit) localStorage.setItem('awsUnits', JSON.stringify(units));
+
+            const btnTrue = document.getElementById('btn-verdadeiro');
+            const btnFalse = document.getElementById('btn-falso');
+            btnTrue.disabled = true;
+            btnFalse.disabled = true;
+
+            if (userChoice === true) btnTrue.classList.add('selected-true');
+            if (userChoice === false) btnFalse.classList.add('selected-false');
+
+            const feedbackBox = document.getElementById('quiz-feedback');
+            const statusText = document.getElementById('feedback-status');
+            
+            if (isCorrect) {
+                quizScore++;
+                statusText.innerText = "🎯 Correto!";
+                statusText.className = "feedback-status correct";
+            } else {
+                statusText.innerText = "❌ Incorreto";
+                statusText.className = "feedback-status wrong";
+                if (ex.answer === true) btnTrue.style.borderColor = "var(--duo-green)";
+                if (ex.answer === false) btnFalse.style.borderColor = "var(--duo-green)";
+            }
+
+            document.getElementById('quiz-score').innerText = `Acertos: ${quizScore}`;
+            document.getElementById('feedback-explanation').innerHTML = renderSimpleMarkdown(ex.explanation);
+            feedbackBox.classList.add('show');
+
+            const btnNext = document.getElementById('btn-next-question');
+            btnNext.style.display = 'inline-block';
+            
+            if (currentQuizIndex === currentExercises.length - 1) {
+                btnNext.innerText = "Ver Relatório 📊";
+                btnNext.style.backgroundColor = "var(--duo-blue)";
+                btnNext.style.borderBottomColor = "#189ad4";
+            } else {
+                btnNext.innerText = "Próxima Questão";
+                btnNext.style.backgroundColor = "var(--aws-orange)";
+                btnNext.style.borderBottomColor = "var(--aws-orange-dark)";
+            }
+        }
+
+        function nextQuestion() {
+            if (currentQuizIndex < currentExercises.length - 1) {
+                currentQuizIndex++;
+                renderQuizQuestion();
+            } else {
+                generateQuizReport();
+            }
+        }
+
+        // --- SISTEMA DE APROFUNDAMENTO DIRETO DO QUIZ ---
+        function toggleDeepenBox(source, idx = null) {
+            const box = document.getElementById(`deepen-box-${source}`);
+            if (box.style.display === 'none') {
+                box.style.display = 'block';
+                
+                let exerciseIndex = source === 'runner' ? currentQuizIndex : idx;
+                let ex = currentExercises[exerciseIndex];
+                
+                let pt = `Estou estudando para a AWS Professional. Gere uma leitura aprofundada baseada na seguinte questão e sua explicação. A ontologia deve ter três níveis no mínimo de profundidade, em texto corrido:\n\nQuestão: ${ex.question}\nExplicação: ${ex.explanation}`;
+                let en = `I am studying for the AWS Professional certification. Generate an in-depth reading based on the following question and its explanation. This ontology must have at least three levels of depth, formatted as continuous text:\n\nQuestion: ${ex.question}\nExplanation: ${ex.explanation}\n\nPlease write the response entirely in English.`;
+                
+                window.currentPrompts[source] = { pt, en };
+                document.getElementById(`ai-prompt-text-${source}`).innerText = pt;
+            } else {
+                box.style.display = 'none';
+            }
+        }
+
+        function injectDeepenCycle(source) {
+            const content = document.getElementById(`deepen-text-${source}`).value.trim();
+            if(!content) return alert('Cole o texto da IA.');
+            const unit = units.find(u => u.id === activeUnitId);
+            if(unit) {
+                unit.texts.push({ content: content, read: false, notes: [] });
+                unit.tasks.teoria = false;
+                localStorage.setItem('awsUnits', JSON.stringify(units));
+                activeTextIndex = unit.texts.length - 1;
+                document.getElementById(`deepen-text-${source}`).value = '';
+                launchReader(unit);
+            }
+        }
+
+        function getDeepenHTML(idx) {
+            return `
+                <div style="margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 1rem;">
+                    <button class="btn-action" style="background: transparent; border: 2px solid var(--duo-blue); color: var(--duo-blue); font-size: 0.8rem; padding: 0.4rem 0.8rem;" onclick="toggleDeepenBox('report-${idx}', ${idx})">🧠 Aprofundar</button>
+                    
+                    <div id="deepen-box-report-${idx}" style="display: none; margin-top: 1rem;">
+                        <div class="prompt-helper" style="padding: 0.8rem; margin-bottom: 0.8rem;">
+                            <p style="color: var(--duo-blue); font-weight: 700; margin-bottom: 0.5rem; font-size: 0.8rem;">🤖 Prompt de Aprofundamento</p>
+                            <div class="prompt-box" style="padding: 0.5rem; flex-direction: column; align-items: stretch;">
+                                <span class="ai-prompt-text" id="ai-prompt-text-report-${idx}" style="font-size: 0.8rem; max-height: 100px; overflow-y: auto;"></span>
+                                <div class="prompt-actions" style="justify-content: flex-end; margin-top: 0.5rem;">
+                                    <button class="prompt-copy-btn" onclick="copyDynamicPrompt('report-${idx}', 'pt', this)">PT</button>
+                                    <button class="prompt-copy-btn" onclick="copyDynamicPrompt('report-${idx}', 'en', this)">EN</button>
+                                </div>
+                            </div>
+                        </div>
+                        <textarea id="deepen-text-report-${idx}" style="min-height: 80px; font-size: 0.85rem; margin-bottom: 0.5rem;" placeholder="Cole a leitura gerada pela IA..."></textarea>
+                        <button class="btn-action btn-blue" style="width: 100%; font-size: 0.85rem; padding: 0.5rem;" onclick="injectDeepenCycle('report-${idx}')">Injetar Ciclo e Ler Agora</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function generateQuizReport() {
+            document.getElementById('quiz-runner').style.display = 'none';
+            document.getElementById('quiz-report').style.display = 'block';
+
+            const errContainer = document.getElementById('report-errors');
+            const markContainer = document.getElementById('report-marked');
+            const kwContainer = document.getElementById('report-keywords');
+            
+            errContainer.innerHTML = '';
+            markContainer.innerHTML = '';
+            kwContainer.innerHTML = '';
+
+            let keywordsToStudy = new Set();
+            let hasErrors = false;
+            let hasMarked = false;
+
+            currentExercises.forEach((ex, idx) => {
+                if (ex.isCorrect === false || ex.isMarked) {
+                    if(ex.keywords) {
+                        ex.keywords.forEach(k => keywordsToStudy.add(k));
+                    }
+                }
+
+                if (ex.isCorrect === false) {
+                    hasErrors = true;
+                    errContainer.innerHTML += `
+                        <div class="report-item">
+                            <div class="report-item-header">
+                                <span style="font-weight:700;">Questão ${idx + 1}</span>
+                                <span class="report-item-badge badge-wrong">Errou</span>
+                            </div>
+                            <div class="markdown-render" style="font-size: 0.95rem; margin-bottom: 0.8rem;">${renderSimpleMarkdown(ex.question)}</div>
+                            <div class="markdown-render" style="font-size: 0.85rem; color: var(--text-muted); border-top: 1px solid var(--border); padding-top: 0.8rem;"><strong>Explicação:</strong> ${renderSimpleMarkdown(ex.explanation)}</div>
+                            ${getDeepenHTML(idx)}
+                        </div>
+                    `;
+                }
+
+                if (ex.isMarked) {
+                    hasMarked = true;
+                    markContainer.innerHTML += `
+                        <div class="report-item">
+                            <div class="report-item-header">
+                                <span style="font-weight:700;">Questão ${idx + 1}</span>
+                                <span class="report-item-badge badge-marked">Revisão</span>
+                            </div>
+                            <div class="markdown-render" style="font-size: 0.95rem; margin-bottom: 0.8rem;">${renderSimpleMarkdown(ex.question)}</div>
+                            <div class="markdown-render" style="font-size: 0.85rem; color: var(--text-muted); border-top: 1px solid var(--border); padding-top: 0.8rem;"><strong>Explicação:</strong> ${renderSimpleMarkdown(ex.explanation)}</div>
+                            ${getDeepenHTML(idx)}
+                        </div>
+                    `;
+                }
+            });
+
+            if(!hasErrors) errContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem;">Nenhum cenário falho! Excelente trabalho.</p>';
+            if(!hasMarked) markContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem;">Nenhuma questão marcada para revisão.</p>';
+
+            if(keywordsToStudy.size > 0) {
+                let tagsHTML = '';
+                keywordsToStudy.forEach(kw => {
+                    tagsHTML += `<span class="nuvem-tag">${kw}</span>`;
+                });
+                kwContainer.innerHTML = tagsHTML;
+            } else {
+                kwContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem;">Sem lacunas aparentes.</p>';
+            }
+        }
+
+        function finishQuizReport() {
+            const unit = units.find(u => u.id === activeUnitId);
+            if(unit) {
+                unit.tasks.exercicios = true;
+                localStorage.setItem('awsUnits', JSON.stringify(units));
+            }
+            returnToTrilha();
+        }
+
+        function renderTrilha() {
+            migrateData();
+            const container = document.getElementById('units-container');
+            container.innerHTML = '';
+            if (units.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-muted); text-align:center; padding: 2rem;">Trilha sem diretrizes. Acesse a Forja de Missões.</p>';
+                updateProgress();
+                return;
+            }
+
+            units.forEach((unit, index) => {
+                const totalTexts = unit.texts.length;
+                const unreadTexts = unit.texts.filter(t => !t.read).length;
+                let teoriaLabel = '📖 Teoria ➕';
+                let isTeoriaCompleted = unit.tasks.teoria;
+                
+                if (totalTexts > 0) {
+                    if (unreadTexts > 0) {
+                        const currentCycle = totalTexts - unreadTexts + 1;
+                        teoriaLabel = `📖 Ciclo ${currentCycle} Pendente ⚡`;
+                        isTeoriaCompleted = false;
+                    } else {
+                        teoriaLabel = `📖 Teoria (Ciclos: ${totalTexts}) ✅`;
+                        isTeoriaCompleted = true;
+                    }
+                }
+
+                let hasExercises = unit.exercises && unit.exercises.length > 0;
+                let exerciciosLabel = `🧠 Exercícios T/F ${hasExercises ? '⚡' : '➕'}`;
+                let isExCompleted = unit.tasks.exercicios;
+
+                let historyHTML = '';
+                const cyclesWithNotes = unit.texts.filter(t => t.notes && t.notes.length > 0);
+                if(cyclesWithNotes.length > 0) {
+                    let groupsHTML = '';
+                    unit.texts.forEach((textObj, cIndex) => {
+                        if(textObj.notes && textObj.notes.length > 0) {
+                            const tags = textObj.notes.map(n => `<span class="history-tag">${n}</span>`).join('');
+                            groupsHTML += `<div class="history-cycle-group"><span class="history-cycle-label">Ciclo ${cIndex + 1}</span><div class="history-tags">${tags}</div></div>`;
+                        }
+                    });
+                    historyHTML = `<div class="history-area"><div class="history-title">Radar Histórico</div>${groupsHTML}</div>`;
+                }
+
+                const card = document.createElement('div');
+                card.className = 'unit-card';
+                card.innerHTML = `
+                    <h3 style="color: var(--aws-orange);">Unidade ${index + 1}: <span style="color: #fff;">${unit.name}</span></h3>
+                    <div class="mission-grid">
+                        
+                        <div class="mission-item locked-teoria ${isTeoriaCompleted ? 'completed' : ''}" style="flex-direction: column; align-items: stretch; gap: 0;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; height: 100%;" onclick="handleTeoriaFlux('${unit.id}')">
+                                <span>${teoriaLabel}</span>
+                                <input type="checkbox" ${isTeoriaCompleted ? 'checked' : ''} onclick="event.stopPropagation(); return false;" readonly>
+                            </div>
+                            ${isTeoriaCompleted ? `<button class="btn-add-cycle" onclick="openAddCycle('${unit.id}', event)">➕ Novo Ciclo</button>` : ''}
+                        </div>
+
+                        <div class="mission-item locked-quiz ${isExCompleted ? 'completed' : ''}" style="flex-direction: column; align-items: stretch; gap: 0;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; height: 100%;" onclick="handleExerciciosFlux('${unit.id}')">
+                                <span>${exerciciosLabel}</span>
+                                <input type="checkbox" ${isExCompleted ? 'checked' : ''} onclick="event.stopPropagation(); return false;" readonly>
+                            </div>
+                            ${isExCompleted ? `<button class="btn-add-cycle" style="border-color:var(--aws-orange); color:var(--aws-orange);" onclick="handleExerciciosFlux('${unit.id}', event)">🔄 Refazer Quiz</button>` : ''}
+                        </div>
+
+                        <label class="mission-item ${unit.tasks.pratica ? 'completed' : ''}">
+                            <span>🧪 Prática</span>
+                            <input type="checkbox" onchange="toggleManualTask('${unit.id}', 'pratica')" ${unit.tasks.pratica ? 'checked' : ''}>
+                        </label>
+                        <label class="mission-item ${unit.tasks.multi ? 'completed' : ''}">
+                            <span>▶️ Multimídia</span>
+                            <input type="checkbox" onchange="toggleManualTask('${unit.id}', 'multi')" ${unit.tasks.multi ? 'checked' : ''}>
+                        </label>
+                    </div>
+                    ${historyHTML}
+                `;
+                container.appendChild(card);
+            });
+            updateProgress();
+        }
+
+        function renderNuvem() {
+            migrateData();
+            const container = document.getElementById('nuvem-container');
+            container.innerHTML = '';
+            let hasAnyNotes = false;
+            units.forEach(unit => {
+                const cyclesWithNotes = unit.texts.filter(t => t.notes && t.notes.length > 0);
+                if (cyclesWithNotes.length > 0) {
+                    hasAnyNotes = true;
+                    const card = document.createElement('div');
+                    card.className = 'nuvem-card';
+                    let cyclesHTML = '';
+                    unit.texts.forEach((textObj, index) => {
+                        if(textObj.notes && textObj.notes.length > 0) {
+                            const tagsHTML = textObj.notes.map(note => `<span class="nuvem-tag">${note}</span>`).join('');
+                            cyclesHTML += `<div class="nuvem-cycle-block"><div class="nuvem-cycle-label">Ciclo ${index + 1}</div><div class="nuvem-tags">${tagsHTML}</div></div>`;
+                        }
+                    });
+                    card.innerHTML = `<h3>${unit.name}</h3>${cyclesHTML}`;
+                    container.appendChild(card);
+                }
+            });
+            if (!hasAnyNotes) {
+                container.innerHTML = `<div class="nuvem-empty"><h3 style="margin-bottom: 1rem; color: #fff;">O Radar está silencioso.</h3><p>Inicie uma missão no Modo Imersão e utilize o Radar.</p></div>`;
+            }
+        }
+
+        function updateProgress() {
+            if (units.length === 0) {
+                document.getElementById('progress-text').innerText = '0%';
+                document.getElementById('progress-fill').style.width = '0%';
+                return;
+            }
+            let total = units.length * 4;
+            let completed = 0;
+            units.forEach(u => {
+                if(u.tasks.teoria) completed++;
+                if(u.tasks.exercicios) completed++;
+                if(u.tasks.pratica) completed++;
+                if(u.tasks.multi) completed++;
+            });
+            const percent = Math.round((completed / total) * 100);
+            document.getElementById('progress-text').innerText = `${percent}%`;
+            document.getElementById('progress-fill').style.width = `${percent}%`;
+        }
+
+        document.addEventListener('keydown', function(e) {
+            const imersaoView = document.getElementById('imersao');
+            if(imersaoView && imersaoView.classList.contains('active')) {
+                if(document.activeElement && document.activeElement.id === 'note-input') return;
+                if(e.key === 'ArrowRight') {
+                    const btnForward = document.getElementById('btn-reader-forward');
+                    if(btnForward && btnForward.onclick) btnForward.onclick();
+                } else if(e.key === 'ArrowLeft') {
+                    prevWords();
+                }
+            }
+        });
+
+        window.onload = () => { renderTrilha(); };
+    </script>
+</body>
+</html>
