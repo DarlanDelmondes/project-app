@@ -46,8 +46,8 @@
         .btn-aws { background-color: var(--aws-orange); border-bottom-color: var(--aws-orange-dark); color: #000; }
         .btn-blue { background-color: var(--duo-blue); border-bottom-color: #189ad4; color: #fff; }
 
-        input[type="text"], textarea { width: 100%; background-color: var(--panel-bg); border: 2px solid var(--border); color: var(--text-main); padding: 1rem; border-radius: 12px; font-family: inherit; font-size: 1rem; margin-bottom: 1rem; transition: border-color 0.2s; }
-        input[type="text"]:focus, textarea:focus { outline: none; border-color: var(--duo-blue); }
+        input[type="text"], textarea, select { width: 100%; background-color: var(--panel-bg); border: 2px solid var(--border); color: var(--text-main); padding: 1rem; border-radius: 12px; font-family: inherit; font-size: 1rem; margin-bottom: 1rem; transition: border-color 0.2s; outline: none; }
+        input[type="text"]:focus, textarea:focus, select:focus { border-color: var(--duo-blue); }
 
         /* TRILHA & CARTÕES */
         .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; font-weight: 700; color: var(--aws-orange); }
@@ -55,8 +55,9 @@
         .progress-bar-fill { background-color: var(--aws-orange); height: 100%; width: 0%; transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1); position: relative; }
         .progress-bar-fill::after { content: ''; position: absolute; top: 4px; left: 8px; right: 8px; height: 6px; background: rgba(255,255,255,0.3); border-radius: 10px; }
 
-        .unit-card { background-color: var(--panel-bg); border: 2px solid var(--border); border-bottom: 6px solid var(--border); border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem; }
+        .unit-card { background-color: var(--panel-bg); border: 2px solid var(--border); border-bottom: 6px solid var(--border); border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem; position: relative;}
         .unit-card h3 { font-size: 1.3rem; margin-bottom: 1rem; color: #fff; }
+        
         .mission-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1rem; align-items: start; }
         
         .mission-item { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; background-color: rgba(255,255,255,0.05); padding: 0.8rem; border-radius: 12px; cursor: pointer; transition: background 0.2s; font-weight: 700; font-size: 0.95rem; }
@@ -149,9 +150,9 @@
         .feedback-status.wrong { color: var(--danger); }
         .feedback-explanation { font-size: 0.95rem; color: var(--text-muted); line-height: 1.6; white-space: pre-wrap; }
 
-        .quiz-footer { margin-top: auto; display: flex; justify-content: flex-end; }
+        .quiz-footer { margin-top: auto; display: flex; justify-content: space-between; align-items: center; }
 
-        /* ESTILOS DE MARKDOWN (CÓDIGO) NO QUIZ E RELATÓRIO */
+        /* ESTILOS DE MARKDOWN */
         .markdown-render pre { background-color: rgba(0, 0, 0, 0.4); padding: 1rem; border-radius: 8px; overflow-x: auto; font-family: 'Courier New', Courier, monospace; font-size: 0.9rem; margin: 1rem 0; border: 1px solid rgba(255,255,255,0.1); white-space: pre; color: #e6e6e6; }
         .markdown-render code { font-family: 'Courier New', Courier, monospace; background-color: rgba(0, 0, 0, 0.4); padding: 0.2rem 0.4rem; border-radius: 4px; font-size: 0.9em; color: var(--aws-orange); }
         .markdown-render pre code { background-color: transparent; padding: 0; color: inherit; }
@@ -164,6 +165,17 @@
         .report-item-badge { font-size: 0.75rem; font-weight: 900; padding: 0.2rem 0.5rem; border-radius: 4px; text-transform: uppercase; }
         .badge-wrong { background: rgba(255, 75, 75, 0.1); color: var(--danger); border: 1px solid var(--danger); }
         .badge-marked { background: rgba(255, 153, 0, 0.1); color: var(--aws-orange); border: 1px solid var(--aws-orange); }
+
+        /* --- TELA DE GESTÃO (CRUD) --- */
+        .gestao-section { background-color: var(--panel-bg); border: 2px solid var(--border); border-radius: 16px; padding: 2rem; margin-bottom: 2rem; }
+        .gestao-section h3 { border-bottom: 1px dashed var(--border); padding-bottom: 0.8rem; margin-bottom: 1.5rem; color: var(--duo-blue); }
+        .gestao-item { background-color: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+        .gestao-item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+        .gestao-item-title { font-weight: 700; color: var(--text-main); }
+        .gestao-controls { display: flex; gap: 0.5rem; }
+        .btn-icon { background: transparent; border: 1px solid var(--border); border-radius: 6px; color: var(--text-muted); cursor: pointer; padding: 0.4rem; transition: all 0.2s; }
+        .btn-icon:hover { background: rgba(255,255,255,0.05); color: #fff; }
+        .edit-panel { background-color: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; margin-top: 1rem; border: 1px solid rgba(255,255,255,0.05); }
 
         /* MOBILE */
         @media (max-width: 768px) {
@@ -186,6 +198,8 @@
             .nuvem-grid { grid-template-columns: 1fr; }
             .quiz-options { flex-direction: column; gap: 1rem; }
             .quiz-container { padding: 1.5rem; }
+            .forja-actions { flex-direction: column; }
+            .forja-actions button { width: 100%; }
         }
     </style>
 </head>
@@ -197,6 +211,7 @@
             <button class="active" onclick="switchView('trilha', this)"><span>🗺️</span> <span class="nav-text">Trilha</span></button>
             <button onclick="switchView('nuvem', this)"><span>☁️</span> <span class="nav-text">Nuvem</span></button>
             <button onclick="switchView('forja', this)"><span>⚙️</span> <span class="nav-text">Forja</span></button>
+            <button onclick="switchView('gestao', this)"><span>🎛️</span> <span class="nav-text">Gestão</span></button>
             <button onclick="switchView('imersao', this)" id="nav-imersao" style="display:none; color: var(--duo-blue);"><span>⚡</span> <span class="nav-text">Imersão</span></button>
             <button onclick="switchView('quiz', this)" id="nav-quiz" style="display:none; color: var(--aws-orange);"><span>🧠</span> <span class="nav-text">Quiz</span></button>
         </nav>
@@ -227,7 +242,51 @@
             <h2>Forja de Missões</h2>
             <p style="color: var(--text-muted); margin-bottom: 2rem;">Cole as diretrizes estruturais (Markdown).</p>
             <textarea id="md-input" style="min-height: 200px;" placeholder="- Domain 1.1: Architect network..."></textarea>
-            <button class="btn-action btn-aws" onclick="parseMarkdown()">Forjar Trilha</button>
+            <div class="forja-actions" style="display:flex; gap:1rem; margin-top:1rem;">
+                <button class="btn-action btn-aws" onclick="parseMarkdown('append')">Adicionar à Trilha</button>
+                <button class="btn-action" style="background:transparent; border:2px solid var(--danger); color:var(--danger);" onclick="parseMarkdown('replace')">Substituir Trilha Completa</button>
+            </div>
+        </section>
+
+        <!-- GESTÃO (NOVO PAINEL DE CONFIGURAÇÕES GERAIS) -->
+        <section id="gestao" class="view">
+            <h2>Gestão de Trilha</h2>
+            <p style="color: var(--text-muted); margin-bottom: 2rem;">Gerencie o conteúdo interno de suas disciplinas.</p>
+            
+            <div style="display:flex; gap:1rem; margin-bottom: 2rem;">
+                <select id="config-unit-select" onchange="renderConfigPanel()" style="flex:1; margin-bottom:0;"></select>
+                <button class="btn-action btn-aws" style="flex-shrink:0; font-size: 0.9rem;" onclick="configCreateUnit()">➕ Nova</button>
+            </div>
+
+            <div id="config-panel" style="display:none;">
+                <!-- Disciplina -->
+                <div class="gestao-section">
+                    <h3>Detalhes da Disciplina</h3>
+                    <input type="text" id="config-unit-name" placeholder="Nome da Disciplina">
+                    <div style="display:flex; justify-content:space-between;">
+                        <button class="btn-action btn-blue" onclick="configSaveUnit()">Salvar Nome</button>
+                        <button class="btn-action" style="background:transparent; border:1px solid var(--danger); color:var(--danger);" onclick="configDeleteUnit()">🗑️ Excluir Disciplina</button>
+                    </div>
+                </div>
+
+                <!-- Ciclos de Leitura -->
+                <div class="gestao-section">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; border-bottom: 1px dashed var(--border); padding-bottom: 0.8rem;">
+                        <h3 style="border:none; margin:0; padding:0;">Ciclos de Leitura</h3>
+                        <button class="btn-action" style="background:transparent; border:1px solid var(--duo-blue); color:var(--duo-blue); padding:0.4rem 0.8rem; font-size:0.8rem;" onclick="configAddCycle()">➕ Ciclo</button>
+                    </div>
+                    <div id="config-cycles-list"></div>
+                </div>
+
+                <!-- Exercícios -->
+                <div class="gestao-section">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; border-bottom: 1px dashed var(--border); padding-bottom: 0.8rem;">
+                        <h3 style="border:none; margin:0; padding:0;">Exercícios T/F</h3>
+                        <button class="btn-action" style="background:transparent; border:1px solid var(--duo-blue); color:var(--duo-blue); padding:0.4rem 0.8rem; font-size:0.8rem;" onclick="configAddExercise()">➕ Exercício</button>
+                    </div>
+                    <div id="config-exercises-list"></div>
+                </div>
+            </div>
         </section>
 
         <!-- PREPARAR TEORIA -->
@@ -339,13 +398,12 @@
                     <div class="feedback-status" id="feedback-status"></div>
                     <div class="feedback-explanation markdown-render" id="feedback-explanation"></div>
                     
-                    <!-- NOVO: BOTÃO DE APROFUNDAMENTO DIRETO NO FEEDBACK -->
                     <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
                         <button class="btn-action" style="background: transparent; border: 2px solid var(--duo-blue); color: var(--duo-blue); font-size: 0.9rem; padding: 0.5rem 1rem;" onclick="toggleDeepenBox('runner')">🧠 Aprofundar Questão</button>
                         
                         <div id="deepen-box-runner" style="display: none; margin-top: 1rem; text-align: left;">
                             <div class="prompt-helper" style="padding: 1rem; margin-bottom: 1rem;">
-                                <p style="color: var(--duo-blue); font-weight: 700; margin-bottom: 0.5rem; font-size: 0.85rem;">🤖 Prompt Específico da Questão</p>
+                                <p style="color: var(--duo-blue); font-weight: 700; margin-bottom: 0.5rem; font-size: 0.85rem;">🤖 Prompt Específico</p>
                                 <div class="prompt-box" style="padding: 0.5rem; flex-direction: column; align-items: stretch;">
                                     <span class="ai-prompt-text" id="ai-prompt-text-runner" style="font-size: 0.8rem; max-height: 100px; overflow-y: auto;"></span>
                                     <div class="prompt-actions" style="justify-content: flex-end; margin-top: 0.5rem;">
@@ -354,15 +412,15 @@
                                     </div>
                                 </div>
                             </div>
-                            <textarea id="deepen-text-runner" style="min-height: 80px; font-size: 0.9rem;" placeholder="Cole o retorno da IA para criar um ciclo desta questão e ler no modo Imersão..."></textarea>
-                            <button class="btn-action btn-blue" style="width: 100%; font-size: 0.9rem;" onclick="injectDeepenCycle('runner')">Injetar Ciclo e Ler Agora</button>
+                            <textarea id="deepen-text-runner" style="min-height: 80px; font-size: 0.9rem;" placeholder="Cole o retorno da IA..."></textarea>
+                            <button class="btn-action btn-blue" style="width: 100%; font-size: 0.9rem;" onclick="injectDeepenCycle('runner')">Injetar Ciclo e Ler</button>
                         </div>
                     </div>
-
                 </div>
 
-                <div class="quiz-footer" style="margin-top: 1.5rem;">
-                    <button class="btn-action btn-aws" id="btn-next-question" style="display:none;" onclick="nextQuestion()">Próxima Questão</button>
+                <div class="quiz-footer">
+                    <button class="btn-action" style="background:transparent; border:2px solid var(--border); color:var(--text-main);" id="btn-prev-question" onclick="prevQuestion()">⬅ Voltar</button>
+                    <button class="btn-action btn-aws" id="btn-next-question" style="display:none;" onclick="nextQuestion()">Próxima ➔</button>
                 </div>
             </div>
 
@@ -371,8 +429,7 @@
                 <h3 style="color: #fff; margin-bottom: 1.5rem; border-bottom: 2px dashed var(--border); padding-bottom: 0.5rem;">Relatório Tático 📊</h3>
                 
                 <div class="report-section">
-                    <h4 style="color: var(--aws-orange); margin-bottom: 0.8rem;">Radar de Foco (Para Revisar)</h4>
-                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">Conceitos extraídos das questões que você errou ou marcou.</p>
+                    <h4 style="color: var(--aws-orange); margin-bottom: 0.8rem;">Radar de Foco</h4>
                     <div class="nuvem-tags" id="report-keywords"></div>
                 </div>
 
@@ -405,12 +462,12 @@
         let currentExercises = [];
         let currentQuizIndex = 0;
         let quizScore = 0;
-        let quizHasAnswered = false;
 
         window.currentPrompts = {
             setup: { pt: '', en: '' },
             sintese: { pt: '', en: '' },
-            quiz: { pt: '', en: '' }
+            quiz: { pt: '', en: '' },
+            runner: { pt: '', en: '' }
         };
 
         function renderSimpleMarkdown(text) {
@@ -454,41 +511,9 @@
             
             if(viewId === 'trilha') renderTrilha();
             if(viewId === 'nuvem') renderNuvem();
+            if(viewId === 'gestao') loadConfigUnits();
+
             window.scrollTo(0, 0);
-        }
-
-        function parseMarkdown() {
-            const md = document.getElementById('md-input').value;
-            if(!md.trim()) return;
-            const lines = md.split('\n');
-            const newUnits = [];
-            lines.forEach((line, index) => {
-                const cleanLine = line.replace(/^[\-\*\#]+\s*/, '').trim();
-                if (cleanLine) {
-                    newUnits.push({
-                        id: 'unit_' + Date.now() + '_' + index,
-                        name: cleanLine,
-                        texts: [],
-                        exercises: [],
-                        tasks: { teoria: false, pratica: false, exercicios: false, multi: false }
-                    });
-                }
-            });
-            if(newUnits.length > 0) {
-                units = newUnits;
-                localStorage.setItem('awsUnits', JSON.stringify(units));
-                document.getElementById('md-input').value = '';
-                switchView('trilha', document.querySelector('nav button:nth-child(1)'));
-            }
-        }
-
-        function toggleManualTask(unitId, taskType) {
-            const unit = units.find(u => u.id === unitId);
-            if(unit) {
-                unit.tasks[taskType] = !unit.tasks[taskType];
-                localStorage.setItem('awsUnits', JSON.stringify(units));
-                renderTrilha();
-            }
         }
 
         function copyDynamicPrompt(section, lang, btnElement) {
@@ -508,6 +533,275 @@
                 }, 2000);
             });
         }
+
+        function toggleManualTask(unitId, taskType) {
+            const unit = units.find(u => u.id === unitId);
+            if(unit) {
+                unit.tasks[taskType] = !unit.tasks[taskType];
+                localStorage.setItem('awsUnits', JSON.stringify(units));
+                renderTrilha();
+            }
+        }
+
+        // --- SISTEMA DE GESTÃO (CRUD GERAL) ---
+        function loadConfigUnits() {
+            migrateData();
+            const select = document.getElementById('config-unit-select');
+            select.innerHTML = '<option value="">-- Selecione uma disciplina --</option>';
+            units.forEach(u => {
+                select.innerHTML += `<option value="${u.id}">${u.name}</option>`;
+            });
+            document.getElementById('config-panel').style.display = 'none';
+        }
+
+        function renderConfigPanel() {
+            const unitId = document.getElementById('config-unit-select').value;
+            if(!unitId) {
+                document.getElementById('config-panel').style.display = 'none';
+                return;
+            }
+            const unit = units.find(u => u.id === unitId);
+            document.getElementById('config-panel').style.display = 'block';
+            
+            // Detalhes da Disciplina
+            document.getElementById('config-unit-name').value = unit.name;
+
+            // Ciclos
+            const cyclesList = document.getElementById('config-cycles-list');
+            cyclesList.innerHTML = '';
+            if(unit.texts.length === 0) {
+                cyclesList.innerHTML = '<p style="color:var(--text-muted); font-size:0.9rem;">Nenhum ciclo injetado.</p>';
+            } else {
+                unit.texts.forEach((txt, idx) => {
+                    const snippet = txt.content.substring(0, 40) + '...';
+                    cyclesList.innerHTML += `
+                        <div class="gestao-item" id="cycle-item-${idx}">
+                            <div class="gestao-item-header">
+                                <span class="gestao-item-title">Ciclo ${idx + 1}</span>
+                                <div class="gestao-controls">
+                                    <button class="btn-icon" onclick="configToggleEditCycle(${idx})">✏️</button>
+                                    <button class="btn-icon" onclick="configDeleteCycle('${unit.id}', ${idx})">🗑️</button>
+                                </div>
+                            </div>
+                            <div style="font-size:0.85rem; color:var(--text-muted);">${snippet}</div>
+                            
+                            <div class="edit-panel" id="cycle-edit-${idx}" style="display:none;">
+                                <textarea id="cycle-textarea-${idx}" style="min-height:100px;">${txt.content}</textarea>
+                                <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.9rem; margin-bottom:1rem;">
+                                    <input type="checkbox" id="cycle-read-${idx}" ${txt.read ? 'checked' : ''} style="width:auto; margin:0;">
+                                    Marcar como lido
+                                </label>
+                                <button class="btn-action btn-blue" style="padding:0.4rem 1rem; font-size:0.9rem;" onclick="configSaveCycle('${unit.id}', ${idx})">Salvar Ciclo</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            // Exercícios
+            const exList = document.getElementById('config-exercises-list');
+            exList.innerHTML = '';
+            if(unit.exercises.length === 0) {
+                exList.innerHTML = '<p style="color:var(--text-muted); font-size:0.9rem;">Nenhum exercício injetado.</p>';
+            } else {
+                unit.exercises.forEach((ex, idx) => {
+                    const snippet = ex.question.substring(0, 40) + '...';
+                    exList.innerHTML += `
+                        <div class="gestao-item" id="ex-item-${idx}">
+                            <div class="gestao-item-header">
+                                <span class="gestao-item-title">Questão ${idx + 1}</span>
+                                <div class="gestao-controls">
+                                    <button class="btn-icon" onclick="configToggleEditEx(${idx})">✏️</button>
+                                    <button class="btn-icon" onclick="configDeleteEx('${unit.id}', ${idx})">🗑️</button>
+                                </div>
+                            </div>
+                            <div style="font-size:0.85rem; color:var(--text-muted);">${snippet}</div>
+                            
+                            <div class="edit-panel" id="ex-edit-${idx}" style="display:none;">
+                                <label style="font-size:0.8rem; color:var(--text-muted);">Questão</label>
+                                <textarea id="ex-q-${idx}" style="min-height:60px; margin-bottom:0.5rem;">${ex.question}</textarea>
+                                
+                                <label style="font-size:0.8rem; color:var(--text-muted);">Gabarito</label>
+                                <select id="ex-a-${idx}" style="margin-bottom:0.5rem; padding:0.5rem;">
+                                    <option value="true" ${ex.answer ? 'selected' : ''}>Verdadeiro</option>
+                                    <option value="false" ${!ex.answer ? 'selected' : ''}>Falso</option>
+                                </select>
+                                
+                                <label style="font-size:0.8rem; color:var(--text-muted);">Explicação</label>
+                                <textarea id="ex-e-${idx}" style="min-height:60px; margin-bottom:0.5rem;">${ex.explanation}</textarea>
+
+                                <label style="font-size:0.8rem; color:var(--text-muted);">Palavras-chave (separadas por vírgula)</label>
+                                <input type="text" id="ex-k-${idx}" value="${(ex.keywords || []).join(', ')}" style="padding:0.5rem;">
+
+                                <button class="btn-action btn-blue" style="padding:0.4rem 1rem; font-size:0.9rem;" onclick="configSaveEx('${unit.id}', ${idx})">Salvar Exercício</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        // Funções CRUD Trilha
+        function parseMarkdown(mode) {
+            const md = document.getElementById('md-input').value;
+            if(!md.trim()) return alert("Insira um texto markdown válido.");
+            const lines = md.split('\n');
+            const newUnits = [];
+            lines.forEach((line, index) => {
+                const cleanLine = line.replace(/^[\-\*\#]+\s*/, '').trim();
+                if (cleanLine) {
+                    newUnits.push({
+                        id: 'unit_' + Date.now() + '_' + index,
+                        name: cleanLine,
+                        texts: [],
+                        exercises: [],
+                        tasks: { teoria: false, pratica: false, exercicios: false, multi: false }
+                    });
+                }
+            });
+            if(newUnits.length > 0) {
+                if(mode === 'replace') {
+                    if(confirm("Isso apagará toda a sua trilha atual. Tem certeza?")) { units = newUnits; } else { return; }
+                } else {
+                    units = [...units, ...newUnits];
+                }
+                localStorage.setItem('awsUnits', JSON.stringify(units));
+                document.getElementById('md-input').value = '';
+                switchView('trilha', document.querySelector('nav button:nth-child(1)'));
+            }
+        }
+
+        function configCreateUnit() {
+            const name = prompt("Nome da Nova Disciplina:");
+            if(name && name.trim()) {
+                units.push({
+                    id: 'unit_' + Date.now(),
+                    name: name.trim(),
+                    texts: [],
+                    exercises: [],
+                    tasks: { teoria: false, pratica: false, exercicios: false, multi: false }
+                });
+                localStorage.setItem('awsUnits', JSON.stringify(units));
+                loadConfigUnits();
+            }
+        }
+
+        function configSaveUnit() {
+            const unitId = document.getElementById('config-unit-select').value;
+            const newName = document.getElementById('config-unit-name').value.trim();
+            if(!newName || !unitId) return;
+            const unit = units.find(u => u.id === unitId);
+            if(unit) {
+                unit.name = newName;
+                localStorage.setItem('awsUnits', JSON.stringify(units));
+                loadConfigUnits();
+                document.getElementById('config-unit-select').value = unitId;
+                renderConfigPanel();
+                alert("Salvo com sucesso!");
+            }
+        }
+
+        function configDeleteUnit() {
+            const unitId = document.getElementById('config-unit-select').value;
+            if(!unitId) return;
+            if(confirm("Tem certeza que deseja excluir esta disciplina e todo o seu histórico?")) {
+                units = units.filter(u => u.id !== unitId);
+                localStorage.setItem('awsUnits', JSON.stringify(units));
+                loadConfigUnits();
+            }
+        }
+
+        // Funções CRUD Ciclos
+        function configToggleEditCycle(idx) {
+            const panel = document.getElementById(`cycle-edit-${idx}`);
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function configAddCycle() {
+            const unitId = document.getElementById('config-unit-select').value;
+            if(!unitId) return;
+            const unit = units.find(u => u.id === unitId);
+            if(unit) {
+                unit.texts.push({ content: "Insira o conteúdo do novo ciclo aqui...", read: false, notes: [] });
+                unit.tasks.teoria = false;
+                localStorage.setItem('awsUnits', JSON.stringify(units));
+                renderConfigPanel();
+            }
+        }
+
+        function configSaveCycle(unitId, idx) {
+            const unit = units.find(u => u.id === unitId);
+            if(unit && unit.texts[idx]) {
+                unit.texts[idx].content = document.getElementById(`cycle-textarea-${idx}`).value;
+                unit.texts[idx].read = document.getElementById(`cycle-read-${idx}`).checked;
+                unit.tasks.teoria = unit.texts.every(t => t.read);
+                localStorage.setItem('awsUnits', JSON.stringify(units));
+                renderConfigPanel();
+            }
+        }
+
+        function configDeleteCycle(unitId, idx) {
+            if(!confirm("Excluir este ciclo?")) return;
+            const unit = units.find(u => u.id === unitId);
+            if(unit && unit.texts[idx]) {
+                unit.texts.splice(idx, 1);
+                unit.tasks.teoria = unit.texts.length > 0 ? unit.texts.every(t => t.read) : false;
+                localStorage.setItem('awsUnits', JSON.stringify(units));
+                renderConfigPanel();
+            }
+        }
+
+        // Funções CRUD Exercícios
+        function configToggleEditEx(idx) {
+            const panel = document.getElementById(`ex-edit-${idx}`);
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function configAddExercise() {
+            const unitId = document.getElementById('config-unit-select').value;
+            if(!unitId) return;
+            const unit = units.find(u => u.id === unitId);
+            if(unit) {
+                unit.exercises.push({
+                    question: "Nova Questão...",
+                    answer: true,
+                    explanation: "Explicação...",
+                    keywords: [],
+                    isMarked: false,
+                    isCorrect: null,
+                    userChoice: null
+                });
+                unit.tasks.exercicios = false;
+                localStorage.setItem('awsUnits', JSON.stringify(units));
+                renderConfigPanel();
+            }
+        }
+
+        function configSaveEx(unitId, idx) {
+            const unit = units.find(u => u.id === unitId);
+            if(unit && unit.exercises[idx]) {
+                unit.exercises[idx].question = document.getElementById(`ex-q-${idx}`).value;
+                unit.exercises[idx].answer = document.getElementById(`ex-a-${idx}`).value === 'true';
+                unit.exercises[idx].explanation = document.getElementById(`ex-e-${idx}`).value;
+                
+                const kwRaw = document.getElementById(`ex-k-${idx}`).value;
+                unit.exercises[idx].keywords = kwRaw.split(',').map(k => k.trim()).filter(k => k);
+                
+                localStorage.setItem('awsUnits', JSON.stringify(units));
+                renderConfigPanel();
+            }
+        }
+
+        function configDeleteEx(unitId, idx) {
+            if(!confirm("Excluir este exercício?")) return;
+            const unit = units.find(u => u.id === unitId);
+            if(unit && unit.exercises[idx]) {
+                unit.exercises.splice(idx, 1);
+                localStorage.setItem('awsUnits', JSON.stringify(units));
+                renderConfigPanel();
+            }
+        }
+
 
         // --- FLUXO DE TEORIA ---
         function setSetupPrompts(isInitial, unitName, notesArray) {
@@ -541,11 +835,19 @@
             document.getElementById('ai-prompt-text-sintese').innerText = pt;
         }
 
-        function handleTeoriaFlux(unitId) {
+        function handleTeoriaFlux(unitId, cIndex = null) {
             migrateData();
             const unit = units.find(u => u.id === unitId);
             if(!unit) return;
             activeUnitId = unitId;
+
+            // Se for pra revisitar um ciclo específico
+            if (cIndex !== null) {
+                activeTextIndex = cIndex;
+                launchReader(unit);
+                return;
+            }
+
             const unreadIndex = unit.texts.findIndex(t => !t.read);
 
             if (unit.texts.length === 0) {
@@ -711,6 +1013,13 @@
                 unit.tasks.teoria = unit.texts.every(t => t.read);
                 localStorage.setItem('awsUnits', JSON.stringify(units));
                 document.getElementById('nav-imersao').style.display = 'none';
+                
+                // Se estiver apenas relendo um ciclo antigo, volta para a trilha direto
+                if(activeTextIndex < unit.texts.length - 1 && unit.tasks.teoria) {
+                    returnToTrilha();
+                    return;
+                }
+
                 setSintesePrompts(unit.name, unit.texts[activeTextIndex].notes || []);
                 document.getElementById('sintese-extra-text').value = '';
                 switchView('sintese');
@@ -723,10 +1032,10 @@
             switchView('trilha', document.querySelector('nav button:nth-child(1)'));
         }
 
-        // --- FLUXO DE EXERCÍCIOS E APROFUNDAMENTO ---
+        // --- FLUXO DE EXERCÍCIOS (QUIZ T/F) ---
         function setQuizPrompts(unitName) {
-            let pt = `Atue como um examinador sênior da certificação AWS Solutions Architect Professional. Gere 10 exercícios de Verdadeiro ou Falso sobre a disciplina: ${unitName}. Os cenários devem ser avançados, profundos e incluir trechos de código em algumas das questões para avaliar o conhecimento prático. Retorne EXATAMENTE neste formato de texto para CADA questão, sem adicionar textos antes ou depois:\n\nQ: [Texto da questão e código]\nR: [V ou F]\nE: [Explicação técnica detalhada]\nK: [Palavras-chave separadas por vírgula]`;
-            let en = `Act as a senior examiner for the AWS Solutions Architect Professional certification. Generate 10 True/False exercises regarding the discipline: ${unitName}. Scenarios must be advanced, deep, and MUST include code snippets in some questions to assess practical knowledge. Return EXACTLY in this text format for EACH question, without adding any prefix or suffix text:\n\nQ: [Question text and code]\nR: [T or F]\nE: [Detailed technical explanation]\nK: [Comma-separated keywords]`;
+            let pt = `Atue como um examinador sênior da certificação AWS Solutions Architect Professional. Gere 10 exercícios de Verdadeiro ou Falso sobre a disciplina: ${unitName}. Os cenários devem ser avançados, profundos e incluir trechos de código em algumas das questões. Retorne EXATAMENTE neste formato de texto para CADA questão, sem adicionar textos antes ou depois:\n\nQ: [Texto da questão e código]\nR: [V ou F]\nE: [Explicação técnica detalhada]\nK: [Palavras-chave separadas por vírgula]`;
+            let en = `Act as a senior examiner for the AWS Solutions Architect Professional certification. Generate 10 True/False exercises regarding the discipline: ${unitName}. Scenarios must be advanced, deep, and MUST include code snippets in some questions. Return EXACTLY in this text format for EACH question, without adding any prefix or suffix text:\n\nQ: [Question text and code]\nR: [T or F]\nE: [Detailed technical explanation]\nK: [Comma-separated keywords]`;
             window.currentPrompts.quiz = { pt, en };
             document.getElementById('ai-prompt-text-quiz').innerText = pt;
         }
@@ -745,7 +1054,6 @@
                 switchView('preparar-quiz');
             } else {
                 currentExercises = unit.exercises;
-                currentExercises.forEach(ex => { ex.isCorrect = null; });
                 startQuizFlow(unit.name);
             }
         }
@@ -770,19 +1078,13 @@
                 const eText = kSplit[0].trim();
                 
                 let kText = "AWS";
-                if(kSplit.length > 1) {
-                    kText = kSplit[1].trim();
-                }
+                if(kSplit.length > 1) { kText = kSplit[1].trim(); }
                 const keywords = kText.split(',').map(k => k.trim()).filter(k => k);
 
                 const isTrue = rText.startsWith('V') || rText.startsWith('T') || rText.includes('TRUE') || rText.includes('VERDADEIRO');
                 parsedExercises.push({ 
-                    question: qText, 
-                    answer: isTrue, 
-                    explanation: eText, 
-                    keywords: keywords,
-                    isMarked: false,
-                    isCorrect: null
+                    question: qText, answer: isTrue, explanation: eText, 
+                    keywords: keywords, isMarked: false, isCorrect: null, userChoice: null
                 });
             });
 
@@ -798,9 +1100,9 @@
 
         function startQuizFlow(unitName) {
             currentQuizIndex = 0;
-            quizScore = 0;
-            document.getElementById('quiz-title').innerText = `Missão AWS: ${unitName}`;
+            quizScore = currentExercises.filter(ex => ex.isCorrect === true).length;
             
+            document.getElementById('quiz-title').innerText = `Missão AWS: ${unitName}`;
             document.getElementById('quiz-runner').style.display = 'flex';
             document.getElementById('quiz-report').style.display = 'none';
             document.getElementById('nav-quiz').style.display = 'flex';
@@ -810,36 +1112,90 @@
         }
 
         function renderQuizQuestion() {
-            quizHasAnswered = false;
             const ex = currentExercises[currentQuizIndex];
             
             document.getElementById('quiz-progress').innerText = `Questão ${currentQuizIndex + 1} de ${currentExercises.length}`;
             document.getElementById('quiz-score').innerText = `Acertos: ${quizScore}`;
             
             const btnStar = document.getElementById('btn-star');
-            if (ex.isMarked) {
-                btnStar.classList.add('starred');
-                btnStar.innerText = "★";
-            } else {
-                btnStar.classList.remove('starred');
-                btnStar.innerText = "☆";
-            }
+            if (ex.isMarked) { btnStar.classList.add('starred'); btnStar.innerText = "★"; } 
+            else { btnStar.classList.remove('starred'); btnStar.innerText = "☆"; }
             
             document.getElementById('quiz-question-text').innerHTML = renderSimpleMarkdown(ex.question);
             
             const btnTrue = document.getElementById('btn-verdadeiro');
             const btnFalse = document.getElementById('btn-falso');
-            btnTrue.className = 'btn-quiz';
-            btnFalse.className = 'btn-quiz';
-            btnTrue.disabled = false;
-            btnFalse.disabled = false;
-            btnTrue.style.borderColor = "";
-            btnFalse.style.borderColor = "";
-
             const feedbackBox = document.getElementById('quiz-feedback');
+            const btnNext = document.getElementById('btn-next-question');
+            const btnPrev = document.getElementById('btn-prev-question');
+
+            btnTrue.className = 'btn-quiz'; btnFalse.className = 'btn-quiz';
+            btnTrue.disabled = false; btnFalse.disabled = false;
+            btnTrue.style.borderColor = ""; btnFalse.style.borderColor = "";
             feedbackBox.classList.remove('show');
-            document.getElementById('btn-next-question').style.display = 'none';
             document.getElementById('deepen-box-runner').style.display = 'none';
+
+            btnPrev.style.display = currentQuizIndex > 0 ? 'inline-block' : 'none';
+
+            if (ex.userChoice !== undefined && ex.userChoice !== null) {
+                btnTrue.disabled = true; btnFalse.disabled = true;
+                if (ex.userChoice === true) btnTrue.classList.add('selected-true');
+                if (ex.userChoice === false) btnFalse.classList.add('selected-false');
+
+                const statusText = document.getElementById('feedback-status');
+                if (ex.isCorrect) {
+                    statusText.innerText = "🎯 Correto!";
+                    statusText.className = "feedback-status correct";
+                } else {
+                    statusText.innerText = "❌ Incorreto";
+                    statusText.className = "feedback-status wrong";
+                    if (ex.answer === true) btnTrue.style.borderColor = "var(--duo-green)";
+                    if (ex.answer === false) btnFalse.style.borderColor = "var(--duo-green)";
+                }
+
+                document.getElementById('feedback-explanation').innerHTML = renderSimpleMarkdown(ex.explanation);
+                feedbackBox.classList.add('show');
+                
+                btnNext.style.display = 'inline-block';
+                if (currentQuizIndex === currentExercises.length - 1) {
+                    btnNext.innerText = "Ver Relatório 📊";
+                    btnNext.style.backgroundColor = "var(--duo-blue)";
+                    btnNext.style.borderBottomColor = "#189ad4";
+                } else {
+                    btnNext.innerText = "Próxima ➔";
+                    btnNext.style.backgroundColor = "var(--aws-orange)";
+                    btnNext.style.borderBottomColor = "var(--aws-orange-dark)";
+                }
+            } else {
+                btnNext.style.display = 'none';
+            }
+        }
+
+        function checkAnswer(userChoice) {
+            const ex = currentExercises[currentQuizIndex];
+            if(ex.userChoice !== undefined && ex.userChoice !== null) return; 
+
+            ex.userChoice = userChoice;
+            ex.isCorrect = (userChoice === ex.answer);
+
+            quizScore = currentExercises.filter(e => e.isCorrect === true).length;
+
+            const unit = units.find(u => u.id === activeUnitId);
+            if(unit) localStorage.setItem('awsUnits', JSON.stringify(units));
+
+            renderQuizQuestion(); 
+        }
+
+        function prevQuestion() {
+            if (currentQuizIndex > 0) { currentQuizIndex--; renderQuizQuestion(); }
+        }
+
+        function nextQuestion() {
+            if (currentQuizIndex < currentExercises.length - 1) {
+                currentQuizIndex++; renderQuizQuestion();
+            } else {
+                generateQuizReport();
+            }
         }
 
         function toggleStar() {
@@ -850,76 +1206,10 @@
             if(unit) localStorage.setItem('awsUnits', JSON.stringify(units));
 
             const btnStar = document.getElementById('btn-star');
-            if (ex.isMarked) {
-                btnStar.classList.add('starred');
-                btnStar.innerText = "★";
-            } else {
-                btnStar.classList.remove('starred');
-                btnStar.innerText = "☆";
-            }
+            if (ex.isMarked) { btnStar.classList.add('starred'); btnStar.innerText = "★"; } 
+            else { btnStar.classList.remove('starred'); btnStar.innerText = "☆"; }
         }
 
-        function checkAnswer(userChoice) {
-            if(quizHasAnswered) return;
-            quizHasAnswered = true;
-
-            const ex = currentExercises[currentQuizIndex];
-            const isCorrect = (userChoice === ex.answer);
-            ex.isCorrect = isCorrect; 
-
-            const unit = units.find(u => u.id === activeUnitId);
-            if(unit) localStorage.setItem('awsUnits', JSON.stringify(units));
-
-            const btnTrue = document.getElementById('btn-verdadeiro');
-            const btnFalse = document.getElementById('btn-falso');
-            btnTrue.disabled = true;
-            btnFalse.disabled = true;
-
-            if (userChoice === true) btnTrue.classList.add('selected-true');
-            if (userChoice === false) btnFalse.classList.add('selected-false');
-
-            const feedbackBox = document.getElementById('quiz-feedback');
-            const statusText = document.getElementById('feedback-status');
-            
-            if (isCorrect) {
-                quizScore++;
-                statusText.innerText = "🎯 Correto!";
-                statusText.className = "feedback-status correct";
-            } else {
-                statusText.innerText = "❌ Incorreto";
-                statusText.className = "feedback-status wrong";
-                if (ex.answer === true) btnTrue.style.borderColor = "var(--duo-green)";
-                if (ex.answer === false) btnFalse.style.borderColor = "var(--duo-green)";
-            }
-
-            document.getElementById('quiz-score').innerText = `Acertos: ${quizScore}`;
-            document.getElementById('feedback-explanation').innerHTML = renderSimpleMarkdown(ex.explanation);
-            feedbackBox.classList.add('show');
-
-            const btnNext = document.getElementById('btn-next-question');
-            btnNext.style.display = 'inline-block';
-            
-            if (currentQuizIndex === currentExercises.length - 1) {
-                btnNext.innerText = "Ver Relatório 📊";
-                btnNext.style.backgroundColor = "var(--duo-blue)";
-                btnNext.style.borderBottomColor = "#189ad4";
-            } else {
-                btnNext.innerText = "Próxima Questão";
-                btnNext.style.backgroundColor = "var(--aws-orange)";
-                btnNext.style.borderBottomColor = "var(--aws-orange-dark)";
-            }
-        }
-
-        function nextQuestion() {
-            if (currentQuizIndex < currentExercises.length - 1) {
-                currentQuizIndex++;
-                renderQuizQuestion();
-            } else {
-                generateQuizReport();
-            }
-        }
-
-        // --- SISTEMA DE APROFUNDAMENTO DIRETO DO QUIZ ---
         function toggleDeepenBox(source, idx = null) {
             const box = document.getElementById(`deepen-box-${source}`);
             if (box.style.display === 'none') {
@@ -983,9 +1273,7 @@
             const markContainer = document.getElementById('report-marked');
             const kwContainer = document.getElementById('report-keywords');
             
-            errContainer.innerHTML = '';
-            markContainer.innerHTML = '';
-            kwContainer.innerHTML = '';
+            errContainer.innerHTML = ''; markContainer.innerHTML = ''; kwContainer.innerHTML = '';
 
             let keywordsToStudy = new Set();
             let hasErrors = false;
@@ -993,9 +1281,7 @@
 
             currentExercises.forEach((ex, idx) => {
                 if (ex.isCorrect === false || ex.isMarked) {
-                    if(ex.keywords) {
-                        ex.keywords.forEach(k => keywordsToStudy.add(k));
-                    }
+                    if(ex.keywords) { ex.keywords.forEach(k => keywordsToStudy.add(k)); }
                 }
 
                 if (ex.isCorrect === false) {
@@ -1034,9 +1320,7 @@
 
             if(keywordsToStudy.size > 0) {
                 let tagsHTML = '';
-                keywordsToStudy.forEach(kw => {
-                    tagsHTML += `<span class="nuvem-tag">${kw}</span>`;
-                });
+                keywordsToStudy.forEach(kw => { tagsHTML += `<span class="nuvem-tag">${kw}</span>`; });
                 kwContainer.innerHTML = tagsHTML;
             } else {
                 kwContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem;">Sem lacunas aparentes.</p>';
@@ -1057,7 +1341,7 @@
             const container = document.getElementById('units-container');
             container.innerHTML = '';
             if (units.length === 0) {
-                container.innerHTML = '<p style="color: var(--text-muted); text-align:center; padding: 2rem;">Trilha sem diretrizes. Acesse a Forja de Missões.</p>';
+                container.innerHTML = '<p style="color: var(--text-muted); text-align:center; padding: 2rem;">Trilha sem diretrizes. Acesse a Forja ou a aba de Gestão.</p>';
                 updateProgress();
                 return;
             }
@@ -1074,7 +1358,7 @@
                         teoriaLabel = `📖 Ciclo ${currentCycle} Pendente ⚡`;
                         isTeoriaCompleted = false;
                     } else {
-                        teoriaLabel = `📖 Teoria (Ciclos: ${totalTexts}) ✅`;
+                        teoriaLabel = `📖 Teoria ✅`;
                         isTeoriaCompleted = true;
                     }
                 }
@@ -1096,10 +1380,23 @@
                     historyHTML = `<div class="history-area"><div class="history-title">Radar Histórico</div>${groupsHTML}</div>`;
                 }
 
+                // Renderiza badges clicáveis para ciclos antigos
+                let cyclesBadgesHTML = '';
+                if(totalTexts > 0) {
+                    cyclesBadgesHTML = `<div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:0.8rem; border-top:1px dashed rgba(255,255,255,0.1); padding-top:0.8rem;">`;
+                    unit.texts.forEach((t, idx) => {
+                        let icon = t.read ? '✅' : '⚡';
+                        cyclesBadgesHTML += `<span class="cycle-badge" onclick="handleTeoriaFlux('${unit.id}', ${idx}); event.stopPropagation();">Ciclo ${idx + 1} ${icon}</span>`;
+                    });
+                    cyclesBadgesHTML += `</div>`;
+                }
+
                 const card = document.createElement('div');
                 card.className = 'unit-card';
                 card.innerHTML = `
-                    <h3 style="color: var(--aws-orange);">Unidade ${index + 1}: <span style="color: #fff;">${unit.name}</span></h3>
+                    <div class="unit-card-header">
+                        <h3>Unidade ${index + 1}: <span style="color: #fff; font-weight:normal;">${unit.name}</span></h3>
+                    </div>
                     <div class="mission-grid">
                         
                         <div class="mission-item locked-teoria ${isTeoriaCompleted ? 'completed' : ''}" style="flex-direction: column; align-items: stretch; gap: 0;">
@@ -1107,6 +1404,7 @@
                                 <span>${teoriaLabel}</span>
                                 <input type="checkbox" ${isTeoriaCompleted ? 'checked' : ''} onclick="event.stopPropagation(); return false;" readonly>
                             </div>
+                            ${cyclesBadgesHTML}
                             ${isTeoriaCompleted ? `<button class="btn-add-cycle" onclick="openAddCycle('${unit.id}', event)">➕ Novo Ciclo</button>` : ''}
                         </div>
 
