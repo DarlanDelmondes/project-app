@@ -55,7 +55,7 @@
             display: flex; align-items: center; justify-content: center;
         }
 
-        .card:active { cursor: grabbing; box-shadow: 0 15px 40px rgba(0,0,0,0.8); z-index: 100; }
+        .card:active { cursor: grabbing; box-shadow: 0 15px 40px rgba(0,0,0,0.8); z-index: 1000; }
 
         .card img {
             width: 100%; height: 100%; object-fit: cover;
@@ -166,7 +166,6 @@
         let backgroundUrl = '';
         let baseFolder = '';
         
-        // Cache em memória para exibição imediata do arquivo escolhido no picker
         const sessionBlobs = {}; 
 
         const viewport = document.getElementById('viewport');
@@ -231,6 +230,24 @@
         });
         window.addEventListener('mouseup', () => { isPanning = false; });
 
+        // --- MANIPULAÇÃO DE CAMADAS (Z-INDEX NATIVO) ---
+        function bringToFront(id) {
+            const index = cards.findIndex(c => c.id === id);
+            // Se o cartão já existe e não é o último (ou seja, já não está no topo)
+            if (index > -1 && index !== cards.length - 1) {
+                // 1. Remove do array e empurra para o final
+                const [card] = cards.splice(index, 1);
+                cards.push(card);
+                saveData();
+                
+                // 2. Move o elemento DOM visualmente para o fim do Canvas
+                const cardEl = document.querySelector(`.card[data-id="${id}"]`);
+                if (cardEl) {
+                    canvas.appendChild(cardEl);
+                }
+            }
+        }
+
         // --- RENDERIZAÇÃO DOS CARTÕES ---
         function renderCards() {
             canvas.innerHTML = '';
@@ -244,12 +261,9 @@
 
                 const img = document.createElement('img');
                 
-                // Lógica Híbrida: Exibição Imediata vs Concatenação Estratégica
                 if (sessionBlobs[cardData.id]) {
-                    // Se foi carregado nesta sessão, usa a memória RAM para exibir instantaneamente
                     img.src = sessionBlobs[cardData.id];
                 } else if (cardData.isLocal) {
-                    // Se é um carregamento novo (refresh), usa a concatenação pura do localStorage
                     const prefix = (baseFolder && !baseFolder.endsWith('/')) ? baseFolder + '/' : baseFolder;
                     img.src = prefix + cardData.filename;
                 } else {
@@ -283,9 +297,16 @@
                 cardEl.appendChild(rotBtn); cardEl.appendChild(resBtn); cardEl.appendChild(delBtn);
                 canvas.appendChild(cardEl);
 
+                // Eventos do Cartão
                 cardEl.addEventListener('mousedown', (e) => {
                     if(e.target.classList.contains('control-btn')) return;
                     startDragCard(e, cardData.id, cardEl);
+                });
+
+                // NOVO: Duplo Clique para trazer para frente
+                cardEl.addEventListener('dblclick', (e) => {
+                    if(e.target.classList.contains('control-btn')) return;
+                    bringToFront(cardData.id);
                 });
             });
         }
@@ -298,7 +319,10 @@
             e.stopPropagation(); activeAction = 'drag'; activeCardId = id; activeCardEl = el;
             const cardData = cards.find(c => c.id === id);
             initialVal1 = cardData.x; initialVal2 = cardData.y;
-            startX = e.clientX; startY = e.clientY; el.style.zIndex = 100;
+            startX = e.clientX; startY = e.clientY; 
+            
+            // Opcional: Quando clica e arrasta, ele fica na frente de todos até soltar
+            el.style.zIndex = 1000;
         }
 
         function startResize(e, id, el) {
@@ -361,19 +385,16 @@
             }
         });
 
-        // Evento do File Picker Nativo do OS
         document.getElementById('file-upload').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
                 const filename = file.name;
                 const newId = Date.now().toString();
                 
-                // Salva a imagem na RAM temporária para carregar imediatamente na tela
                 sessionBlobs[newId] = URL.createObjectURL(file);
 
                 const coords = getCenterCoords();
                 
-                // Grava APENAS o nome do arquivo para o LocalStorage trabalhar com concatenação futura
                 cards.push({ 
                     id: newId, 
                     isLocal: true, 
@@ -387,7 +408,7 @@
                 saveData(); 
                 renderCards();
             }
-            this.value = ''; // Reseta o input para permitir selecionar a mesma imagem novamente
+            this.value = ''; 
         });
 
         document.getElementById('btn-config-folder').addEventListener('click', () => {
