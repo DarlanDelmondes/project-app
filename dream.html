@@ -10,16 +10,13 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body, html {
-            width: 100%; height: 100%;
-            overflow: hidden;
-            font-family: 'Inter', sans-serif;
-            background-color: #121212;
+            width: 100%; height: 100%; overflow: hidden;
+            font-family: 'Inter', sans-serif; background-color: #121212;
             user-select: none;
         }
 
         #bg-container {
-            position: fixed; top: -5%; left: -5%;
-            width: 110vw; height: 110vh;
+            position: fixed; top: -5%; left: -5%; width: 110vw; height: 110vh;
             background-size: cover; background-position: center;
             filter: blur(15px) brightness(0.4);
             z-index: 1; transition: background-image 0.5s ease-in-out;
@@ -36,93 +33,120 @@
         #daily-message { font-size: 3rem; font-weight: 700; letter-spacing: -1px; }
 
         #viewport {
-            position: absolute; top: 0; left: 0;
-            width: 100vw; height: 100vh;
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
             z-index: 5; cursor: grab;
         }
         #viewport:active { cursor: grabbing; }
-
-        #canvas {
-            position: absolute; top: 0; left: 0;
-            transform-origin: 0 0; width: 0; height: 0;
-        }
+        #canvas { position: absolute; top: 0; left: 0; transform-origin: 0 0; width: 0; height: 0; }
 
         /* Cartões */
         .card {
             position: absolute; background: #2a2a2a; border-radius: 12px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: grab;
-            transform-origin: center center;
-            display: flex; align-items: center; justify-content: center;
+            transform-origin: center center; display: flex; align-items: center; justify-content: center;
+            transition: outline 0.2s, box-shadow 0.2s, opacity 0.4s ease, filter 0.4s ease;
+            outline: 0px solid transparent; 
         }
 
         .card:active { cursor: grabbing; box-shadow: 0 15px 40px rgba(0,0,0,0.8); z-index: 1000; }
+        .card.status-red { outline: 4px solid #ff4444; box-shadow: 0 0 30px rgba(255, 68, 68, 0.3); }
+        .card.status-green { outline: 4px solid #00C851; box-shadow: 0 0 30px rgba(0, 200, 81, 0.3); }
+        .card.dimmed { opacity: 0.1; filter: grayscale(100%) blur(3px); pointer-events: none; z-index: 1 !important; }
 
-        .card img {
-            width: 100%; height: 100%; object-fit: cover;
-            border-radius: 12px; pointer-events: none;
-        }
+        .card img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; pointer-events: none; }
+        .error-text { color: #ff6b6b; font-size: 0.8rem; text-align: center; padding: 15px; position: absolute; }
 
-        .error-text {
-            color: #ff6b6b; font-size: 0.8rem; text-align: center; padding: 15px; position: absolute;
-        }
-
-        /* Controles Internos */
-        .control-btn {
-            position: absolute; background: rgba(0, 0, 0, 0.7); color: white;
-            border: 1px solid rgba(255,255,255,0.2); border-radius: 50%;
-            width: 28px; height: 28px; font-size: 14px;
-            display: flex; align-items: center; justify-content: center;
-            opacity: 0; transition: opacity 0.2s, background 0.2s;
+        /* Controles do Cartão */
+        .semaphore-container {
+            position: absolute; top: 10px; left: 10px; display: flex; gap: 6px; z-index: 10;
+            opacity: 0; transition: opacity 0.2s; background: rgba(0,0,0,0.6); padding: 5px; border-radius: 20px;
             backdrop-filter: blur(4px);
         }
+        .card:hover .semaphore-container { opacity: 1; }
+        .sema-btn { width: 12px; height: 12px; border-radius: 50%; cursor: pointer; transition: transform 0.2s; border: 1px solid rgba(255,255,255,0.3); }
+        .sema-btn:hover { transform: scale(1.4); border-color: #fff; }
+        .sema-neutral { background: #888888; } .sema-red { background: #ff4444; } .sema-green { background: #00C851; }
 
-        .card:hover .control-btn { opacity: 1; }
-        .delete-btn { top: -10px; right: -10px; cursor: pointer; }
-        .delete-btn:hover { background: rgba(255, 50, 50, 0.9); }
-        .rotate-handle { top: -35px; left: calc(50% - 14px); cursor: grab; }
-        .rotate-handle:active { cursor: grabbing; }
-        
-        .rotate-line {
-            position: absolute; top: -20px; left: 50%; width: 2px; height: 20px;
-            background: rgba(255,255,255,0.5); opacity: 0; transition: opacity 0.2s;
+        .control-btn {
+            position: absolute; background: rgba(0, 0, 0, 0.7); color: white; border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 50%; width: 28px; height: 28px; font-size: 14px; display: flex; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.2s, background 0.2s; backdrop-filter: blur(4px);
         }
+        .card:hover .control-btn { opacity: 1; }
+        .delete-btn { top: -10px; right: -10px; cursor: pointer; } .delete-btn:hover { background: rgba(255, 50, 50, 0.9); }
+        .rotate-handle { top: -35px; left: calc(50% - 14px); cursor: grab; } .rotate-handle:active { cursor: grabbing; }
+        .rotate-line { position: absolute; top: -20px; left: 50%; width: 2px; height: 20px; background: rgba(255,255,255,0.5); opacity: 0; transition: opacity 0.2s; }
         .card:hover .rotate-line { opacity: 1; }
         .resize-handle { bottom: -10px; right: -10px; cursor: nwse-resize; font-size: 12px; }
 
-        /* Controles Flutuantes Centralizados (Dock) */
-        #dock-wrapper {
-            position: fixed; bottom: 30px; left: 0; width: 100%;
-            display: flex; justify-content: center; align-items: flex-end;
-            pointer-events: none; z-index: 10;
+        /* Doca e Menus */
+        #bottom-left-dock {
+            position: fixed; bottom: 30px; left: 30px; display: flex; gap: 15px; align-items: center;
+            z-index: 20; opacity: 0.3; transition: opacity 0.4s ease;
         }
+        #bottom-left-dock:hover { opacity: 1; }
+        .dock-group {
+            display: flex; gap: 10px; background: rgba(20, 20, 20, 0.6); padding: 8px 12px; border-radius: 30px;
+            backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); align-items: center;
+        }
+
+        button.icon-btn, label.icon-btn {
+            background: transparent; border: none; color: white; font-size: 1.2rem; cursor: pointer; transition: all 0.2s ease;
+            display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 50%; margin: 0;
+        }
+        button.icon-btn:hover, label.icon-btn:hover { background: rgba(255, 255, 255, 0.15); transform: scale(1.15); }
+
+        /* Menu de Murais */
+        #mural-indicator {
+            color: white; font-size: 0.9rem; font-weight: 700; padding: 0 10px; cursor: pointer;
+            border-right: 1px solid rgba(255,255,255,0.2); margin-right: 5px; display: flex; align-items: center; gap: 5px;
+        }
+        #mural-indicator:hover { color: #aaa; }
+
+        #mural-modal {
+            position: absolute; bottom: 60px; left: 0; background: rgba(20, 20, 20, 0.9); border-radius: 12px;
+            backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); width: 220px; padding: 10px;
+            display: none; flex-direction: column; gap: 5px; box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+        }
+        #mural-modal.open { display: flex; }
+        
+        .mural-item {
+            color: white; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 0.9rem;
+            transition: background 0.2s; display: flex; justify-content: space-between; align-items: center;
+        }
+        .mural-item:hover { background: rgba(255,255,255,0.1); }
+        .mural-item.active { background: rgba(255,255,255,0.2); font-weight: 700; }
+        .del-mural { color: #ff6b6b; font-size: 0.8rem; border: none; background: transparent; cursor: pointer; display: none; }
+        .mural-item:hover .del-mural { display: block; }
+        .del-mural:hover { color: #ff0000; transform: scale(1.2); }
+        
+        #btn-new-mural {
+            background: rgba(100, 150, 255, 0.2); border: 1px solid rgba(100, 150, 255, 0.4); color: white;
+            padding: 10px; border-radius: 8px; cursor: pointer; margin-top: 5px; transition: background 0.2s;
+        }
+        #btn-new-mural:hover { background: rgba(100, 150, 255, 0.3); }
+
+        /* Filtros Gerais e Porcentagens */
+        .filter-group { display: flex; gap: 12px; align-items: center; padding-left: 10px; border-left: 1px solid rgba(255,255,255,0.2); }
+        .filter-wrapper { display: flex; align-items: center; gap: 6px; }
+        .filter-pct { font-size: 0.65rem; color: rgba(255,255,255,0.4); font-weight: 700; min-width: 20px; transition: color 0.2s; }
+        
+        .filter-btn { width: 16px; height: 16px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: all 0.2s; }
+        .filter-btn:hover { transform: scale(1.2); }
+        .filter-btn.active { border-color: white; transform: scale(1.2); box-shadow: 0 0 10px rgba(255,255,255,0.3); }
+        .filter-btn.active + .filter-pct { color: rgba(255,255,255,0.9); } /* Destaca o percentual ativo */
+
+        .f-all { background: transparent; border: 2px solid rgba(255,255,255,0.4); display: flex; align-items: center; justify-content: center;}
+        .f-all::after { content: ''; width: 4px; height: 4px; background: white; border-radius: 50%; }
+        .f-all.active { border-color: white; }
+        .f-neutral { background: #888888; } .f-red { background: #ff4444; } .f-green { background: #00C851; }
 
         #folder-display {
-            position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
-            margin-bottom: 12px; color: rgba(255,255,255,0.6); font-size: 0.8rem;
-            background: rgba(0,0,0,0.5); padding: 5px 12px; border-radius: 20px;
-            white-space: nowrap; pointer-events: auto;
+            position: absolute; bottom: 100%; left: 10px; margin-bottom: 10px; color: rgba(255,255,255,0.5); font-size: 0.75rem;
+            background: rgba(0,0,0,0.4); padding: 4px 10px; border-radius: 10px; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.3s;
         }
+        #bottom-left-dock:hover #folder-display { opacity: 1; }
 
-        #controls {
-            display: flex; gap: 12px; background: rgba(20, 20, 20, 0.75);
-            padding: 12px 24px; border-radius: 40px; backdrop-filter: blur(20px);
-            border: 1px solid rgba(255,255,255,0.1); pointer-events: auto;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.6); align-items: center;
-        }
-
-        button.action-btn, label.action-btn {
-            background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.1); 
-            color: white; padding: 10px 20px; border-radius: 30px; font-size: 0.9rem;
-            font-weight: 400; cursor: pointer; transition: all 0.2s ease;
-            display: inline-block; font-family: inherit; margin: 0;
-        }
-
-        button.action-btn:hover, label.action-btn:hover {
-            background: rgba(255, 255, 255, 0.2); transform: translateY(-2px);
-        }
-
-        .btn-config { background: rgba(100, 150, 255, 0.15) !important; border-color: rgba(100, 150, 255, 0.3) !important; }
-        .btn-config:hover { background: rgba(100, 150, 255, 0.25) !important; }
     </style>
 </head>
 <body>
@@ -138,17 +162,48 @@
         <div id="canvas"></div>
     </div>
 
-    <div id="dock-wrapper">
-        <div id="folder-display">Pasta Base: <span id="current-folder-text">Nenhuma</span></div>
-        <div id="controls">
-            <button class="action-btn btn-config" id="btn-config-folder">⚙️ Pasta</button>
-            <button class="action-btn" id="btn-bg">Fundo</button>
-            <button class="action-btn" id="btn-card-url">+ URL Web</button>
+    <div id="bottom-left-dock">
+        <div id="folder-display">📁 <span id="current-folder-text">Nenhuma</span></div>
+        
+        <div class="dock-group">
             
-            <label class="action-btn">
-                + Arquivo Local
+            <div style="position: relative;">
+                <div id="mural-indicator" title="Alternar Mural">
+                    <span id="active-mural-name">Mural</span> ⏷
+                </div>
+                <div id="mural-modal">
+                    <div id="mural-list"></div>
+                    <button id="btn-new-mural">+ Novo Mural</button>
+                </div>
+            </div>
+
+            <button class="icon-btn" id="btn-config-folder" title="Configurar Pasta Base">⚙️</button>
+            <button class="icon-btn" id="btn-bg" title="Imagem de Fundo">🖼️</button>
+            <button class="icon-btn" id="btn-card-url" title="Adicionar Imagem (URL Web)">🌐</button>
+            
+            <label class="icon-btn" title="Adicionar Arquivo Local">
+                💻
                 <input type="file" id="file-upload" accept="image/*" style="display: none;">
             </label>
+
+            <div class="filter-group" title="Filtros de Visão">
+                <div class="filter-wrapper">
+                    <div class="filter-btn f-all active" data-filter="all" title="Mostrar Todos"></div>
+                    <span class="filter-pct" id="pct-all">100%</span>
+                </div>
+                <div class="filter-wrapper">
+                    <div class="filter-btn f-neutral" data-filter="neutral" title="Apenas Neutros"></div>
+                    <span class="filter-pct" id="pct-neutral">0%</span>
+                </div>
+                <div class="filter-wrapper">
+                    <div class="filter-btn f-red" data-filter="red" title="Apenas Prioridade"></div>
+                    <span class="filter-pct" id="pct-red">0%</span>
+                </div>
+                <div class="filter-wrapper">
+                    <div class="filter-btn f-green" data-filter="green" title="Apenas Concluídos"></div>
+                    <span class="filter-pct" id="pct-green">0%</span>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -160,44 +215,138 @@
         }
         setDate();
 
-        // --- ESTADO ---
-        let scale = 1, translateX = 0, translateY = 0;
-        let cards = [];
-        let backgroundUrl = '';
-        let baseFolder = '';
+        // --- ESTADO GLOBAL (MURAIS) ---
+        let murals = [];
+        let activeMuralId = null;
         
+        let scale = 1, translateX = 0, translateY = 0;
+        let activeFilter = 'all';
         const sessionBlobs = {}; 
 
         const viewport = document.getElementById('viewport');
         const canvas = document.getElementById('canvas');
         const bgContainer = document.getElementById('bg-container');
         const folderText = document.getElementById('current-folder-text');
+        const muralModal = document.getElementById('mural-modal');
+        const muralIndicatorText = document.getElementById('active-mural-name');
 
-        // --- LOCAL STORAGE ---
-        function loadData() {
-            const savedCards = localStorage.getItem('dreamMapCards_v4');
-            const savedBg = localStorage.getItem('dreamMapBg_v4');
-            const savedFolder = localStorage.getItem('dreamMapFolder_v4');
+        function getCurrentMural() {
+            return murals.find(m => m.id === activeMuralId) || murals[0];
+        }
+
+        // --- SISTEMA DE ARQUIVOS E MIGRAÇÃO ---
+        function loadAndMigrateData() {
+            const savedMurals = localStorage.getItem('dreamMap_Murals');
             
-            if (savedCards) cards = JSON.parse(savedCards);
-            if (savedFolder) {
-                baseFolder = savedFolder;
-                folderText.innerText = baseFolder;
-            }
-            if (savedBg) {
-                backgroundUrl = savedBg;
-                bgContainer.style.backgroundImage = `url('${backgroundUrl}')`;
+            if (!savedMurals) {
+                const oldCards = localStorage.getItem('dreamMapCards_v5') || localStorage.getItem('dreamMapCards_v4') || '[]';
+                const oldBg = localStorage.getItem('dreamMapBg_v5') || localStorage.getItem('dreamMapBg_v4') || '';
+                const oldFolder = localStorage.getItem('dreamMapFolder_v5') || localStorage.getItem('dreamMapFolder_v4') || '';
+
+                const defaultMural = {
+                    id: 'mural-' + Date.now(),
+                    name: 'Mural Principal',
+                    cards: JSON.parse(oldCards),
+                    bg: oldBg,
+                    folder: oldFolder
+                };
+
+                murals = [defaultMural];
+                activeMuralId = defaultMural.id;
+                saveData();
             } else {
-                bgContainer.style.backgroundImage = `url('https://images.unsplash.com/photo-1506744626753-1fa44df14d28?q=80&w=2000&auto=format&fit=crop')`;
+                murals = JSON.parse(savedMurals);
+                activeMuralId = localStorage.getItem('dreamMap_ActiveMural') || murals[0].id;
             }
-            renderCards();
+            
+            applyMuralState();
+            renderMuralMenu();
         }
 
         function saveData() {
-            localStorage.setItem('dreamMapCards_v4', JSON.stringify(cards));
-            localStorage.setItem('dreamMapBg_v4', backgroundUrl);
-            localStorage.setItem('dreamMapFolder_v4', baseFolder);
+            localStorage.setItem('dreamMap_Murals', JSON.stringify(murals));
+            localStorage.setItem('dreamMap_ActiveMural', activeMuralId);
         }
+
+        function applyMuralState() {
+            const mural = getCurrentMural();
+            muralIndicatorText.innerText = mural.name;
+            folderText.innerText = mural.folder || "Nenhuma";
+            
+            if (mural.bg) {
+                bgContainer.style.backgroundImage = `url('${mural.bg}')`;
+            } else {
+                bgContainer.style.backgroundImage = `url('https://images.unsplash.com/photo-1506744626753-1fa44df14d28?q=80&w=2000&auto=format&fit=crop')`;
+            }
+            
+            scale = 1; translateX = 0; translateY = 0; updateTransform();
+            renderCards();
+        }
+
+        // --- GERENCIAMENTO DE MURAIS (UI) ---
+        document.getElementById('mural-indicator').addEventListener('click', (e) => {
+            e.stopPropagation();
+            muralModal.classList.toggle('open');
+        });
+
+        window.addEventListener('click', () => {
+            muralModal.classList.remove('open');
+        });
+
+        muralModal.addEventListener('click', (e) => e.stopPropagation());
+
+        function renderMuralMenu() {
+            const list = document.getElementById('mural-list');
+            list.innerHTML = '';
+            
+            murals.forEach(m => {
+                const item = document.createElement('div');
+                item.className = `mural-item ${m.id === activeMuralId ? 'active' : ''}`;
+                
+                const nameSpan = document.createElement('span');
+                nameSpan.innerText = m.name;
+                nameSpan.onclick = () => {
+                    activeMuralId = m.id;
+                    saveData();
+                    applyMuralState();
+                    renderMuralMenu();
+                    muralModal.classList.remove('open');
+                };
+
+                item.appendChild(nameSpan);
+
+                if (murals.length > 1) {
+                    const del = document.createElement('button');
+                    del.className = 'del-mural';
+                    del.innerHTML = '🗑️';
+                    del.onclick = (e) => {
+                        e.stopPropagation();
+                        if (confirm(`Excluir o mural "${m.name}"?`)) {
+                            murals = murals.filter(mx => mx.id !== m.id);
+                            if (activeMuralId === m.id) activeMuralId = murals[0].id;
+                            saveData(); applyMuralState(); renderMuralMenu();
+                        }
+                    };
+                    item.appendChild(del);
+                }
+                list.appendChild(item);
+            });
+        }
+
+        document.getElementById('btn-new-mural').addEventListener('click', () => {
+            const name = prompt("Nome do novo Mural:");
+            if (name && name.trim() !== '') {
+                const newMural = {
+                    id: 'mural-' + Date.now(),
+                    name: name.trim(),
+                    cards: [], bg: '', folder: ''
+                };
+                murals.push(newMural);
+                activeMuralId = newMural.id;
+                saveData(); applyMuralState(); renderMuralMenu();
+                muralModal.classList.remove('open');
+            }
+        });
 
         // --- PAN & ZOOM ---
         function updateTransform() {
@@ -208,19 +357,15 @@
             e.preventDefault();
             const delta = -e.deltaY * 0.0015;
             let newScale = Math.min(Math.max(0.1, scale * Math.exp(delta)), 5);
-
             const rect = viewport.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
-
-            translateX = mouseX - (mouseX - translateX) * (newScale / scale);
-            translateY = mouseY - (mouseY - translateY) * (newScale / scale);
+            translateX = (e.clientX - rect.left) - ((e.clientX - rect.left) - translateX) * (newScale / scale);
+            translateY = (e.clientY - rect.top) - ((e.clientY - rect.top) - translateY) * (newScale / scale);
             scale = newScale; updateTransform();
         });
 
         let isPanning = false; let startPanX, startPanY;
         viewport.addEventListener('mousedown', (e) => {
-            if (e.target.closest('.card')) return;
+            if (e.target.closest('.card') || e.target.closest('#bottom-left-dock')) return;
             isPanning = true; startPanX = e.clientX - translateX; startPanY = e.clientY - translateY;
         });
 
@@ -230,41 +375,86 @@
         });
         window.addEventListener('mouseup', () => { isPanning = false; });
 
-        // --- MANIPULAÇÃO DE CAMADAS (Z-INDEX NATIVO) ---
+        // --- CAMADAS, FILTROS E MÉTRICAS ---
         function bringToFront(id) {
-            const index = cards.findIndex(c => c.id === id);
-            // Se o cartão já existe e não é o último (ou seja, já não está no topo)
-            if (index > -1 && index !== cards.length - 1) {
-                // 1. Remove do array e empurra para o final
-                const [card] = cards.splice(index, 1);
-                cards.push(card);
+            const mural = getCurrentMural();
+            const index = mural.cards.findIndex(c => c.id === id);
+            if (index > -1 && index !== mural.cards.length - 1) {
+                const [card] = mural.cards.splice(index, 1);
+                mural.cards.push(card);
                 saveData();
-                
-                // 2. Move o elemento DOM visualmente para o fim do Canvas
                 const cardEl = document.querySelector(`.card[data-id="${id}"]`);
-                if (cardEl) {
-                    canvas.appendChild(cardEl);
-                }
+                if (cardEl) canvas.appendChild(cardEl);
             }
+        }
+
+        function setStatus(id, status, el) {
+            const mural = getCurrentMural();
+            const card = mural.cards.find(c => c.id === id);
+            if(card) {
+                card.status = status;
+                el.classList.remove('status-red', 'status-green');
+                el.dataset.status = status;
+                if (status === 'red') el.classList.add('status-red');
+                if (status === 'green') el.classList.add('status-green');
+                saveData(); applyFilterEngine(); updatePercentages();
+            }
+        }
+
+        function applyFilterEngine() {
+            document.querySelectorAll('.card').forEach(el => {
+                if (activeFilter === 'all' || (el.dataset.status || 'neutral') === activeFilter) {
+                    el.classList.remove('dimmed');
+                } else {
+                    el.classList.add('dimmed');
+                }
+            });
+        }
+
+        // NOVO: Cálculo Dinâmico de Métricas
+        function updatePercentages() {
+            const mural = getCurrentMural();
+            const total = mural.cards.length;
+            
+            let counts = { 'neutral': 0, 'red': 0, 'green': 0 };
+            mural.cards.forEach(c => {
+                let s = c.status || 'neutral';
+                if(counts[s] !== undefined) counts[s]++;
+            });
+
+            const calcPct = (count) => total === 0 ? '0%' : Math.round((count / total) * 100) + '%';
+
+            document.getElementById('pct-all').innerText = total === 0 ? '0%' : '100%';
+            document.getElementById('pct-neutral').innerText = calcPct(counts['neutral']);
+            document.getElementById('pct-red').innerText = calcPct(counts['red']);
+            document.getElementById('pct-green').innerText = calcPct(counts['green']);
         }
 
         // --- RENDERIZAÇÃO DOS CARTÕES ---
         function renderCards() {
             canvas.innerHTML = '';
-            cards.forEach(cardData => {
+            const mural = getCurrentMural();
+            
+            mural.cards.forEach(cardData => {
+                cardData.status = cardData.status || 'neutral';
+
                 const cardEl = document.createElement('div');
                 cardEl.className = 'card';
                 cardEl.style.left = `${cardData.x}px`; cardEl.style.top = `${cardData.y}px`;
                 cardEl.style.width = `${cardData.width}px`; cardEl.style.height = `${cardData.height}px`;
                 cardEl.style.transform = `rotate(${cardData.rotation}deg)`;
                 cardEl.dataset.id = cardData.id;
+                cardEl.dataset.status = cardData.status;
+
+                if (cardData.status === 'red') cardEl.classList.add('status-red');
+                if (cardData.status === 'green') cardEl.classList.add('status-green');
 
                 const img = document.createElement('img');
                 
                 if (sessionBlobs[cardData.id]) {
                     img.src = sessionBlobs[cardData.id];
                 } else if (cardData.isLocal) {
-                    const prefix = (baseFolder && !baseFolder.endsWith('/')) ? baseFolder + '/' : baseFolder;
+                    const prefix = (mural.folder && !mural.folder.endsWith('/')) ? mural.folder + '/' : mural.folder;
                     img.src = prefix + cardData.filename;
                 } else {
                     img.src = cardData.url;
@@ -274,11 +464,18 @@
                     img.style.display = 'none';
                     const err = document.createElement('div');
                     err.className = 'error-text';
-                    err.innerHTML = cardData.isLocal 
-                        ? `Arquivo não encontrado:<br><b>${cardData.filename}</b><br><br>Coloque a imagem na pasta configurada.` 
-                        : 'Erro ao carregar URL.';
+                    err.innerHTML = cardData.isLocal ? `Erro local` : 'Erro URL';
                     cardEl.appendChild(err);
                 };
+
+                const semaContainer = document.createElement('div');
+                semaContainer.className = 'semaphore-container';
+                ['neutral', 'red', 'green'].forEach(s => {
+                    const btn = document.createElement('div');
+                    btn.className = `sema-btn sema-${s}`;
+                    btn.onclick = (e) => { e.stopPropagation(); setStatus(cardData.id, s, cardEl); };
+                    semaContainer.appendChild(btn);
+                });
 
                 const delBtn = document.createElement('div');
                 delBtn.className = 'control-btn delete-btn'; delBtn.innerHTML = '✕';
@@ -292,70 +489,60 @@
                 resBtn.className = 'control-btn resize-handle'; resBtn.innerHTML = '⤡';
                 resBtn.onmousedown = (e) => startResize(e, cardData.id, cardEl);
 
-                cardEl.appendChild(img);
+                cardEl.appendChild(img); cardEl.appendChild(semaContainer);
                 cardEl.appendChild(document.createElement('div')).className = 'rotate-line';
                 cardEl.appendChild(rotBtn); cardEl.appendChild(resBtn); cardEl.appendChild(delBtn);
                 canvas.appendChild(cardEl);
 
-                // Eventos do Cartão
                 cardEl.addEventListener('mousedown', (e) => {
-                    if(e.target.classList.contains('control-btn')) return;
+                    if(e.target.classList.contains('control-btn') || e.target.classList.contains('sema-btn')) return;
                     startDragCard(e, cardData.id, cardEl);
                 });
 
-                // NOVO: Duplo Clique para trazer para frente
                 cardEl.addEventListener('dblclick', (e) => {
-                    if(e.target.classList.contains('control-btn')) return;
+                    if(e.target.classList.contains('control-btn') || e.target.classList.contains('sema-btn')) return;
                     bringToFront(cardData.id);
                 });
             });
+            
+            applyFilterEngine();
+            updatePercentages(); // Atualiza a métrica sempre que os cartões são renderizados
         }
 
-        // --- LÓGICA DE INTERAÇÃO FÍSICA ---
+        // --- LÓGICA FÍSICA ---
         let activeAction = null, activeCardId = null, activeCardEl = null;
         let startX, startY, initialVal1, initialVal2;
 
         function startDragCard(e, id, el) {
             e.stopPropagation(); activeAction = 'drag'; activeCardId = id; activeCardEl = el;
-            const cardData = cards.find(c => c.id === id);
-            initialVal1 = cardData.x; initialVal2 = cardData.y;
-            startX = e.clientX; startY = e.clientY; 
-            
-            // Opcional: Quando clica e arrasta, ele fica na frente de todos até soltar
-            el.style.zIndex = 1000;
+            const card = getCurrentMural().cards.find(c => c.id === id);
+            initialVal1 = card.x; initialVal2 = card.y; startX = e.clientX; startY = e.clientY; el.style.zIndex = 1000;
         }
 
         function startResize(e, id, el) {
             e.stopPropagation(); activeAction = 'resize'; activeCardId = id; activeCardEl = el;
-            const cardData = cards.find(c => c.id === id);
-            initialVal1 = cardData.width; initialVal2 = cardData.height;
-            startX = e.clientX; startY = e.clientY;
+            const card = getCurrentMural().cards.find(c => c.id === id);
+            initialVal1 = card.width; initialVal2 = card.height; startX = e.clientX; startY = e.clientY;
         }
 
         function startRotate(e, id, el) {
             e.stopPropagation(); activeAction = 'rotate'; activeCardId = id; activeCardEl = el;
-            const rect = el.getBoundingClientRect();
-            initialVal1 = rect.left + rect.width / 2; initialVal2 = rect.top + rect.height / 2;
+            const rect = el.getBoundingClientRect(); initialVal1 = rect.left + rect.width / 2; initialVal2 = rect.top + rect.height / 2;
         }
 
         window.addEventListener('mousemove', (e) => {
             if (!activeAction || !activeCardId) return;
-            const cardData = cards.find(c => c.id === activeCardId);
+            const card = getCurrentMural().cards.find(c => c.id === activeCardId);
 
             if (activeAction === 'drag') {
-                cardData.x = initialVal1 + (e.clientX - startX) / scale;
-                cardData.y = initialVal2 + (e.clientY - startY) / scale;
-                activeCardEl.style.left = `${cardData.x}px`; activeCardEl.style.top = `${cardData.y}px`;
-            } 
-            else if (activeAction === 'resize') {
-                cardData.width = Math.max(100, initialVal1 + (e.clientX - startX) / scale);
-                cardData.height = Math.max(100, initialVal2 + (e.clientY - startY) / scale);
-                activeCardEl.style.width = `${cardData.width}px`; activeCardEl.style.height = `${cardData.height}px`;
-            }
-            else if (activeAction === 'rotate') {
-                const angleRad = Math.atan2(e.clientY - initialVal2, e.clientX - initialVal1);
-                cardData.rotation = (angleRad * 180 / Math.PI) + 90;
-                activeCardEl.style.transform = `rotate(${cardData.rotation}deg)`;
+                card.x = initialVal1 + (e.clientX - startX) / scale; card.y = initialVal2 + (e.clientY - startY) / scale;
+                activeCardEl.style.left = `${card.x}px`; activeCardEl.style.top = `${card.y}px`;
+            } else if (activeAction === 'resize') {
+                card.width = Math.max(100, initialVal1 + (e.clientX - startX) / scale); card.height = Math.max(100, initialVal2 + (e.clientY - startY) / scale);
+                activeCardEl.style.width = `${card.width}px`; activeCardEl.style.height = `${card.height}px`;
+            } else if (activeAction === 'rotate') {
+                card.rotation = (Math.atan2(e.clientY - initialVal2, e.clientX - initialVal1) * 180 / Math.PI) + 90;
+                activeCardEl.style.transform = `rotate(${card.rotation}deg)`;
             }
         });
 
@@ -366,68 +553,60 @@
             }
         });
 
-        function deleteCard(id) { cards = cards.filter(c => c.id !== id); saveData(); renderCards(); }
+        function deleteCard(id) {
+            const mural = getCurrentMural();
+            mural.cards = mural.cards.filter(c => c.id !== id);
+            saveData(); renderCards();
+        }
 
-        // --- SISTEMA DE CRIAÇÃO ---
+        // --- INTERAÇÕES DA DOCA ---
         function getCenterCoords() {
-            return {
-                x: (-translateX + window.innerWidth / 2) / scale - 150,
-                y: (-translateY + window.innerHeight / 2) / scale - 100
-            };
+            return { x: (-translateX + window.innerWidth / 2) / scale - 150, y: (-translateY + window.innerHeight / 2) / scale - 100 };
         }
 
         document.getElementById('btn-card-url').addEventListener('click', () => {
-            const url = prompt("Insira a URL da imagem web:");
+            const url = prompt("Insira a URL da imagem:");
             if (url && url.trim() !== '') {
-                const coords = getCenterCoords();
-                cards.push({ id: Date.now().toString(), isLocal: false, url: url.trim(), ...coords, width: 300, height: 200, rotation: 0 });
+                getCurrentMural().cards.push({ id: Date.now().toString(), isLocal: false, url: url.trim(), status: 'neutral', ...getCenterCoords(), width: 300, height: 200, rotation: 0 });
                 saveData(); renderCards();
             }
         });
 
         document.getElementById('file-upload').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const filename = file.name;
+            if (e.target.files[0]) {
                 const newId = Date.now().toString();
-                
-                sessionBlobs[newId] = URL.createObjectURL(file);
-
-                const coords = getCenterCoords();
-                
-                cards.push({ 
-                    id: newId, 
-                    isLocal: true, 
-                    filename: filename, 
-                    ...coords, 
-                    width: 300, 
-                    height: 200, 
-                    rotation: 0 
-                });
-                
-                saveData(); 
-                renderCards();
+                sessionBlobs[newId] = URL.createObjectURL(e.target.files[0]);
+                getCurrentMural().cards.push({ id: newId, isLocal: true, filename: e.target.files[0].name, status: 'neutral', ...getCenterCoords(), width: 300, height: 200, rotation: 0 });
+                saveData(); renderCards();
             }
             this.value = ''; 
         });
 
         document.getElementById('btn-config-folder').addEventListener('click', () => {
-            const folder = prompt("Configure o caminho da pasta raiz de imagens.\nExemplo: imagens/ ou ./imagens/", baseFolder);
+            const mural = getCurrentMural();
+            const folder = prompt("Caminho da pasta (Ex: imagens/):", mural.folder);
             if (folder !== null) {
-                baseFolder = folder.trim();
-                folderText.innerText = baseFolder || "Diretório Atual";
+                mural.folder = folder.trim(); folderText.innerText = mural.folder || "Nenhuma";
                 saveData(); renderCards(); 
             }
         });
 
         document.getElementById('btn-bg').addEventListener('click', () => {
-            const url = prompt("Insira a URL da imagem de fundo:");
+            const url = prompt("URL da imagem de fundo:");
             if (url && url.trim() !== '') {
-                backgroundUrl = url.trim(); bgContainer.style.backgroundImage = `url('${backgroundUrl}')`; saveData();
+                getCurrentMural().bg = url.trim(); bgContainer.style.backgroundImage = `url('${url.trim()}')`; saveData();
             }
         });
 
-        loadData(); updateTransform();
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active'); activeFilter = e.target.dataset.filter; applyFilterEngine();
+            });
+        });
+
+        // INICIALIZAÇÃO
+        loadAndMigrateData();
     </script>
 </body>
 </html>
