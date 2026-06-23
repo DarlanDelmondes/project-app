@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa dos Sonhos - Imersão</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700&display=swap');
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body, html {
+            width: 100%; height: 100%;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+            background-color: #121212;
+            user-select: none;
+        }
+
+        #bg-container {
+            position: fixed; top: -5%; left: -5%;
+            width: 110vw; height: 110vh;
+            background-size: cover; background-position: center;
+            filter: blur(15px) brightness(0.4);
+            z-index: 1; transition: background-image 0.5s ease-in-out;
+        }
+
+        header {
+            position: fixed; top: 0; left: 0; width: 100%;
+            padding: 40px 20px; text-align: center;
+            z-index: 10; color: #ffffff; pointer-events: none;
+            text-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+        }
+
+        #current-date { font-size: 1.2rem; font-weight: 300; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; opacity: 0.8; }
+        #daily-message { font-size: 3rem; font-weight: 700; letter-spacing: -1px; }
+
+        #viewport {
+            position: absolute; top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            z-index: 5; cursor: grab;
+        }
+        #viewport:active { cursor: grabbing; }
+
+        #canvas {
+            position: absolute; top: 0; left: 0;
+            transform-origin: 0 0; width: 0; height: 0;
+        }
+
+        /* Cartões */
+        .card {
+            position: absolute; background: #2a2a2a; border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: grab;
+            transform-origin: center center;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .card:active { cursor: grabbing; box-shadow: 0 15px 40px rgba(0,0,0,0.8); z-index: 100; }
+
+        .card img {
+            width: 100%; height: 100%; object-fit: cover;
+            border-radius: 12px; pointer-events: none;
+        }
+
+        .error-text {
+            color: #ff6b6b; font-size: 0.8rem; text-align: center; padding: 15px; position: absolute;
+        }
+
+        /* Controles Internos */
+        .control-btn {
+            position: absolute; background: rgba(0, 0, 0, 0.7); color: white;
+            border: 1px solid rgba(255,255,255,0.2); border-radius: 50%;
+            width: 28px; height: 28px; font-size: 14px;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.2s, background 0.2s;
+            backdrop-filter: blur(4px);
+        }
+
+        .card:hover .control-btn { opacity: 1; }
+        .delete-btn { top: -10px; right: -10px; cursor: pointer; }
+        .delete-btn:hover { background: rgba(255, 50, 50, 0.9); }
+        .rotate-handle { top: -35px; left: calc(50% - 14px); cursor: grab; }
+        .rotate-handle:active { cursor: grabbing; }
+        
+        .rotate-line {
+            position: absolute; top: -20px; left: 50%; width: 2px; height: 20px;
+            background: rgba(255,255,255,0.5); opacity: 0; transition: opacity 0.2s;
+        }
+        .card:hover .rotate-line { opacity: 1; }
+        .resize-handle { bottom: -10px; right: -10px; cursor: nwse-resize; font-size: 12px; }
+
+        /* Controles Flutuantes Centralizados (Dock) */
+        #dock-wrapper {
+            position: fixed; bottom: 30px; left: 0; width: 100%;
+            display: flex; justify-content: center; align-items: flex-end;
+            pointer-events: none; z-index: 10;
+        }
+
+        #folder-display {
+            position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+            margin-bottom: 12px; color: rgba(255,255,255,0.6); font-size: 0.8rem;
+            background: rgba(0,0,0,0.5); padding: 5px 12px; border-radius: 20px;
+            white-space: nowrap; pointer-events: auto;
+        }
+
+        #controls {
+            display: flex; gap: 12px; background: rgba(20, 20, 20, 0.75);
+            padding: 12px 24px; border-radius: 40px; backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.1); pointer-events: auto;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6); align-items: center;
+        }
+
+        button.action-btn, label.action-btn {
+            background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.1); 
+            color: white; padding: 10px 20px; border-radius: 30px; font-size: 0.9rem;
+            font-weight: 400; cursor: pointer; transition: all 0.2s ease;
+            display: inline-block; font-family: inherit; margin: 0;
+        }
+
+        button.action-btn:hover, label.action-btn:hover {
+            background: rgba(255, 255, 255, 0.2); transform: translateY(-2px);
+        }
+
+        .btn-config { background: rgba(100, 150, 255, 0.15) !important; border-color: rgba(100, 150, 255, 0.3) !important; }
+        .btn-config:hover { background: rgba(100, 150, 255, 0.25) !important; }
+    </style>
+</head>
+<body>
+
+    <div id="bg-container"></div>
+
+    <header>
+        <div id="current-date"></div>
+        <div id="daily-message">o que você quer fazer hoje?</div>
+    </header>
+
+    <div id="viewport">
+        <div id="canvas"></div>
+    </div>
+
+    <div id="dock-wrapper">
+        <div id="folder-display">Pasta Base: <span id="current-folder-text">Nenhuma</span></div>
+        <div id="controls">
+            <button class="action-btn btn-config" id="btn-config-folder">⚙️ Pasta</button>
+            <button class="action-btn" id="btn-bg">Fundo</button>
+            <button class="action-btn" id="btn-card-url">+ URL Web</button>
+            
+            <label class="action-btn">
+                + Arquivo Local
+                <input type="file" id="file-upload" accept="image/*" style="display: none;">
+            </label>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA ---
+        function setDate() {
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('current-date').innerText = new Date().toLocaleDateString('pt-BR', options);
+        }
+        setDate();
+
+        // --- ESTADO ---
+        let scale = 1, translateX = 0, translateY = 0;
+        let cards = [];
+        let backgroundUrl = '';
+        let baseFolder = '';
+        
+        // Cache em memória para exibição imediata do arquivo escolhido no picker
+        const sessionBlobs = {}; 
+
+        const viewport = document.getElementById('viewport');
+        const canvas = document.getElementById('canvas');
+        const bgContainer = document.getElementById('bg-container');
+        const folderText = document.getElementById('current-folder-text');
+
+        // --- LOCAL STORAGE ---
+        function loadData() {
+            const savedCards = localStorage.getItem('dreamMapCards_v4');
+            const savedBg = localStorage.getItem('dreamMapBg_v4');
+            const savedFolder = localStorage.getItem('dreamMapFolder_v4');
+            
+            if (savedCards) cards = JSON.parse(savedCards);
+            if (savedFolder) {
+                baseFolder = savedFolder;
+                folderText.innerText = baseFolder;
+            }
+            if (savedBg) {
+                backgroundUrl = savedBg;
+                bgContainer.style.backgroundImage = `url('${backgroundUrl}')`;
+            } else {
+                bgContainer.style.backgroundImage = `url('https://images.unsplash.com/photo-1506744626753-1fa44df14d28?q=80&w=2000&auto=format&fit=crop')`;
+            }
+            renderCards();
+        }
+
+        function saveData() {
+            localStorage.setItem('dreamMapCards_v4', JSON.stringify(cards));
+            localStorage.setItem('dreamMapBg_v4', backgroundUrl);
+            localStorage.setItem('dreamMapFolder_v4', baseFolder);
+        }
+
+        // --- PAN & ZOOM ---
+        function updateTransform() {
+            canvas.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+        }
+
+        viewport.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const delta = -e.deltaY * 0.0015;
+            let newScale = Math.min(Math.max(0.1, scale * Math.exp(delta)), 5);
+
+            const rect = viewport.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            translateX = mouseX - (mouseX - translateX) * (newScale / scale);
+            translateY = mouseY - (mouseY - translateY) * (newScale / scale);
+            scale = newScale; updateTransform();
+        });
+
+        let isPanning = false; let startPanX, startPanY;
+        viewport.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.card')) return;
+            isPanning = true; startPanX = e.clientX - translateX; startPanY = e.clientY - translateY;
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isPanning) return;
+            translateX = e.clientX - startPanX; translateY = e.clientY - startPanY; updateTransform();
+        });
+        window.addEventListener('mouseup', () => { isPanning = false; });
+
+        // --- RENDERIZAÇÃO DOS CARTÕES ---
+        function renderCards() {
+            canvas.innerHTML = '';
+            cards.forEach(cardData => {
+                const cardEl = document.createElement('div');
+                cardEl.className = 'card';
+                cardEl.style.left = `${cardData.x}px`; cardEl.style.top = `${cardData.y}px`;
+                cardEl.style.width = `${cardData.width}px`; cardEl.style.height = `${cardData.height}px`;
+                cardEl.style.transform = `rotate(${cardData.rotation}deg)`;
+                cardEl.dataset.id = cardData.id;
+
+                const img = document.createElement('img');
+                
+                // Lógica Híbrida: Exibição Imediata vs Concatenação Estratégica
+                if (sessionBlobs[cardData.id]) {
+                    // Se foi carregado nesta sessão, usa a memória RAM para exibir instantaneamente
+                    img.src = sessionBlobs[cardData.id];
+                } else if (cardData.isLocal) {
+                    // Se é um carregamento novo (refresh), usa a concatenação pura do localStorage
+                    const prefix = (baseFolder && !baseFolder.endsWith('/')) ? baseFolder + '/' : baseFolder;
+                    img.src = prefix + cardData.filename;
+                } else {
+                    img.src = cardData.url;
+                }
+                
+                img.onerror = () => { 
+                    img.style.display = 'none';
+                    const err = document.createElement('div');
+                    err.className = 'error-text';
+                    err.innerHTML = cardData.isLocal 
+                        ? `Arquivo não encontrado:<br><b>${cardData.filename}</b><br><br>Coloque a imagem na pasta configurada.` 
+                        : 'Erro ao carregar URL.';
+                    cardEl.appendChild(err);
+                };
+
+                const delBtn = document.createElement('div');
+                delBtn.className = 'control-btn delete-btn'; delBtn.innerHTML = '✕';
+                delBtn.onclick = (e) => { e.stopPropagation(); deleteCard(cardData.id); };
+
+                const rotBtn = document.createElement('div');
+                rotBtn.className = 'control-btn rotate-handle'; rotBtn.innerHTML = '↻';
+                rotBtn.onmousedown = (e) => startRotate(e, cardData.id, cardEl);
+
+                const resBtn = document.createElement('div');
+                resBtn.className = 'control-btn resize-handle'; resBtn.innerHTML = '⤡';
+                resBtn.onmousedown = (e) => startResize(e, cardData.id, cardEl);
+
+                cardEl.appendChild(img);
+                cardEl.appendChild(document.createElement('div')).className = 'rotate-line';
+                cardEl.appendChild(rotBtn); cardEl.appendChild(resBtn); cardEl.appendChild(delBtn);
+                canvas.appendChild(cardEl);
+
+                cardEl.addEventListener('mousedown', (e) => {
+                    if(e.target.classList.contains('control-btn')) return;
+                    startDragCard(e, cardData.id, cardEl);
+                });
+            });
+        }
+
+        // --- LÓGICA DE INTERAÇÃO FÍSICA ---
+        let activeAction = null, activeCardId = null, activeCardEl = null;
+        let startX, startY, initialVal1, initialVal2;
+
+        function startDragCard(e, id, el) {
+            e.stopPropagation(); activeAction = 'drag'; activeCardId = id; activeCardEl = el;
+            const cardData = cards.find(c => c.id === id);
+            initialVal1 = cardData.x; initialVal2 = cardData.y;
+            startX = e.clientX; startY = e.clientY; el.style.zIndex = 100;
+        }
+
+        function startResize(e, id, el) {
+            e.stopPropagation(); activeAction = 'resize'; activeCardId = id; activeCardEl = el;
+            const cardData = cards.find(c => c.id === id);
+            initialVal1 = cardData.width; initialVal2 = cardData.height;
+            startX = e.clientX; startY = e.clientY;
+        }
+
+        function startRotate(e, id, el) {
+            e.stopPropagation(); activeAction = 'rotate'; activeCardId = id; activeCardEl = el;
+            const rect = el.getBoundingClientRect();
+            initialVal1 = rect.left + rect.width / 2; initialVal2 = rect.top + rect.height / 2;
+        }
+
+        window.addEventListener('mousemove', (e) => {
+            if (!activeAction || !activeCardId) return;
+            const cardData = cards.find(c => c.id === activeCardId);
+
+            if (activeAction === 'drag') {
+                cardData.x = initialVal1 + (e.clientX - startX) / scale;
+                cardData.y = initialVal2 + (e.clientY - startY) / scale;
+                activeCardEl.style.left = `${cardData.x}px`; activeCardEl.style.top = `${cardData.y}px`;
+            } 
+            else if (activeAction === 'resize') {
+                cardData.width = Math.max(100, initialVal1 + (e.clientX - startX) / scale);
+                cardData.height = Math.max(100, initialVal2 + (e.clientY - startY) / scale);
+                activeCardEl.style.width = `${cardData.width}px`; activeCardEl.style.height = `${cardData.height}px`;
+            }
+            else if (activeAction === 'rotate') {
+                const angleRad = Math.atan2(e.clientY - initialVal2, e.clientX - initialVal1);
+                cardData.rotation = (angleRad * 180 / Math.PI) + 90;
+                activeCardEl.style.transform = `rotate(${cardData.rotation}deg)`;
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (activeAction) {
+                if(activeCardEl && activeAction === 'drag') activeCardEl.style.zIndex = '';
+                activeAction = null; activeCardId = null; activeCardEl = null; saveData();
+            }
+        });
+
+        function deleteCard(id) { cards = cards.filter(c => c.id !== id); saveData(); renderCards(); }
+
+        // --- SISTEMA DE CRIAÇÃO ---
+        function getCenterCoords() {
+            return {
+                x: (-translateX + window.innerWidth / 2) / scale - 150,
+                y: (-translateY + window.innerHeight / 2) / scale - 100
+            };
+        }
+
+        document.getElementById('btn-card-url').addEventListener('click', () => {
+            const url = prompt("Insira a URL da imagem web:");
+            if (url && url.trim() !== '') {
+                const coords = getCenterCoords();
+                cards.push({ id: Date.now().toString(), isLocal: false, url: url.trim(), ...coords, width: 300, height: 200, rotation: 0 });
+                saveData(); renderCards();
+            }
+        });
+
+        // Evento do File Picker Nativo do OS
+        document.getElementById('file-upload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const filename = file.name;
+                const newId = Date.now().toString();
+                
+                // Salva a imagem na RAM temporária para carregar imediatamente na tela
+                sessionBlobs[newId] = URL.createObjectURL(file);
+
+                const coords = getCenterCoords();
+                
+                // Grava APENAS o nome do arquivo para o LocalStorage trabalhar com concatenação futura
+                cards.push({ 
+                    id: newId, 
+                    isLocal: true, 
+                    filename: filename, 
+                    ...coords, 
+                    width: 300, 
+                    height: 200, 
+                    rotation: 0 
+                });
+                
+                saveData(); 
+                renderCards();
+            }
+            this.value = ''; // Reseta o input para permitir selecionar a mesma imagem novamente
+        });
+
+        document.getElementById('btn-config-folder').addEventListener('click', () => {
+            const folder = prompt("Configure o caminho da pasta raiz de imagens.\nExemplo: imagens/ ou ./imagens/", baseFolder);
+            if (folder !== null) {
+                baseFolder = folder.trim();
+                folderText.innerText = baseFolder || "Diretório Atual";
+                saveData(); renderCards(); 
+            }
+        });
+
+        document.getElementById('btn-bg').addEventListener('click', () => {
+            const url = prompt("Insira a URL da imagem de fundo:");
+            if (url && url.trim() !== '') {
+                backgroundUrl = url.trim(); bgContainer.style.backgroundImage = `url('${backgroundUrl}')`; saveData();
+            }
+        });
+
+        loadData(); updateTransform();
+    </script>
+</body>
+</html>
