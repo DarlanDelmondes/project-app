@@ -1,0 +1,731 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvas Diagramming - Pincel de Tamanho</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --text: #f8fafc;
+            --accent: #10b981;
+            --purple: #a855f7;
+            --purple-hover: #9333ea;
+            --warning: #f59e0b;
+            --neutral-btn: #475569;
+        }
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            overflow: hidden; background: var(--bg-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+        }
+        canvas { display: block; touch-action: none; }
+        .toolbar {
+            position: absolute; top: 20px; left: 20px;
+            background: rgba(30, 41, 59, 0.8); padding: 12px;
+            border-radius: 12px; backdrop-filter: blur(10px);
+            display: flex; gap: 12px; border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); z-index: 10;
+        }
+        button {
+            background: var(--primary); color: white; border: none;
+            padding: 10px 18px; border-radius: 6px; cursor: pointer;
+            font-weight: bold; font-size: 14px; transition: all 0.2s ease;
+        }
+        button:hover { background: var(--primary-hover); transform: translateY(-2px); }
+        
+        .btn-toggle { background: var(--neutral-btn); }
+        .btn-toggle.active { background: var(--accent); }
+
+        .info-text { color: #94a3b8; font-size: 12px; align-self: center; margin-left: 10px; transition: color 0.3s; }
+        
+        #text-input {
+            position: absolute; display: none; background: rgba(255, 255, 255, 0.95);
+            border: 2px solid var(--primary); padding: 4px; font-family: inherit;
+            font-weight: bold; outline: none; border-radius: 6px;
+            color: #0f172a; box-shadow: 0 4px 10px rgba(0,0,0,0.2); resize: none;
+            text-align: center; z-index: 20;
+        }
+
+        /* BARRA DE FERRAMENTAS EM BALÃO (CONTEXTUAL POPOVER) */
+        .popover-balloon {
+            position: absolute;
+            display: none;
+            flex-direction: column;
+            background: #1e293b;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            padding: 8px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+            z-index: 30;
+            gap: 8px;
+            pointer-events: auto;
+        }
+        .popover-balloon::after {
+            content: ''; position: absolute; bottom: -6px; left: 50%;
+            transform: translateX(-50%); border-width: 6px 6px 0;
+            border-style: solid; border-color: #1e293b transparent; display: block; width: 0;
+        }
+        .popover-row { display: flex; gap: 6px; justify-content: center; }
+        .popover-divider { height: 1px; background: rgba(255, 255, 255, 0.1); width: 100%; }
+        .popover-btn {
+            background: #334155; color: var(--text); padding: 6px 12px;
+            font-size: 12px; border-radius: 4px; font-weight: 500; border: none; cursor: pointer;
+        }
+        .popover-btn:hover { background: var(--primary); }
+        .popover-btn.btn-wand { background: rgba(139, 92, 246, 0.2); color: #ddd6fe; border: 1px solid rgba(139, 92, 246, 0.4); }
+        .popover-btn.btn-wand:hover { background: var(--purple); color: white; }
+        .popover-btn.btn-clone { background: rgba(56, 189, 248, 0.15); color: #bae6fd; border: 1px solid rgba(56, 189, 248, 0.3); }
+        .popover-btn.btn-clone:hover { background: #0284c7; color: white; }
+        .popover-btn.btn-delete { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4); }
+        .popover-btn.btn-delete:hover { background: var(--danger); color: white; }
+        
+        .popover-icon-btn {
+            background: #334155; border: none; color: white;
+            width: 28px; height: 28px; border-radius: 4px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; font-size: 14px;
+        }
+        .popover-icon-btn:hover { background: var(--primary); }
+        .popover-icon-btn.btn-link:hover { background: var(--accent); }
+        .popover-icon-btn.btn-paint:hover { background: var(--warning); }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <button onclick="addBox()">+ Nova Caixa</button>
+        <button id="btn-autoresize" class="btn-toggle" onclick="toggleAutoResize()">🧩 Auto-Ajustar Pai: OFF</button>
+        <span id="instruction-text" class="info-text">Selecione uma caixa para usar ferramentas como Setas, Varinha ou Clonar.</span>
+    </div>
+    
+    <canvas id="canvas"></canvas>
+    <textarea id="text-input" rows="2"></textarea>
+
+    <!-- Balão de Contexto Atualizado com Pincel -->
+    <div id="box-popover" class="popover-balloon">
+        <div class="popover-row">
+            <button class="popover-icon-btn" onclick="setBoxStyle('default')" title="Padrão">🟦</button>
+            <button class="popover-icon-btn" onclick="setBoxStyle('square')" title="Quadrada">◼️</button>
+            <button class="popover-icon-btn" onclick="setBoxStyle('dashed')" title="Pontilhada">🔲</button>
+            <button class="popover-icon-btn" onclick="setBoxStyle('ghost')" title="Fantasma">👻</button>
+            <button class="popover-icon-btn" onclick="setBoxStyle('pill')" title="Pílula">💊</button>
+            <button class="popover-icon-btn btn-paint" onclick="startPaintingMode()" title="Pincel (Copiar Tamanho)">🖌️</button>
+            <button class="popover-icon-btn btn-link" onclick="startLinkingMode()" title="Puxar Seta / Conectar">➡️</button>
+        </div>
+        <div class="popover-divider"></div>
+        <div class="popover-row">
+            <button class="popover-btn btn-wand" onclick="distributeChildrenFromPopover()" title="Organizar filhas equidistantes">🪄 Varinha</button>
+            <button class="popover-btn" onclick="addChildBoxFromPopover()">+ Filha</button>
+            <button class="popover-btn btn-clone" onclick="cloneBoxFromPopover()">📋 Clonar</button>
+            <button class="popover-btn btn-delete" onclick="deleteBoxFromPopover()">Excluir</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const textInput = document.getElementById('text-input');
+        const popover = document.getElementById('box-popover');
+        const instructionText = document.getElementById('instruction-text');
+
+        let width, height;
+        function resize() {
+            width = window.innerWidth; height = window.innerHeight;
+            canvas.width = width; canvas.height = height;
+            draw(); updatePopoverPosition();
+        }
+        window.addEventListener('resize', resize);
+
+        // Estado do Sistema
+        let boxes = [];
+        let connections = [];
+        let camera = { x: 0, y: 0, zoom: 1 };
+        
+        let isDragging = false; let isPanning = false; let isResizing = false;
+        let dragTarget = null; let startMouse = { x: 0, y: 0 }; let panStart = { x: 0, y: 0 };
+        let selectedBox = null; let editingBox = null;
+
+        // Modos de Ferramenta
+        let isLinkingMode = false; let linkSourceBox = null; let currentMouseCanvasPos = { x: 0, y: 0 };
+        let isPaintingMode = false; let paintSourceBox = null; // NOVO MODO: Pincel
+        
+        let isAutoResizeParent = false;
+        let isLocalWandAnimating = false;
+
+        const MIN_WIDTH = 100; const MIN_HEIGHT = 45; const HANDLE_SIZE = 12;
+
+        function addBox() {
+            const box = {
+                id: Date.now() + Math.floor(Math.random() * 1000),
+                x: -camera.x / camera.zoom + width / (2 * camera.zoom) - 100,
+                y: -camera.y / camera.zoom + height / (2 * camera.zoom) - 50,
+                w: 240, h: 160,
+                text: "Grupo Principal",
+                color: '#1e293b',
+                parentId: null,
+                isCollapsed: false,
+                boxStyle: 'default'
+            };
+            boxes.push(box);
+            selectedBox = box;
+            draw(); updatePopoverPosition();
+        }
+
+        function toggleAutoResize() {
+            isAutoResizeParent = !isAutoResizeParent;
+            const btn = document.getElementById('btn-autoresize');
+            if (isAutoResizeParent) {
+                btn.classList.add('active'); btn.innerText = "🧩 Auto-Ajustar Pai: ON";
+                boxes.forEach(b => { if (b.parentId) autoResizeParents(b.id); });
+                draw(); updatePopoverPosition();
+            } else {
+                btn.classList.remove('active'); btn.innerText = "🧩 Auto-Ajustar Pai: OFF";
+            }
+        }
+
+        function autoResizeParents(childId) {
+            if (!isAutoResizeParent || isLocalWandAnimating) return;
+            
+            const child = boxes.find(b => b.id === childId);
+            if (!child || !child.parentId) return;
+
+            const parent = boxes.find(b => b.id === child.parentId);
+            if (!parent) return;
+
+            const siblingChildren = boxes.filter(b => b.parentId === parent.id);
+            if (siblingChildren.length === 0) return;
+
+            let minX = Math.min(...siblingChildren.map(c => c.x));
+            let minY = Math.min(...siblingChildren.map(c => c.y));
+            let maxX = Math.max(...siblingChildren.map(c => c.x + c.w));
+            let maxY = Math.max(...siblingChildren.map(c => c.y + c.h));
+
+            const paddingLeft = 24; const paddingRight = 24;
+            const paddingTop = 48;  const paddingBottom = 24;
+
+            parent.x = minX - paddingLeft;
+            parent.y = minY - paddingTop;
+            parent.w = (maxX + paddingRight) - parent.x;
+            parent.h = (maxY + paddingBottom) - parent.y;
+
+            if (parent.parentId) { autoResizeParents(parent.id); }
+        }
+
+        // --- MODO PINCEL (NOVO) ---
+        function startPaintingMode() {
+            if (!selectedBox) return;
+            isPaintingMode = true;
+            paintSourceBox = selectedBox;
+            popover.style.display = 'none';
+            instructionText.innerText = "Modo Pincel 🖌️: Clique em outra caixa para colar o tamanho exato (Largura e Altura).";
+            instructionText.style.color = "var(--warning)";
+            draw();
+        }
+
+        // --- MODO SETA ---
+        function startLinkingMode() {
+            if (!selectedBox) return;
+            isLinkingMode = true; linkSourceBox = selectedBox;
+            popover.style.display = 'none';
+            instructionText.innerText = "Modo Seta ➡️: Clique na caixa de destino para ligar.";
+            instructionText.style.color = "var(--accent)";
+            draw();
+        }
+
+        function distributeChildrenFromPopover() {
+            if (!selectedBox) return;
+            const parent = selectedBox;
+            const children = boxes.filter(b => b.parentId === parent.id);
+            
+            if (children.length === 0) {
+                instructionText.innerText = "Esta caixa não possui filhas para organizar!";
+                setTimeout(() => {
+                    instructionText.innerText = "Selecione uma caixa para usar ferramentas como Setas, Varinha ou Clonar.";
+                }, 2500);
+                return;
+            }
+
+            if (parent.isCollapsed) parent.isCollapsed = false;
+
+            const paddingTop = 48; const paddingLeft = 20; const paddingRight = 20; const paddingBottom = 20;
+            const availW = parent.w - paddingLeft - paddingRight;
+            const availH = parent.h - paddingTop - paddingBottom;
+            const cols = Math.ceil(Math.sqrt(children.length));
+            const rows = Math.ceil(children.length / cols);
+            const cellW = availW / cols;
+            const cellH = availH / rows;
+
+            children.forEach((child, index) => {
+                const c = index % cols; const r = Math.floor(index / cols);
+                child.targetX = parent.x + paddingLeft + (c * cellW) + (cellW - child.w) / 2;
+                child.targetY = parent.y + paddingTop + (r * cellH) + (cellH - child.h) / 2;
+            });
+
+            isLocalWandAnimating = true; popover.style.display = 'none';
+
+            function animateLocalLayout() {
+                let stillMoving = false;
+                children.forEach(child => {
+                    if (child.targetX !== undefined && child.targetY !== undefined) {
+                        const dx = child.targetX - child.x; const dy = child.targetY - child.y;
+                        child.x += dx * 0.18; child.y += dy * 0.18;
+                        if (Math.abs(dx) > 0.4 || Math.abs(dy) > 0.4) {
+                            stillMoving = true;
+                        } else {
+                            child.x = child.targetX; child.y = child.targetY;
+                            delete child.targetX; delete child.targetY;
+                        }
+                    }
+                });
+                draw();
+                if (stillMoving) {
+                    requestAnimationFrame(animateLocalLayout);
+                } else {
+                    isLocalWandAnimating = false;
+                    if (isAutoResizeParent && children.length > 0) {
+                        autoResizeParents(children[0].id); draw();
+                    }
+                    updatePopoverPosition();
+                }
+            }
+            animateLocalLayout();
+        }
+
+        // --- Funções do Balão Contextual (Popover) ---
+        function updatePopoverPosition() {
+            if (!selectedBox || !isBoxVisible(selectedBox) || editingBox === selectedBox || isLinkingMode || isPaintingMode || isLocalWandAnimating) {
+                popover.style.display = 'none'; return;
+            }
+            
+            const screenX = selectedBox.x * camera.zoom + camera.x;
+            const screenY = selectedBox.y * camera.zoom + camera.y;
+            const boxScreenWidth = selectedBox.w * camera.zoom;
+
+            popover.style.display = 'flex';
+            const popoverWidth = popover.offsetWidth || 310; // Aumentado um pouco para caber o novo icone
+            const popoverHeight = popover.offsetHeight || 80;
+            
+            popover.style.left = (screenX + (boxScreenWidth / 2) - (popoverWidth / 2)) + 'px';
+            popover.style.top = (screenY - popoverHeight - 15) + 'px';
+        }
+
+        function deleteBoxFromPopover() {
+            if (!selectedBox) return;
+            const targetId = selectedBox.id;
+            function deleteCascade(id) {
+                let children = boxes.filter(b => b.parentId === id);
+                children.forEach(c => deleteCascade(c.id));
+                connections = connections.filter(conn => conn.from !== id && conn.to !== id);
+                boxes = boxes.filter(b => b.id !== id);
+            }
+            deleteCascade(targetId);
+            selectedBox = null; popover.style.display = 'none'; draw();
+        }
+
+        function addChildBoxFromPopover() {
+            if (!selectedBox) return;
+            if (selectedBox.isCollapsed) selectedBox.isCollapsed = false;
+
+            const childWidth = 110; const childHeight = 60;
+            const childBox = {
+                id: Date.now() + Math.floor(Math.random() * 1000),
+                x: selectedBox.x + (selectedBox.w / 2) - (childWidth / 2),
+                y: selectedBox.y + (selectedBox.h / 2) - (childHeight / 2) + 15,
+                w: childWidth, h: childHeight,
+                text: "Nova Filha", color: '#334155',
+                parentId: selectedBox.id, isCollapsed: false, boxStyle: 'default'
+            };
+
+            boxes.push(childBox); selectedBox = childBox;
+            if (isAutoResizeParent) autoResizeParents(childBox.id);
+            draw(); updatePopoverPosition();
+        }
+
+        function setBoxStyle(styleName) {
+            if (!selectedBox) return;
+            selectedBox.boxStyle = styleName; draw();
+        }
+
+        function cloneBoxFromPopover() {
+            if (!selectedBox) return;
+            const idMap = new Map(); const offset = 40;
+
+            function duplicateCascade(boxId, newParentId) {
+                const original = boxes.find(b => b.id === boxId);
+                if (!original) return null;
+
+                const newId = Date.now() + Math.floor(Math.random() * 10000);
+                const clonedBox = {
+                    ...original, id: newId, parentId: newParentId,
+                    x: original.x + offset, y: original.y + offset
+                };
+
+                boxes.push(clonedBox); idMap.set(boxId, newId);
+                const children = boxes.filter(b => b.parentId === boxId && b.id !== newId);
+                children.forEach(child => { duplicateCascade(child.id, newId); });
+                return newId;
+            }
+
+            const topClonedId = duplicateCascade(selectedBox.id, selectedBox.parentId);
+
+            const clonedConnections = [];
+            connections.forEach(conn => {
+                const hasFrom = idMap.has(conn.from); const hasTo = idMap.has(conn.to);
+                if (hasFrom || hasTo) {
+                    clonedConnections.push({
+                        from: hasFrom ? idMap.get(conn.from) : conn.from,
+                        to: hasTo ? idMap.get(conn.to) : conn.to
+                    });
+                }
+            });
+            connections = connections.concat(clonedConnections);
+            if (topClonedId) selectedBox = boxes.find(b => b.id === topClonedId);
+            draw(); updatePopoverPosition();
+        }
+
+        // --- Métodos de Interseção e Geometria ---
+        function getBoxIntersection(fromX, fromY, box) {
+            const cx = box.x + box.w / 2; const cy = box.y + box.h / 2;
+            const dx = cx - fromX; const dy = cy - fromY;
+            let ix = cx; let iy = cy;
+
+            if (Math.abs(dx) * box.h > Math.abs(dy) * box.w) {
+                ix = dx > 0 ? box.x : box.x + box.w;
+                iy = cy - (dy * (cx - ix)) / dx;
+            } else {
+                iy = dy > 0 ? box.y : box.y + box.h;
+                ix = cx - (dx * (cy - iy)) / dy;
+            }
+            return { x: ix, y: iy };
+        }
+
+        function drawArrowLine(x1, y1, x2, y2, color, isDashed = false) {
+            ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 2;
+            if(isDashed) ctx.setLineDash([6, 6]); else ctx.setLineDash([]);
+            ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+            ctx.setLineDash([]);
+
+            const headLength = 10; const angle = Math.atan2(y2 - y1, x2 - x1);
+            ctx.beginPath(); ctx.moveTo(x2, y2);
+            ctx.lineTo(x2 - headLength * Math.cos(angle - Math.PI / 6), y2 - headLength * Math.sin(angle - Math.PI / 6));
+            ctx.lineTo(x2 - headLength * Math.cos(angle + Math.PI / 6), y2 - headLength * Math.sin(angle + Math.PI / 6));
+            ctx.closePath(); ctx.fill();
+        }
+
+        function isBoxVisible(box) {
+            let current = box;
+            while(current.parentId) {
+                let parent = boxes.find(b => b.id === current.parentId);
+                if (!parent) break;
+                if (parent.isCollapsed) return false;
+                current = parent;
+            }
+            return true;
+        }
+
+        function moveBoxAndChildren(box, dx, dy) {
+            box.x += dx; box.y += dy;
+            boxes.filter(b => b.parentId === box.id).forEach(child => moveBoxAndChildren(child, dx, dy));
+        }
+
+        function isDescendant(child, parent) {
+            let current = child;
+            while(current.parentId) {
+                if(current.parentId === parent.id) return true;
+                current = boxes.find(b => b.id === current.parentId);
+                if(!current) break;
+            }
+            return false;
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+            ctx.save();
+            ctx.translate(camera.x, camera.y); ctx.scale(camera.zoom, camera.zoom);
+            
+            // Grid
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)'; ctx.lineWidth = 1;
+            const gridSize = 40;
+            const left = -camera.x / camera.zoom; const top = -camera.y / camera.zoom;
+            const right = left + width / camera.zoom; const bottom = top + height / camera.zoom;
+            ctx.beginPath();
+            for(let x = Math.floor(left/gridSize)*gridSize; x < right; x += gridSize) { ctx.moveTo(x, top); ctx.lineTo(x, bottom); }
+            for(let y = Math.floor(top/gridSize)*gridSize; y < bottom; y += gridSize) { ctx.moveTo(left, y); ctx.lineTo(right, y); }
+            ctx.stroke();
+
+            // Passo 1: Caixas
+            let visibleBoxes = boxes.filter(isBoxVisible);
+            let drawOrder = [...visibleBoxes].sort((a, b) => (b.w * b.h) - (a.w * a.h));
+
+            drawOrder.forEach(box => {
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.4)'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 6;
+                let radius = 8; let fill = box.color;
+                let stroke = box.parentId ? '#64748b' : '#475569';
+                let lineWidth = 1; let isDashed = false; let textColor = '#f8fafc';
+                
+                if (box.boxStyle === 'square') radius = 0;
+                else if (box.boxStyle === 'dashed') { isDashed = true; lineWidth = 2; }
+                else if (box.boxStyle === 'ghost') { fill = 'rgba(30, 41, 59, 0.2)'; stroke = box.color; lineWidth = 2; textColor = '#e2e8f0'; }
+                else if (box.boxStyle === 'pill') radius = Math.min(box.w, box.h) / 2;
+
+                if (selectedBox === box) { stroke = '#3b82f6'; lineWidth = 3; }
+
+                ctx.fillStyle = fill;
+                ctx.beginPath();
+                if (radius > 0 && ctx.roundRect) ctx.roundRect(box.x, box.y, box.w, box.h, radius);
+                else ctx.rect(box.x, box.y, box.w, box.h);
+                ctx.fill();
+                ctx.shadowColor = 'transparent';
+
+                ctx.strokeStyle = stroke; ctx.lineWidth = lineWidth;
+                if (isDashed) ctx.setLineDash([8, 8]); else ctx.setLineDash([]);
+                ctx.stroke(); ctx.setLineDash([]);
+
+                if (selectedBox === box) {
+                    ctx.fillStyle = '#3b82f6'; ctx.beginPath();
+                    ctx.arc(box.x + box.w, box.y + box.h, HANDLE_SIZE / camera.zoom, 0, Math.PI * 2); ctx.fill();
+                    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2 / camera.zoom; ctx.beginPath();
+                    ctx.moveTo(box.x + box.w - 4/camera.zoom, box.y + box.h + 4/camera.zoom);
+                    ctx.lineTo(box.x + box.w + 4/camera.zoom, box.y + box.h - 4/camera.zoom); ctx.stroke();
+                }
+
+                ctx.fillStyle = '#64748b'; ctx.font = '14px sans-serif';
+                ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+                ctx.fillText(box.isCollapsed ? '▶' : '▼', box.x + 12, box.y + 12);
+
+                if (editingBox !== box) {
+                    ctx.fillStyle = textColor;
+                    let lines = box.text.split('\n');
+                    let longestLine = lines.reduce((a, b) => a.length > b.length ? a : b, "");
+                    let widthMultiplier = box.boxStyle === 'pill' ? 0.6 : 0.8;
+                    let dynamicFontSize = Math.max(10, (box.w * widthMultiplier) / (longestLine.length * 0.6 + 1));
+                    ctx.textAlign = 'center';
+                    
+                    if (box.isCollapsed) {
+                        dynamicFontSize = Math.min(dynamicFontSize, box.h * 0.3);
+                        ctx.font = `bold ${dynamicFontSize}px sans-serif`; ctx.textBaseline = 'middle';
+                        const totalTextHeight = lines.length * dynamicFontSize;
+                        let startY = box.y + (box.h / 2) - (totalTextHeight / 2) + (dynamicFontSize / 2);
+                        lines.forEach((line, index) => { ctx.fillText(line, box.x + box.w / 2, startY + (index * dynamicFontSize * 1.2)); });
+                    } else {
+                        dynamicFontSize = Math.min(dynamicFontSize, box.h * 0.18, 20);
+                        ctx.font = `bold ${dynamicFontSize}px sans-serif`; ctx.textBaseline = 'top';
+                        let startY = box.y + 12;
+                        lines.forEach((line, index) => { ctx.fillText(line, box.x + box.w / 2, startY + (index * dynamicFontSize * 1.1)); });
+                    }
+                }
+            });
+
+            // Passo 2: Setas
+            connections.forEach(conn => {
+                const bFrom = boxes.find(b => b.id === conn.from); const bTo = boxes.find(b => b.id === conn.to);
+                if (bFrom && bTo && isBoxVisible(bFrom) && isBoxVisible(bTo)) {
+                    const cxA = bFrom.x + bFrom.w / 2; const cyA = bFrom.y + bFrom.h / 2;
+                    const cxB = bTo.x + bTo.w / 2; const cyB = bTo.y + bTo.h / 2;
+                    const startIntersect = getBoxIntersection(cxB, cyB, bFrom);
+                    const endIntersect = getBoxIntersection(cxA, cyA, bTo);
+                    drawArrowLine(startIntersect.x, startIntersect.y, endIntersect.x, endIntersect.y, '#38bdf8', false);
+                }
+            });
+
+            if (isLinkingMode && linkSourceBox) {
+                const edgeStart = getBoxIntersection(currentMouseCanvasPos.x, currentMouseCanvasPos.y, linkSourceBox);
+                drawArrowLine(edgeStart.x, edgeStart.y, currentMouseCanvasPos.x, currentMouseCanvasPos.y, 'var(--accent)', true);
+            }
+            ctx.restore();
+        }
+
+        function getMousePos(e) { return { x: (e.clientX - camera.x)/camera.zoom, y: (e.clientY - camera.y)/camera.zoom }; }
+
+        canvas.addEventListener('mousedown', e => {
+            if (editingBox) { saveText(); return; }
+            if (isLocalWandAnimating) return; 
+            
+            const mouse = getMousePos(e);
+            startMouse = { x: e.clientX, y: e.clientY };
+            
+            let visibleBoxes = boxes.filter(isBoxVisible);
+            let interactOrder = [...visibleBoxes].sort((a, b) => (a.w * a.h) - (b.w * b.h));
+            let hit = false;
+
+            // COMPORTAMENTO: MODO SETA
+            if (isLinkingMode) {
+                for (let box of interactOrder) {
+                    if (mouse.x >= box.x && mouse.x <= box.x + box.w && mouse.y >= box.y && mouse.y <= box.y + box.h) {
+                        if (box.id !== linkSourceBox.id) { connections.push({ from: linkSourceBox.id, to: box.id }); }
+                        hit = true; break;
+                    }
+                }
+                isLinkingMode = false; linkSourceBox = null;
+                instructionText.innerText = "Selecione uma caixa para usar ferramentas como Setas, Varinha ou Clonar.";
+                instructionText.style.color = "#94a3b8";
+                draw(); updatePopoverPosition(); return;
+            }
+
+            // COMPORTAMENTO: MODO PINCEL (NOVO)
+            if (isPaintingMode) {
+                for (let box of interactOrder) {
+                    if (mouse.x >= box.x && mouse.x <= box.x + box.w && mouse.y >= box.y && mouse.y <= box.y + box.h) {
+                        if (box.id !== paintSourceBox.id) { 
+                            // Copia a largura e a altura exata
+                            box.w = paintSourceBox.w; 
+                            box.h = paintSourceBox.h; 
+                            
+                            // Gatilho: Se a caixa colada estiver dentro de um pai, avisa o pai para crescer se o auto-ajuste estiver ON
+                            if (isAutoResizeParent && box.parentId) autoResizeParents(box.id);
+                        }
+                        hit = true; break;
+                    }
+                }
+                isPaintingMode = false; paintSourceBox = null;
+                document.body.style.cursor = 'default';
+                instructionText.innerText = "Selecione uma caixa para usar ferramentas como Setas, Varinha ou Clonar.";
+                instructionText.style.color = "#94a3b8";
+                draw(); updatePopoverPosition(); return;
+            }
+
+            // COMPORTAMENTO PADRÃO: CLIQUE NORMAL
+            for (let box of interactOrder) {
+                if (mouse.x >= box.x && mouse.x <= box.x + 32 && mouse.y >= box.y && mouse.y <= box.y + 32) {
+                    box.isCollapsed = !box.isCollapsed;
+                    selectedBox = box; hit = true; break;
+                }
+                if (selectedBox === box) {
+                    const handleRadius = (HANDLE_SIZE + 4) / camera.zoom;
+                    if (Math.hypot(mouse.x - (box.x+box.w), mouse.y - (box.y+box.h)) < handleRadius) {
+                        isResizing = true; dragTarget = box; hit = true; break;
+                    }
+                }
+                if (mouse.x >= box.x && mouse.x <= box.x + box.w && mouse.y >= box.y && mouse.y <= box.y + box.h) {
+                    isDragging = true; dragTarget = box; selectedBox = box; hit = true; break;
+                }
+            }
+            
+            if (!hit) { selectedBox = null; isPanning = true; panStart = { x: camera.x, y: camera.y }; }
+            draw(); updatePopoverPosition();
+        });
+
+        window.addEventListener('mousemove', e => {
+            const mouse = getMousePos(e);
+            
+            if (isLinkingMode) { currentMouseCanvasPos = mouse; document.body.style.cursor = 'crosshair'; draw(); return; }
+            if (isPaintingMode) { document.body.style.cursor = 'copy'; return; } // Cursor de copiar tamanho
+            if (isLocalWandAnimating) return;
+
+            if (isDragging && dragTarget) {
+                const dx = (e.clientX - startMouse.x) / camera.zoom;
+                const dy = (e.clientY - startMouse.y) / camera.zoom;
+                moveBoxAndChildren(dragTarget, dx, dy);
+                if (isAutoResizeParent) autoResizeParents(dragTarget.id);
+                startMouse = { x: e.clientX, y: e.clientY };
+                draw(); updatePopoverPosition();
+            } else if (isResizing && dragTarget) {
+                document.body.style.cursor = 'nwse-resize';
+                const dx = (e.clientX - startMouse.x) / camera.zoom;
+                const dy = (e.clientY - startMouse.y) / camera.zoom;
+                dragTarget.w = Math.max(MIN_WIDTH, dragTarget.w + dx);
+                dragTarget.h = Math.max(MIN_HEIGHT, dragTarget.h + dy);
+                if (isAutoResizeParent) autoResizeParents(dragTarget.id);
+                startMouse = { x: e.clientX, y: e.clientY };
+                draw(); updatePopoverPosition();
+            } else if (isPanning) {
+                document.body.style.cursor = 'grabbing';
+                camera.x = panStart.x + (e.clientX - startMouse.x); camera.y = panStart.y + (e.clientY - startMouse.y);
+                draw(); updatePopoverPosition();
+            } else {
+                document.body.style.cursor = 'default';
+                if (selectedBox && isBoxVisible(selectedBox)) {
+                    if (Math.hypot(mouse.x - (selectedBox.x+selectedBox.w), mouse.y - (selectedBox.y+selectedBox.h)) < (HANDLE_SIZE+4)/camera.zoom) {
+                        document.body.style.cursor = 'nwse-resize'; return;
+                    }
+                }
+                for (let box of boxes.filter(isBoxVisible)) {
+                    if (mouse.x >= box.x && mouse.x <= box.x + 32 && mouse.y >= box.y && mouse.y <= box.y + 32) {
+                        document.body.style.cursor = 'pointer'; break;
+                    }
+                }
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (isLinkingMode || isPaintingMode || isLocalWandAnimating) return;
+
+            if (isDragging && dragTarget) {
+                dragTarget.parentId = null;
+                let potentialParents = boxes.filter(b => 
+                    b.id !== dragTarget.id &&
+                    isBoxVisible(b) && !b.isCollapsed &&
+                    !isDescendant(b, dragTarget) &&
+                    dragTarget.x >= b.x && dragTarget.y >= b.y &&
+                    (dragTarget.x + dragTarget.w) <= (b.x + b.w) &&
+                    (dragTarget.y + dragTarget.h) <= (b.y + b.h)
+                );
+                
+                if (potentialParents.length > 0) {
+                    potentialParents.sort((a, b) => (a.w * a.h) - (b.w * b.h));
+                    dragTarget.parentId = potentialParents[0].id;
+                    if (isAutoResizeParent) autoResizeParents(dragTarget.id);
+                }
+            }
+            isDragging = false; isResizing = false; isPanning = false;
+            document.body.style.cursor = 'default';
+            draw(); updatePopoverPosition();
+        });
+        
+        canvas.addEventListener('dblclick', e => {
+            if (isLinkingMode || isPaintingMode || isLocalWandAnimating) return;
+            if (selectedBox && isBoxVisible(selectedBox)) {
+                const mouse = getMousePos(e);
+                if (mouse.x >= selectedBox.x && mouse.x <= selectedBox.x + 32 && mouse.y >= selectedBox.y && mouse.y <= selectedBox.y + 32) return;
+
+                if (mouse.x >= selectedBox.x && mouse.x <= selectedBox.x + selectedBox.w && mouse.y >= selectedBox.y && mouse.y <= selectedBox.y + selectedBox.h) {
+                    editingBox = selectedBox; popover.style.display = 'none';
+                    textInput.style.display = 'block'; textInput.value = editingBox.text;
+                    
+                    const screenX = selectedBox.x * camera.zoom + camera.x;
+                    const screenY = selectedBox.y * camera.zoom + camera.y;
+                    
+                    textInput.style.left = screenX + 'px'; textInput.style.width = (selectedBox.w * camera.zoom - 10) + 'px';
+                    let lines = editingBox.text.split('\n');
+                    let longestLine = lines.reduce((a, b) => a.length > b.length ? a : b, "");
+                    let widthMultiplier = selectedBox.boxStyle === 'pill' ? 0.6 : 0.8;
+                    let dynamicFontSize = Math.max(10, (selectedBox.w * widthMultiplier) / (longestLine.length * 0.6 + 1));
+
+                    if (selectedBox.isCollapsed) {
+                        dynamicFontSize = Math.min(dynamicFontSize, selectedBox.h * 0.3);
+                        textInput.style.top = screenY + 'px'; textInput.style.height = (selectedBox.h * camera.zoom - 10) + 'px';
+                    } else {
+                        dynamicFontSize = Math.min(dynamicFontSize, selectedBox.h * 0.18, 20);
+                        textInput.style.top = (screenY + 10) + 'px'; textInput.style.height = (dynamicFontSize * lines.length * 1.5 * camera.zoom) + 'px';
+                    }
+                    textInput.style.fontSize = (dynamicFontSize * camera.zoom) + 'px';
+                    textInput.focus(); draw();
+                }
+            }
+        });
+
+        function saveText() {
+            if (editingBox) {
+                editingBox.text = textInput.value;
+                if (isAutoResizeParent && editingBox.parentId) autoResizeParents(editingBox.id);
+                editingBox = null; textInput.style.display = 'none'; 
+                draw(); updatePopoverPosition();
+            }
+        }
+        
+        canvas.addEventListener('wheel', e => {
+            e.preventDefault();
+            const zoomFactor = Math.exp((e.deltaY < 0 ? 1 : -1) * 0.1);
+            camera.x = e.clientX - (e.clientX - camera.x) * zoomFactor; camera.y = e.clientY - (e.clientY - camera.y) * zoomFactor;
+            camera.zoom *= zoomFactor; draw(); updatePopoverPosition();
+        }, { passive: false });
+
+        resize();
+    </script>
+</body>
+</html>
