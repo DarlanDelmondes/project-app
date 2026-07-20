@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cognitive Reader - Biblioteca</title>
+    <style>
+        :root {
+            --bg-color: #fcfcfc;
+            --text-color: #1a1a1a;
+            --past-text: #9e9e9e;
+            --sidebar-bg: #f5f5f5;
+            --border-color: #e0e0e0;
+            --accent-color: #0066cc;
+            --danger-color: #ef4444;
+            --highlight-yellow: rgba(255, 235, 59, 0.4);
+            --highlight-green: rgba(76, 175, 80, 0.4);
+            --highlight-blue: rgba(33, 150, 243, 0.4);
+            --highlight-pink: rgba(233, 30, 99, 0.4);
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --past-text: #666666;
+            --sidebar-bg: #1e1e1e;
+            --border-color: #333333;
+            --accent-color: #4da6ff;
+            --danger-color: #f87171;
+            --highlight-yellow: rgba(255, 235, 59, 0.2);
+            --highlight-green: rgba(76, 175, 80, 0.2);
+            --highlight-blue: rgba(33, 150, 243, 0.2);
+            --highlight-pink: rgba(233, 30, 99, 0.2);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        #bookshelf-screen {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-color);
+            position: absolute;
+            z-index: 50;
+            overflow-y: auto;
+        }
+
+        .bookshelf-header {
+            padding: 2rem 4rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .book-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 2rem;
+            padding: 4rem;
+        }
+
+        .book-card {
+            background: var(--sidebar-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+            height: 220px;
+        }
+
+        .book-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+            border-color: var(--accent-color);
+        }
+
+        .book-title {
+            font-weight: 700;
+            font-size: 1.2rem;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .book-meta {
+            font-size: 0.85rem;
+            color: var(--past-text);
+            flex: 1;
+        }
+
+        .book-progress-mini {
+            height: 4px;
+            background: var(--border-color);
+            border-radius: 2px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+        .book-progress-mini-fill {
+            height: 100%;
+            background: var(--accent-color);
+        }
+
+        .book-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: auto;
+            border-top: 1px solid var(--border-color);
+            padding-top: 1rem;
+        }
+
+        .btn-delete {
+            background: transparent;
+            color: var(--danger-color);
+            border: 1px solid var(--danger-color);
+            padding: 0.25rem 0.75rem;
+            font-size: 0.8rem;
+            border-radius: 4px;
+        }
+        .btn-delete:hover {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        #input-screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            padding: 2rem;
+            z-index: 100;
+            background: var(--bg-color);
+            position: absolute;
+        }
+
+        #book-title-input {
+            width: 100%;
+            max-width: 800px;
+            padding: 1rem;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--sidebar-bg);
+            color: var(--text-color);
+            margin-bottom: 1rem;
+        }
+
+        #input-screen textarea {
+            width: 100%;
+            max-width: 800px;
+            height: 50vh;
+            padding: 1rem;
+            font-size: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--sidebar-bg);
+            color: var(--text-color);
+            resize: none;
+            margin-bottom: 1rem;
+        }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            background: var(--accent-color);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        button:hover { opacity: 0.9; }
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+        }
+        .btn-secondary:hover { background: var(--sidebar-bg); }
+
+        #app {
+            display: none;
+            width: 100%;
+            height: 100%;
+        }
+
+        #main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        header {
+            height: 60px;
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .controls select, .controls button {
+            background: var(--sidebar-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 0.5rem;
+            border-radius: 4px;
+            margin-left: 0.5rem;
+            cursor: pointer;
+        }
+
+        #reading-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 4rem 15%;
+            font-size: 24px;
+            line-height: 1.6;
+            scroll-behavior: smooth;
+            white-space: pre-wrap; /* Essencial para manter as quebras nativas do texto */
+        }
+
+        .past-text {
+            color: var(--past-text);
+            font-weight: 600; /* Nivelado para evitar saltos horizontais */
+        }
+
+        .current-block {
+            color: var(--text-color);
+            font-weight: 600;
+        }
+
+        .clickable-word {
+            color: var(--accent-color);
+            text-decoration: underline;
+            cursor: pointer;
+            font-weight: 600; /* Nivelado */
+        }
+
+        @keyframes cognitiveReveal {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+
+        .typing-effect {
+            display: inline;
+            animation: cognitiveReveal var(--anim-speed, 0.4s) ease-out forwards;
+        }
+
+        footer {
+            height: 50px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            padding: 0 2rem;
+            font-size: 0.85rem;
+            background: var(--sidebar-bg);
+        }
+
+        .progress-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .progress-bar-bg {
+            flex: 1;
+            height: 8px;
+            background: var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--accent-color);
+            width: 0%;
+            transition: width 0.2s ease;
+        }
+
+        .nav-buttons button {
+            background: transparent;
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 0.25rem 0.75rem;
+            margin-left: 0.5rem;
+        }
+
+        #sidebar {
+            width: 300px;
+            background: var(--sidebar-bg);
+            border-left: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            transition: width 0.3s;
+        }
+
+        .sidebar-header {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .history-item {
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+        }
+        .history-item time { font-size: 0.75rem; color: var(--past-text); display: block; }
+        
+        body.focus-mode header, body.focus-mode footer, body.focus-mode #sidebar {
+            display: none;
+        }
+        body.focus-mode #reading-area {
+            padding-top: 20vh;
+        }
+
+        #exit-focus {
+            display: none;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            z-index: 1000;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        body.focus-mode #exit-focus {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="bookshelf-screen">
+        <div class="bookshelf-header">
+            <div>
+                <h1 style="font-size: 2rem;">Minha Estante</h1>
+                <p style="color: var(--past-text); margin-top: 0.5rem;">Sua biblioteca pessoal de processamento cognitivo.</p>
+            </div>
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <select id="theme-select-global" onchange="app.updateSettings('theme', this.value)" style="padding: 0.5rem; border-radius: 4px; background: var(--sidebar-bg); color: var(--text-color); border: 1px solid var(--border-color);">
+                    <option value="light">Tema Claro</option>
+                    <option value="dark">Tema Escuro</option>
+                </select>
+                <button onclick="app.showAddBook()">+ Adicionar Livro</button>
+            </div>
+        </div>
+        <div class="book-grid" id="book-grid"></div>
+    </div>
+
+    <div id="input-screen">
+        <h2>Adicionar Novo Livro</h2>
+        <p style="margin-bottom: 2rem; color: var(--past-text);">Cole o texto que deseja ler e dê um título a ele.</p>
+        <input type="text" id="book-title-input" placeholder="Título do Livro (ex: Doutrina Constitucional - Cap 1)" autocomplete="off" />
+        <textarea id="text-input" placeholder="Cole seu texto aqui..."></textarea>
+        <div style="display: flex; gap: 1rem;">
+            <button onclick="app.saveNewBook()">Salvar e Abrir</button>
+            <button class="btn-secondary" onclick="app.showBookshelf()">Cancelar</button>
+        </div>
+    </div>
+
+    <div id="app">
+        <button id="exit-focus" onclick="app.toggleFocusMode()">⛌ Sair do Foco (Esc)</button>
+        
+        <div id="main-content">
+            <header>
+                <div class="brand"><strong id="reading-book-title">Cognitive Reader</strong></div>
+                <div class="controls">
+                    <button onclick="app.toggleFocusMode()" title="Atalho: F">Foco</button>
+                    <select id="chunk-size" onchange="app.updateSettings('chunkSize', this.value)">
+                        <option value="1">1 Palavra</option>
+                        <option value="2">2 Palavras</option>
+                        <option value="3" selected>3 Palavras</option>
+                        <option value="5">5 Palavras</option>
+                        <option value="7">7 Palavras</option>
+                        <option value="10">10 Palavras</option>
+                    </select>
+                    <select id="font-select" onchange="app.updateSettings('fontFamily', this.value)" title="Tipo de Fonte">
+                        <option value="Inter">Inter</option>
+                        <option value="IBM Plex Sans">IBM Plex</option>
+                        <option value="Literata">Literata</option>
+                        <option value="Georgia">Georgia</option>
+                        <option value="Verdana">Verdana</option>
+                        <option value="Courier New">Courier (Mono)</option>
+                    </select>
+                    <select id="font-size" onchange="app.updateSettings('fontSize', this.value)" title="Tamanho da Fonte">
+                        <option value="16">16px</option>
+                        <option value="20">20px</option>
+                        <option value="24" selected>24px</option>
+                        <option value="28">28px</option>
+                        <option value="32">32px</option>
+                        <option value="36">36px</option>
+                    </select>
+                    <select id="line-height" onchange="app.updateSettings('lineHeight', this.value)" title="Espaçamento de Linhas">
+                        <option value="1.2">Altura: 1.2</option>
+                        <option value="1.4">Altura: 1.4</option>
+                        <option value="1.6" selected>Altura: 1.6</option>
+                        <option value="1.8">Altura: 1.8</option>
+                        <option value="2.0">Altura: 2.0</option>
+                        <option value="2.5">Altura: 2.5</option>
+                    </select>
+                    <select id="anim-speed" onchange="app.updateSettings('animationSpeed', this.value)" title="Velocidade da Animação">
+                        <option value="0">Sem animação (0s)</option>
+                        <option value="0.1">Flash (0.1s)</option>
+                        <option value="0.2">Rápida (0.2s)</option>
+                        <option value="0.4">Normal (0.4s)</option>
+                        <option value="0.6">Lenta (0.6s)</option>
+                        <option value="1.0">Zen (1.0s)</option>
+                    </select>
+                    <button class="btn-secondary" onclick="app.showBookshelf()">← Voltar à Estante</button>
+                </div>
+            </header>
+
+            <!-- Spans agrupados sem espaço físico no HTML para controle estrito de whitespace -->
+            <div id="reading-area"><span id="render-past" class="past-text"></span><span id="render-animated-wrapper"><span id="render-current" class="current-block"></span><span id="render-clickable" class="clickable-word" onclick="app.advance()"></span></span><span id="render-after"></span></div>
+
+            <footer>
+                <div class="progress-container">
+                    <span id="progress-percent">0%</span>
+                    <div class="progress-bar-bg">
+                        <div id="progress-bar-fill" class="progress-bar-fill"></div>
+                    </div>
+                    <span id="word-count">0 / 0 tokens</span>
+                </div>
+                <div class="nav-buttons">
+                    <button onclick="app.goBack()">← Voltar</button>
+                    <button onclick="app.advance()">Avançar →</button>
+                </div>
+            </footer>
+        </div>
+
+        <div id="sidebar">
+            <div class="sidebar-header">
+                <span>Histórico</span>
+                <button onclick="app.toggleSidebar()" style="padding: 0 0.5rem; background: transparent; color: var(--text-color);">×</button>
+            </div>
+            <div class="sidebar-content" id="sidebar-content"></div>
+        </div>
+    </div>
+
+    <script>
+        const app = {
+            state: {
+                books: [],
+                activeBookId: null,
+                settings: { chunkSize: 3, theme: 'light', fontFamily: 'Inter', fontSize: 24, focusMode: false }
+            },
+
+            init() {
+                this.loadState();
+                this.applySettings();
+                this.setupEventListeners();
+                
+                if (this.state.activeBookId && this.getActiveBook()) {
+                    this.openBook(this.state.activeBookId);
+                } else {
+                    this.showBookshelf();
+                }
+            },
+
+            loadState() {
+                const saved = localStorage.getItem('cognitive_reader_state_v2');
+                if (saved) {
+                    try {
+                        const parsed = JSON.parse(saved);
+                        this.state = { ...this.state, ...parsed };
+                    } catch (e) { console.error('Erro ao carregar estado:', e); }
+                } 
+
+                document.getElementById('chunk-size').value = this.state.settings.chunkSize;
+                document.getElementById('font-select').value = this.state.settings.fontFamily;
+                document.getElementById('theme-select-global').value = this.state.settings.theme;
+                if(document.getElementById('font-size')) document.getElementById('font-size').value = this.state.settings.fontSize || 24;
+                if(document.getElementById('line-height')) document.getElementById('line-height').value = this.state.settings.lineHeight || 1.6;
+                if(document.getElementById('anim-speed')) document.getElementById('anim-speed').value = this.state.settings.animationSpeed !== undefined ? this.state.settings.animationSpeed : '0.4';
+            },
+
+            saveState() {
+                localStorage.setItem('cognitive_reader_state_v2', JSON.stringify(this.state));
+            },
+
+            getActiveBook() {
+                return this.state.books.find(b => b.id === this.state.activeBookId);
+            },
+
+            showBookshelf() {
+                this.state.activeBookId = null;
+                this.saveState();
+                
+                document.getElementById('input-screen').style.display = 'none';
+                document.getElementById('app').style.display = 'none';
+                document.getElementById('bookshelf-screen').style.display = 'flex';
+                
+                this.renderBookshelf();
+            },
+
+            showAddBook() {
+                document.getElementById('bookshelf-screen').style.display = 'none';
+                document.getElementById('app').style.display = 'none';
+                document.getElementById('input-screen').style.display = 'flex';
+                
+                document.getElementById('book-title-input').value = '';
+                document.getElementById('text-input').value = '';
+                document.getElementById('book-title-input').focus();
+            },
+
+            renderBookshelf() {
+                const grid = document.getElementById('book-grid');
+                if (this.state.books.length === 0) {
+                    grid.innerHTML = `<p style="color: var(--past-text); grid-column: 1/-1;">Sua estante está vazia. Adicione um novo livro para começar.</p>`;
+                    return;
+                }
+
+                grid.innerHTML = this.state.books.map(book => {
+                    const percent = book.words.length > 0 ? Math.round((book.currentIndex / book.words.length) * 100) : 0;
+                    return `
+                        <div class="book-card" onclick="app.openBook('${book.id}')">
+                            <div class="book-title">${book.title}</div>
+                            <div class="book-meta">
+                                Adicionado em: ${book.addedAt}<br>
+                                Tamanho: ${book.words.length} tokens
+                                <div class="book-progress-mini">
+                                    <div class="book-progress-mini-fill" style="width: ${percent}%"></div>
+                                </div>
+                                <span style="font-weight:bold; color: var(--text-color); margin-top:0.25rem; display:block;">${percent}% LIDO</span>
+                            </div>
+                            <div class="book-actions">
+                                <button class="btn-delete" onclick="app.deleteBook('${book.id}', event)">Apagar</button>
+                                <span style="font-size: 0.85rem; color: var(--accent-color); font-weight: bold;">Abrir →</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            },
+
+            saveNewBook() {
+                const title = document.getElementById('book-title-input').value.trim() || 'Sem Título';
+                let rawText = document.getElementById('text-input').value;
+                
+                if (!rawText.trim()) {
+                    alert("Por favor, cole algum texto.");
+                    return;
+                }
+
+                let cleanText = rawText
+                    .replace(/\r\n/g, '\n')           
+                    .replace(/[ \t]+/g, ' ')          
+                    .replace(/\n[ \t]+/g, '\n')       
+                    .replace(/[ \t]+\n/g, '\n')       
+                    .replace(/\n{3,}/g, '\n\n')       
+                    .trim();
+
+                const words = cleanText.match(/\S+\s*/g) || [];
+                
+                const newBook = {
+                    id: Date.now().toString(),
+                    title: title,
+                    addedAt: new Date().toLocaleDateString(),
+                    words: words,
+                    currentIndex: 0,
+                    history: []
+                };
+
+                this.state.books.push(newBook);
+                this.openBook(newBook.id);
+            },
+
+            deleteBook(id, event) {
+                event.stopPropagation();
+                if(confirm("Tem certeza que deseja apagar este livro? O progresso será perdido.")) {
+                    this.state.books = this.state.books.filter(b => b.id !== id);
+                    this.saveState();
+                    this.renderBookshelf();
+                }
+            },
+
+            openBook(id) {
+                this.state.activeBookId = id;
+                this.saveState();
+                
+                document.getElementById('bookshelf-screen').style.display = 'none';
+                document.getElementById('input-screen').style.display = 'none';
+                document.getElementById('app').style.display = 'flex';
+                
+                const book = this.getActiveBook();
+                document.getElementById('reading-book-title').textContent = book.title;
+                
+                this.render();
+                this.renderSidebar();
+            },
+
+            render() {
+                const book = this.getActiveBook();
+                if (!book || book.words.length === 0) return;
+
+                const chunk = parseInt(this.state.settings.chunkSize);
+                const endCurrent = Math.min(book.currentIndex + chunk, book.words.length);
+                
+                const pastWords = book.words.slice(0, book.currentIndex).join('');
+                const currentWords = book.words.slice(book.currentIndex, endCurrent - 1).join('');
+                const clickableRaw = book.words.slice(endCurrent - 1, endCurrent).join('');
+
+                // MÁGICA AQUI: Separa a palavra visível da quebra de linha.
+                // Isso impede que o bloco animado carregue um \n e quebre o layout
+                const match = clickableRaw.match(/^(\S+)(\s*)$/);
+                const clickableWord = match ? match[1] : clickableRaw;
+                const clickableSpace = match ? match[2] : '';
+
+                // Usar textContent nativo em conjunto com white-space: pre-wrap anula a necessidade de injetar tags <br>
+                document.getElementById('render-past').textContent = pastWords;
+                document.getElementById('render-current').textContent = currentWords;
+                
+                const clickableEl = document.getElementById('render-clickable');
+                clickableEl.textContent = clickableWord;
+                document.getElementById('render-after').textContent = clickableSpace;
+                
+                const wrapperEl = document.getElementById('render-animated-wrapper');
+                if (wrapperEl) {
+                    wrapperEl.classList.remove('typing-effect');
+                    void wrapperEl.offsetWidth; 
+                    wrapperEl.classList.add('typing-effect');
+                }
+
+                this.updateProgress(endCurrent, book.words.length);
+                this.autoScroll();
+                this.saveState();
+            },
+
+            advance() {
+                const book = this.getActiveBook();
+                if (!book) return;
+                
+                const chunk = parseInt(this.state.settings.chunkSize);
+                if (book.currentIndex + chunk < book.words.length) {
+                    book.currentIndex += chunk;
+                } else {
+                    const wasNotFinished = book.currentIndex < book.words.length;
+                    book.currentIndex = book.words.length;
+                    if (wasNotFinished) this.fireConfetti();
+                }
+                this.logHistory();
+                this.render();
+            },
+
+            fireConfetti() {
+                const colors = ['#0066cc', '#4caf50', '#ffeb3b', '#e91e63', '#2196f3'];
+                for (let i = 0; i < 150; i++) {
+                    const confetti = document.createElement('div');
+                    confetti.style.position = 'fixed';
+                    confetti.style.left = Math.random() * 100 + 'vw';
+                    confetti.style.top = '-20px';
+                    confetti.style.width = Math.random() * 8 + 4 + 'px';
+                    confetti.style.height = Math.random() * 16 + 8 + 'px';
+                    confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                    confetti.style.zIndex = '9999';
+                    confetti.style.pointerEvents = 'none'; // Impede que o clique seja bloqueado
+                    document.body.appendChild(confetti);
+
+                    const duration = Math.random() * 2 + 1.5;
+                    confetti.animate([
+                        { transform: `translate3d(0,0,0) rotate(0deg)`, opacity: 1 },
+                        { transform: `translate3d(${Math.random()*300 - 150}px, 100vh, 0) rotate(${Math.random()*720}deg)`, opacity: 0 }
+                    ], { duration: duration * 1000, easing: 'ease-in' });
+
+                    // Remove do DOM após a animação para limpar memória
+                    setTimeout(() => confetti.remove(), duration * 1000);
+                }
+            },
+
+            goBack() {
+                const book = this.getActiveBook();
+                if (!book) return;
+
+                const chunk = parseInt(this.state.settings.chunkSize);
+                if (book.currentIndex - chunk >= 0) {
+                    book.currentIndex -= chunk;
+                } else {
+                    book.currentIndex = 0;
+                }
+                this.render();
+            },
+
+            autoScroll() {
+                const clickable = document.getElementById('render-clickable');
+                if (clickable && !this.state.settings.focusMode) {
+                    clickable.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            },
+
+            updateProgress(current, total) {
+                const percent = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0;
+                document.getElementById('progress-percent').textContent = `${percent}%`;
+                document.getElementById('progress-bar-fill').style.width = `${percent}%`;
+                document.getElementById('word-count').textContent = `${current} / ${total} tokens`;
+            },
+
+            logHistory() {
+                const book = this.getActiveBook();
+                if (!book) return;
+
+                if (book.currentIndex % (this.state.settings.chunkSize * 5) === 0 || book.currentIndex === 0) {
+                    let snippet = book.words.slice(Math.max(0, book.currentIndex - 5), book.currentIndex + 5)
+                                      .join('').replace(/\n/g, ' ');
+                    if (snippet.trim()) {
+                        book.history.unshift({
+                            time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                            index: book.currentIndex,
+                            text: snippet.trim() + '...'
+                        });
+                        if (book.history.length > 50) book.history.pop();
+                        this.renderSidebar();
+                    }
+                }
+            },
+
+            renderSidebar() {
+                const book = this.getActiveBook();
+                const container = document.getElementById('sidebar-content');
+                if (!book || !book.history) {
+                    container.innerHTML = ''; return;
+                }
+                container.innerHTML = book.history.map(h => `
+                    <div class="history-item" onclick="app.jumpTo(${h.index})">
+                        <time>${h.time}</time>
+                        ${h.text}
+                    </div>
+                `).join('');
+            },
+
+            jumpTo(index) {
+                const book = this.getActiveBook();
+                if(book) {
+                    book.currentIndex = index;
+                    this.render();
+                }
+            },
+
+            updateSettings(key, value) {
+                this.state.settings[key] = value;
+                this.applySettings();
+                this.saveState();
+                if (key === 'chunkSize') this.render();
+            },
+
+            applySettings() {
+                document.documentElement.setAttribute('data-theme', this.state.settings.theme);
+                document.getElementById('reading-area').style.fontFamily = this.state.settings.fontFamily;
+                document.getElementById('reading-area').style.fontSize = (this.state.settings.fontSize || 24) + 'px';
+                document.getElementById('reading-area').style.lineHeight = this.state.settings.lineHeight || 1.6;
+                document.documentElement.style.setProperty('--anim-speed', (this.state.settings.animationSpeed !== undefined ? this.state.settings.animationSpeed : 0.4) + 's');
+                
+                if (this.state.settings.focusMode) {
+                    document.body.classList.add('focus-mode');
+                } else {
+                    document.body.classList.remove('focus-mode');
+                }
+            },
+
+            toggleFocusMode() {
+                this.state.settings.focusMode = !this.state.settings.focusMode;
+                this.applySettings();
+                this.saveState();
+            },
+
+            toggleSidebar() {
+                const sidebar = document.getElementById('sidebar');
+                sidebar.style.display = sidebar.style.display === 'none' ? 'flex' : 'none';
+            },
+
+            setupEventListeners() {
+                document.addEventListener('keydown', (e) => {
+                    if (document.getElementById('app').style.display !== 'flex') return;
+                    
+                    switch(e.key) {
+                        case 'ArrowRight':
+                        case 'PageDown':
+                        case ' ':
+                            e.preventDefault();
+                            this.advance();
+                            break;
+                        case 'ArrowLeft':
+                        case 'PageUp':
+                            e.preventDefault();
+                            this.goBack();
+                            break;
+                        case 'Home':
+                            e.preventDefault();
+                            this.jumpTo(0);
+                            break;
+                        case 'End':
+                            e.preventDefault();
+                            const book = this.getActiveBook();
+                            if(book) this.jumpTo(book.words.length - parseInt(this.state.settings.chunkSize));
+                            break;
+                        case 'f':
+                        case 'F':
+                            if (!e.ctrlKey && !e.metaKey) {
+                                e.preventDefault();
+                                this.toggleFocusMode();
+                            }
+                            break;
+                        case 'Escape':
+                            if (this.state.settings.focusMode) {
+                                e.preventDefault();
+                                this.toggleFocusMode();
+                            }
+                            break;
+                    }
+                });
+            }
+        };
+
+        window.onload = () => app.init();
+    </script>
+</body>
+</html>
