@@ -1,0 +1,22 @@
+Atue como um analista executivo de produtividade e operações. Analise os meus dados dos últimos 7 dias corridos (mensagens diretas do Teams, canais, e-mails recebidos no Outlook e eventos da minha agenda de trabalho, considerando um expediente padrão de 8 horas diárias, de segunda a sexta-feira).
+
+Gere um diagnóstico operacional estruturado contendo exatamente as métricas abaixo:
+
+1. Triagem de Interações e Vácuos:
+   - Identifique todas as pessoas que me enviaram mensagens diretas (1:1) no Teams ou e-mails diretos demandando resposta/alinhamento e que permaneceram sem resposta da minha parte (ficaram no vácuo).
+   - Liste o nome do contato, o canal de contato (Teams/E-mail), a data do último envio e o resumo em uma frase da demanda.
+
+2. Auditoria da Agenda (Dentro do expediente de 8h/dia = 40h semanais):
+   - Total de horas consumidas em reuniões de acompanhamento/status/controle (Dailies, Follow-ups, Syncs, Status Reports).
+   - Total de horas dedicadas a sessões de desenho técnico, arquitetura, pareamento ou resolução efetiva de problemas (Hands-on, Architecture Reviews, Deep Dives).
+   - Horas Livres Líquidas (Focus Time): Horas restantes de expediente desimpedidas de qualquer reunião.
+   - Taxa de Ocupação (% de reuniões de controle vs. % de tempo livre para execução).
+
+Formato de Saída Obrigatório:
+- Primeiro: Apresente duas tabelas Markdown limpas e consolidadas com os dados acima.
+- Segundo: Gere um único bloco de código HTML/CSS inline (estilo dashboard executivo minimalista, modo escuro, responsivo, pronto para visualização local) contendo:
+    * Cards com os KPIs principais (Horas Livres Líquidas, Horas em Reuniões de Controle, Contatos em Aberto).
+    * Tabela estilizada com a lista nominal das pessoas aguardando meu retorno.
+    * Gráfico de barras simples ou distribuição percentual (em CSS/HTML puro) da alocação de tempo na semana.
+
+Seja estritamente factual com base nos registros reais. Se algum dado não puder ser extraído por limitação de leitura, aponte a métrica estimada com base nos metadados disponíveis.
